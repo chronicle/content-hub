@@ -16,9 +16,13 @@ from __future__ import annotations
 import pathlib
 import json
 import re
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
+
+if TYPE_CHECKING:
+    import types
+    from collections.abc import Callable
+
 INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / 'config.json'
 CONFIG: dict = json.loads(CONFIG_PATH.read_text()) if CONFIG_PATH.exists() else {}
@@ -32,7 +36,7 @@ SUMMARY_PATTERN: re.Pattern[str] = re.compile(
 )
 
 
-def get_summary_lines(mock_siemplify: Any) -> list[dict[str, str]]:
+def get_summary_lines(mock_siemplify: MagicMock) -> list[dict[str, str]]:
     """Get the ACTION_RESULT_SUMMARY lines that an action logged, parsed into fields."""
     lines = [
         call.args[0]
@@ -46,12 +50,12 @@ def get_summary_lines(mock_siemplify: Any) -> list[dict[str, str]]:
 
 
 def run_action(
-    module: Any,
+    module: types.ModuleType,
     params: dict[str, Any],
-    manager_setup: Callable[[Any], None],
-    entities: list[Any] | None = None,
-    main_args: tuple[Any, ...] = (),
-) -> Any:
+    manager_setup: Callable[[MagicMock], None],
+    entities: list[MagicMock] | None = None,
+    main_args: tuple[object, ...] = (),
+) -> MagicMock:
     """Run a Trend Vision One action with a mocked manager."""
     with (
         patch.object(module, "SiemplifyAction") as mock_siemplify_action,
@@ -65,7 +69,8 @@ def run_action(
         mock_siemplify.async_total_duration_deadline = 0
         mock_siemplify.async_polling_interval_in_sec = 30
         mock_extract_action.side_effect = lambda siemplify, param_name, **kwargs: params.get(
-            param_name, kwargs.get("default_value")
+            param_name,
+            kwargs.get("default_value"),
         )
         mock_manager_cls.return_value.siemplify = mock_siemplify
         manager_setup(mock_manager_cls.return_value)
@@ -84,14 +89,14 @@ def make_entity(identifier: str, entity_type: str) -> MagicMock:
     return entity
 
 
-def get_end_args(mock_siemplify: Any) -> tuple[str, Any, int]:
+def get_end_args(mock_siemplify: MagicMock) -> tuple[str, Any, int]:
     """Get the output message, result value, and execution state that the action ended with."""
     mock_siemplify.end.assert_called_once()
 
     return mock_siemplify.end.call_args.args
 
 
-def get_json_by_entity(mock_siemplify: Any) -> dict[str, Any]:
+def get_json_by_entity(mock_siemplify: MagicMock) -> dict[str, Any]:
     """Get the JSON result of the action, keyed by target."""
     mock_siemplify.result.add_result_json.assert_called_once()
     json_result = mock_siemplify.result.add_result_json.call_args.args[0]

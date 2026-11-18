@@ -43,6 +43,32 @@ from .api_utils import validate_response
 DOWNLOAD_CONNECTION_ERRORS = (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError)
 
 
+def _get_collect_file_error_type(status: int, code: str | None, message: str) -> str:
+    """Map a failed item of the collect file multi-status response to an error type.
+
+    The values match UtilsManager.ErrorType. This module cannot import UtilsManager (circular import).
+
+    Args:
+        status: The HTTP status of the item.
+        code: The error code of the item.
+        message: The error message of the item.
+
+    Returns:
+        The error type.
+
+    """
+    if status >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        return "VENDOR_ERROR"
+    if status == HTTPStatus.FORBIDDEN:
+        return "PERMISSION_DENIED"
+    if status == HTTPStatus.NOT_FOUND or COLLECT_FILE_TARGET_NOT_FOUND_MESSAGE in message:
+        return "ENDPOINT_NOT_FOUND"
+    if code == COLLECT_FILE_NOT_SUPPORTED_CODE:
+        return "UNSUPPORTED_ENDPOINT"
+
+    return "INVALID_INPUT"
+
+
 class TrendVisionOneManager:
     def __init__(self, api_root, api_token, verify_ssl, siemplify=None):
         """
@@ -221,7 +247,7 @@ class TrendVisionOneManager:
         """
         url = self._get_full_url("isolate_endpoint")
         payload = [{"agentGuid": guid, "description": description}]
-        response = self.session.post(url, json=payload)
+        response = self.session.post(url, json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
         validate_response(response)
         response_headers = response.json()[0].get("headers", [])
         return next(
@@ -245,7 +271,7 @@ class TrendVisionOneManager:
         """
         url = self._get_full_url("unisolate_endpoint")
         payload = [{"agentGuid": guid, "description": description}]
-        response = self.session.post(url, json=payload)
+        response = self.session.post(url, json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
         validate_response(response)
         response_headers = response.json()[0].get("headers", [])
         return next(
@@ -287,39 +313,13 @@ class TrendVisionOneManager:
             return task_url
         if status not in SUCCESSFUL_STATUS_CODES:
             message = error.get("message") or f"The collect file request failed with status {status}."
-            error_type = self._get_collect_file_error_type(status, error.get("code"), message)
+            error_type = _get_collect_file_error_type(status, error.get("code"), message)
             raise TrendVisionOneException(message, error_type=error_type)
         if not task_url:
             message = "The collect file response has no task location."
             raise TrendVisionOneException(message, error_type="VENDOR_ERROR")
 
         return task_url
-
-    @staticmethod
-    def _get_collect_file_error_type(status: int, code: str | None, message: str) -> str:
-        """Map a failed item of the collect file multi-status response to an error type.
-
-        The values match UtilsManager.ErrorType. This module cannot import UtilsManager (circular import).
-
-        Args:
-            status: The HTTP status of the item.
-            code: The error code of the item.
-            message: The error message of the item.
-
-        Returns:
-            The error type.
-
-        """
-        if status >= HTTPStatus.INTERNAL_SERVER_ERROR:
-            return "VENDOR_ERROR"
-        if status == HTTPStatus.FORBIDDEN:
-            return "PERMISSION_DENIED"
-        if status == HTTPStatus.NOT_FOUND or COLLECT_FILE_TARGET_NOT_FOUND_MESSAGE in message:
-            return "ENDPOINT_NOT_FOUND"
-        if code == COLLECT_FILE_NOT_SUPPORTED_CODE:
-            return "UNSUPPORTED_ENDPOINT"
-
-        return "INVALID_INPUT"
 
     def download_collected_file(
         self,
@@ -377,7 +377,7 @@ class TrendVisionOneManager:
         deadline = time.monotonic() + max_seconds
         timeout = min(max_seconds, REQUEST_TIMEOUT_SECONDS)
         location, api_root = urlparse(resource_location), urlparse(self.api_root)
-        response = None
+        response: requests.Response | None = None
         if location.scheme == "https" and location.hostname == api_root.hostname:
             response = self.session.get(resource_location, stream=True, timeout=timeout)
         if response is None or response.status_code in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:

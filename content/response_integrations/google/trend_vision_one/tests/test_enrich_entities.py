@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -26,12 +26,14 @@ from soar_sdk.SiemplifyDataModel import DomainEntityInfo, EntityTypes
 
 from ..actions import EnrichEntities
 from ..core.constants import REQUEST_TIMEOUT_SECONDS
-from ..core.datamodels import Endpoint
 from ..core.TrendVisionOneExceptions import TrendVisionOneException
 from ..core.TrendVisionOneManager import TrendVisionOneManager
 from ..core.TrendVisionOneParser import TrendVisionOneParser
 from .common import get_json_by_entity, get_summary_lines, make_entity, run_action
 from .test_action_result_summary import make_http_error, make_response
+
+if TYPE_CHECKING:
+    from ..core.datamodels import Endpoint
 
 AGENT_GUID = "3573f000-0000-0000-0000-000000000001"
 

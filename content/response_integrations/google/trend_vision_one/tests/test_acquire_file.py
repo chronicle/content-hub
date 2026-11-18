@@ -382,13 +382,7 @@ class TestAcquireFileAction:
             fake.setup(manager)
             manager.siemplify.async_total_duration_deadline = unix_now() + 45_000
 
-        poll = run_action(
-            AcquireFile,
-            {"additional_data": get_end_args(first)[1]},
-            setup,
-            [],
-            main_args=(False,),
-        )
+        poll = run_action(AcquireFile, {"additional_data": get_end_args(first)[1]}, setup, [], main_args=(False,))
 
         message, result_value, status = get_end_args(poll)
         results = get_json_by_entity(poll)
@@ -712,7 +706,11 @@ class TestAcquireFileAction:
 
         with patch.object(AcquireFile, "build_manager", side_effect=Exception("Missing mandatory parameter API Token")):
             poll = run_action(
-                AcquireFile, {"additional_data": get_end_args(first)[1]}, fake.setup, [], main_args=(False,)
+                AcquireFile,
+                {"additional_data": get_end_args(first)[1]},
+                fake.setup,
+                [],
+                main_args=(False,),
             )
 
         assert get_end_args(poll)[2] == EXECUTION_STATE_FAILED

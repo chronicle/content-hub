@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import dataclasses
 from enum import StrEnum
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -46,6 +48,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Container, Iterable, Mapping
 
     from soar_sdk.SiemplifyAction import SiemplifyAction
+    from soar_sdk.SiemplifyDataModel import DomainEntityInfo
 
 
 class ErrorType(StrEnum):
@@ -90,9 +93,10 @@ EXECUTION_STATE_NAMES: Mapping[int, str] = {
     EXECUTION_STATE_FAILED: "FAILED",
     EXECUTION_STATE_TIMEDOUT: "TIMEDOUT",
 }
-ASYNC_ACTION_TIMEOUT_THRESHOLD_MS = 35000
-SUMMARY_NONE = "NONE"
-TIMEOUT_MARKER_LOGGED_KEY = "timeout_marker_logged"
+ASYNC_ACTION_TIMEOUT_THRESHOLD_MS: int = 35000
+SUMMARY_NONE: str = "NONE"
+TIMEOUT_MARKER_LOGGED_KEY: str = "timeout_marker_logged"
+_ERROR_PRECEDENCE: dict[str, int] = {member.value: index for index, member in enumerate(ErrorType)}
 SummaryCounts = tuple[int, int, list[str], int]
 
 
@@ -202,12 +206,12 @@ def _get_http_status(error: Exception) -> int | None:
         The HTTP status code, or None if there is none.
 
     """
-    response = getattr(error, "response", None)
+    response: requests.Response | None = getattr(error, "response", None)
     if response is None:
         response = getattr(error.__cause__ or error.__context__, "response", None)
-    status_code = getattr(error, "status_code", None) or getattr(response, "status_code", None)
+    status_code: object = getattr(error, "status_code", None) or getattr(response, "status_code", None)
 
-    return status_code if isinstance(status_code, int) else None
+    return status_code if isinstance(status_code, int) and not isinstance(status_code, bool) else None
 
 
 def _get_error_type(error: Exception, http_status: int | None) -> str:
@@ -244,67 +248,67 @@ def dominant_error_type(error_types: Iterable[str]) -> str:
         error_types: The error types of the failed targets and of the run.
 
     Returns:
-        The dominant error type, or NONE if there are no error types. An unknown error type has the lowest precedence.
+        The dominant error type, or NONE if there are no error types. Unrecognized values rank as and normalize to
+        UNKNOWN_ERROR.
 
     """
-    precedence = list(ErrorType)
+    fallback_rank = _ERROR_PRECEDENCE[ErrorType.UNKNOWN_ERROR]
+    dominant = min(error_types, key=lambda error_type: _ERROR_PRECEDENCE.get(error_type, fallback_rank), default=None)
+    if dominant is None:
+        return SUMMARY_NONE
 
-    return min(
-        error_types,
-        key=lambda error_type: precedence.index(error_type) if error_type in precedence else len(precedence),
-        default=SUMMARY_NONE,
-    )
+    return dominant if dominant in _ERROR_PRECEDENCE else ErrorType.UNKNOWN_ERROR
 
 
-def build_action_result_summary(
-    execution_state: int,
-    targets: int,
-    succeeded: int,
-    error_types: list[str],
-    skipped: int = 0,
-    error: Exception | None = None,
-    error_type: str | None = None,
-) -> str:
+@dataclasses.dataclass(slots=True)
+class ActionResultSummaryInput:
+    """Inputs for formatting an ACTION_RESULT_SUMMARY log line."""
+
+    execution_state: int
+    targets: int
+    succeeded: int
+    error_types: list[str]
+    skipped: int = 0
+    error: Exception | None = None
+    error_type: str | None = None
+
+
+def build_action_result_summary(summary: ActionResultSummaryInput) -> str:
     """Build the ACTION_RESULT_SUMMARY log line.
 
     Unfinished targets count as failed with the run error type when an exception
     ended the run. Unsupported entities remain in skipped.
 
     Args:
-        execution_state: The execution state that the run ends with.
-        targets: The number of targets in scope.
-        succeeded: The number of targets that succeeded.
-        error_types: One error type for each failed target.
-        skipped: The number of unsupported entities skipped.
-        error: The exception that ended the run, if any.
-        error_type: The error type to report instead of the dominant one. If nothing succeeded and no failure
-            has a reason, INVALID_INPUT is reported.
+        summary: Execution state, target counts, and error details of the run.
 
     Returns:
         The summary line, with enums and counts only.
 
     """
+    error_types = summary.error_types
     failed = len(error_types)
-    unfinished = max(targets - succeeded - failed, 0)
+    unfinished = max(summary.targets - summary.succeeded - failed, 0)
     exc_type, http_status = SUMMARY_NONE, None
-    if error is not None:
-        run_error_type, exc_type, http_status = classify_exception(error)
+    if summary.error is not None:
+        run_error_type, exc_type, http_status = classify_exception(summary.error)
         error_types = [*error_types, run_error_type]
         failed += unfinished
-    if not succeeded:
+    if not summary.succeeded:
         outcome = "FAILURE"
-    elif failed or error is not None:
+    elif failed or summary.error is not None:
         outcome = "PARTIAL_SUCCESS"
     else:
         outcome = "SUCCESS"
-    reason = error_type or dominant_error_type(error_types)
-    if not succeeded and reason == SUMMARY_NONE:
+    reason = summary.error_type or dominant_error_type(error_types)
+    if not summary.succeeded and reason == SUMMARY_NONE:
         reason = ErrorType.INVALID_INPUT
 
     return (
         f"ACTION_RESULT_SUMMARY v=1 outcome={outcome} error_type={reason} "
-        f"execution_state={EXECUTION_STATE_NAMES[execution_state]} targets={targets} failed={failed} "
-        f"skipped={skipped} exc_type={exc_type} http_status={http_status or SUMMARY_NONE}"
+        f"execution_state={EXECUTION_STATE_NAMES[summary.execution_state]} "
+        f"targets={summary.targets} failed={failed} "
+        f"skipped={summary.skipped} exc_type={exc_type} http_status={http_status or SUMMARY_NONE}"
     )
 
 
@@ -326,9 +330,11 @@ def log_action_result_summary(
     if execution_state == EXECUTION_STATE_INPROGRESS:
         return
     try:
-        siemplify.LOGGER.info(build_action_result_summary(execution_state, *get_counts(), error=error))
-    except Exception:
-        return
+        summary = ActionResultSummaryInput(execution_state, *get_counts(), error=error)
+        siemplify.LOGGER.info(build_action_result_summary(summary))
+    except Exception as err:
+        with contextlib.suppress(Exception):
+            siemplify.LOGGER.warn(f"Failed to log action result summary: {err}")
 
 
 def log_timeout_marker_once(
@@ -348,20 +354,20 @@ def log_timeout_marker_once(
     """
     try:
         deadline = siemplify.async_total_duration_deadline
-        next_poll_time = unix_now() + siemplify.async_polling_interval_in_sec * 1000
         if state.get(TIMEOUT_MARKER_LOGGED_KEY) or not deadline:
             return
+        next_poll_time = unix_now() + (siemplify.async_polling_interval_in_sec or 0) * 1000
         if next_poll_time < deadline - ASYNC_ACTION_TIMEOUT_THRESHOLD_MS:
             return
         state[TIMEOUT_MARKER_LOGGED_KEY] = True
-        siemplify.LOGGER.info(
-            build_action_result_summary(EXECUTION_STATE_INPROGRESS, *get_counts(), error_type=ErrorType.TIMEOUT)
-        )
-    except Exception:
-        return
+        summary = ActionResultSummaryInput(EXECUTION_STATE_INPROGRESS, *get_counts(), error_type=ErrorType.TIMEOUT)
+        siemplify.LOGGER.info(build_action_result_summary(summary))
+    except Exception as err:
+        with contextlib.suppress(Exception):
+            siemplify.LOGGER.warn(f"Failed to log timeout marker: {err}")
 
 
-def count_skipped_entities(target_entities: Iterable[Any], supported_types: Container[str]) -> int:
+def count_skipped_entities(target_entities: Iterable[DomainEntityInfo], supported_types: Container[str]) -> int:
     """Count target entities whose type is not supported by the action.
 
     Args:
@@ -402,31 +408,45 @@ def get_summary_counts(
     return targets, len(set(result_data.get("completed", []))), error_types, skipped
 
 
-def log_run_summary(
-    siemplify: SiemplifyAction,
-    status: int,
-    result_data: dict[str, Any],
-    targets: int,
-    supported_entity_types: Container[str],
-    *,
-    error: Exception | None = None,
-) -> None:
+@dataclasses.dataclass(slots=True)
+class RunSummaryContext:
+    """Run state and target metadata for logging an Isolate or Unisolate summary."""
+
+    status: int
+    result_data: dict[str, Any]
+    targets: int
+    supported_entity_types: Container[str]
+    error: Exception | None = None
+
+
+@dataclasses.dataclass(slots=True)
+class ContainmentOperationInput:
+    """Inputs for starting an Isolate or Unisolate Endpoint operation."""
+
+    action_start_time: int
+    description: str
+    suitable_entities: list[DomainEntityInfo]
+    agent_uuids: list[str]
+    result_data: dict[str, Any]
+
+
+def log_run_summary(siemplify: SiemplifyAction, context: RunSummaryContext) -> None:
     """Log the timeout marker on IN_PROGRESS polls and the summary line when an Isolate or Unisolate run ends.
 
     Args:
         siemplify: The action object.
-        status: The execution state that the run ends with.
-        result_data: The async state of the run. The timeout marker flag is saved in it.
-        targets: The number of distinct targets in scope.
-        supported_entity_types: Entity types supported by the action.
-        error: The exception that ended the run, if any.
+        context: The run status, async state, target count, supported entity types, and run error.
 
     """
-    skipped = count_skipped_entities(siemplify.target_entities, supported_entity_types)
-    get_counts = partial(get_summary_counts, result_data, targets, skipped)
-    if status == EXECUTION_STATE_INPROGRESS:
-        log_timeout_marker_once(siemplify, result_data, partial(get_counts, pending_error_type=ErrorType.TIMEOUT))
-    log_action_result_summary(siemplify, status, get_counts, error=error)
+    skipped = count_skipped_entities(siemplify.target_entities, context.supported_entity_types)
+    get_counts = partial(get_summary_counts, context.result_data, context.targets, skipped)
+    if context.status == EXECUTION_STATE_INPROGRESS:
+        log_timeout_marker_once(
+            siemplify,
+            context.result_data,
+            partial(get_counts, pending_error_type=ErrorType.TIMEOUT),
+        )
+    log_action_result_summary(siemplify, context.status, get_counts, error=context.error)
 
 
 def add_unfinished_json_result(siemplify: SiemplifyAction, result_data: dict[str, Any], error: Exception) -> None:
@@ -463,7 +483,7 @@ def get_task_failure(task: datamodels.Task) -> dict[str, str]:
     return {"error": message, "error_type": TASK_STATUS_ERROR_TYPES.get(task.status, ErrorType.VENDOR_ERROR)}
 
 
-def get_endpoint_search_args(target: Any) -> dict[str, str]:
+def get_endpoint_search_args(target: DomainEntityInfo | str) -> dict[str, str]:
     """Build the TrendVisionOneManager.search_endpoint arguments for an entity or an Agent UUID.
 
     Args:

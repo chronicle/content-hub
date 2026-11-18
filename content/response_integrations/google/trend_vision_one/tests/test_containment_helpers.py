@@ -18,12 +18,16 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
 import requests
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_INPROGRESS
 from soar_sdk.SiemplifyUtils import unix_now
 
+from ..core.constants import REQUEST_TIMEOUT_SECONDS
+from ..core.TrendVisionOneManager import TrendVisionOneManager
 from ..core.UtilsManager import (
     TIMEOUT_MARKER_LOGGED_KEY,
+    RunSummaryContext,
     get_summary_counts,
     log_run_summary,
     process_agents,
@@ -98,7 +102,7 @@ def test_log_run_summary_when_run_ends() -> None:
     siemplify = MagicMock()
     siemplify.target_entities = [make_entity("host1", "HOSTNAME"), make_entity("http://x", "DestinationURL")]
 
-    log_run_summary(siemplify, EXECUTION_STATE_COMPLETED, RESULT_DATA, 4, SUPPORTED_TYPES)
+    log_run_summary(siemplify, RunSummaryContext(EXECUTION_STATE_COMPLETED, RESULT_DATA, 4, SUPPORTED_TYPES))
 
     [summary] = get_summary_lines(siemplify)
     assert (summary["outcome"], summary["error_type"]) == ("PARTIAL_SUCCESS", "VENDOR_ERROR")
@@ -112,12 +116,38 @@ def test_log_run_summary_in_progress_logs_only_timeout_marker() -> None:
     siemplify.async_total_duration_deadline = 0
     state = dict(RESULT_DATA)
 
-    log_run_summary(siemplify, EXECUTION_STATE_INPROGRESS, state, 4, SUPPORTED_TYPES)
+    log_run_summary(siemplify, RunSummaryContext(EXECUTION_STATE_INPROGRESS, state, 4, SUPPORTED_TYPES))
     assert get_summary_lines(siemplify) == []
     siemplify.async_total_duration_deadline = unix_now() + 1000
     siemplify.async_polling_interval_in_sec = 60
-    log_run_summary(siemplify, EXECUTION_STATE_INPROGRESS, state, 4, SUPPORTED_TYPES)
+    log_run_summary(siemplify, RunSummaryContext(EXECUTION_STATE_INPROGRESS, state, 4, SUPPORTED_TYPES))
 
     [marker] = get_summary_lines(siemplify)
     assert (marker["execution_state"], marker["error_type"], marker["failed"]) == ("IN_PROGRESS", "TIMEOUT", "3")
     assert state[TIMEOUT_MARKER_LOGGED_KEY] is True
+
+
+@pytest.mark.parametrize(
+    ("method_name", "endpoint_path"),
+    [
+        ("isolate_endpoint", "/v3.0/response/endpoints/isolate"),
+        ("unisolate_endpoint", "/v3.0/response/endpoints/restore"),
+    ],
+)
+def test_containment_requests_pass_timeout(method_name: str, endpoint_path: str) -> None:
+    """Verify that isolate_endpoint and unisolate_endpoint pass REQUEST_TIMEOUT_SECONDS."""
+    manager = TrendVisionOneManager("https://api.example.com", "token", verify_ssl=True)
+    manager.session = MagicMock()
+    manager.session.post.return_value = MagicMock(status_code=200, ok=True)
+    manager.session.post.return_value.json.return_value = [
+        {"headers": [{"name": "Operation-Location", "value": "https://api.example.com/v3.0/response/tasks/1"}]}
+    ]
+
+    task_url = getattr(manager, method_name)("contain", "guid-1")
+
+    assert task_url == "https://api.example.com/v3.0/response/tasks/1"
+    manager.session.post.assert_called_once_with(
+        f"https://api.example.com{endpoint_path}",
+        json=[{"agentGuid": "guid-1", "description": "contain"}],
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )

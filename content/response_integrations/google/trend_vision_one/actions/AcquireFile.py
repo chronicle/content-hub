@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import base64
+import dataclasses
 import json
 import math
 import pathlib
@@ -70,6 +71,15 @@ TIMEOUT_ERROR_MESSAGE = "Action ran into a timeout during execution."
 TRANSIENT_ERROR_TYPES = (ErrorType.CONNECTION_ERROR, ErrorType.RATE_LIMITED, ErrorType.TIMEOUT)
 MAX_DOWNLOAD_TIMEOUTS = 3
 DOWNLOAD_TIMEOUT_MESSAGE = "The archive did not download in the script timeout. Increase the script timeout in the IDE."
+
+
+@dataclasses.dataclass(slots=True)
+class AcquireContext:
+    """Shared runtime objects and async state for an Acquire File run."""
+
+    siemplify: SiemplifyAction
+    manager: TrendVisionOneManager
+    state: SingleJson
 
 
 def new_state() -> SingleJson:
@@ -143,18 +153,11 @@ def get_counts(state: SingleJson) -> tuple[int, int, list[str], int]:
     return len(state["keys"]), succeeded, error_types, state["skipped"]
 
 
-def resolve_targets(
-    siemplify: SiemplifyAction,
-    manager: TrendVisionOneManager,
-    state: SingleJson,
-    lookups: dict[str, SingleJson],
-) -> dict[str, list[str]]:
+def resolve_targets(context: AcquireContext, lookups: dict[str, SingleJson]) -> dict[str, list[str]]:
     """Find the agent GUID of each target. Save a failure for each target that has no endpoint.
 
     Args:
-        siemplify: The action object.
-        manager: The Trend Vision One manager.
-        state: The async state.
+        context: The action runtime context and async state.
         lookups: The endpoint search arguments by target key.
 
     Returns:
@@ -165,63 +168,54 @@ def resolve_targets(
     for key, lookup in lookups.items():
         agent_id = lookup.get("agent_id")
         try:
-            endpoint = manager.search_endpoint(**lookup)
+            endpoint = context.manager.search_endpoint(**lookup)
         except Exception as error:
-            siemplify.LOGGER.exception(f"Failed to search the endpoint of {key}.")
-            entry = build_failure_entry(str(error), classify_exception(error)[0], agent_id, state["file_path"])
-            record_result(state, [key], entry)
+            context.siemplify.LOGGER.exception(f"Failed to search the endpoint of {key}.")
+            entry = build_failure_entry(str(error), classify_exception(error)[0], agent_id, context.state["file_path"])
+            record_result(context.state, [key], entry)
             continue
         if endpoint is None or not endpoint.guid:
             message = f"Endpoint {key} was not found in {INTEGRATION_DISPLAY_NAME}."
-            entry = build_failure_entry(message, ErrorType.ENDPOINT_NOT_FOUND, agent_id, state["file_path"])
-            record_result(state, [key], entry)
+            entry = build_failure_entry(message, ErrorType.ENDPOINT_NOT_FOUND, agent_id, context.state["file_path"])
+            record_result(context.state, [key], entry)
             continue
         targets.setdefault(endpoint.guid, []).append(key)
 
     return targets
 
 
-def start_task(
-    siemplify: SiemplifyAction,
-    manager: TrendVisionOneManager,
-    state: SingleJson,
-    guid: str,
-    keys: list[str],
-) -> None:
+def start_task(context: AcquireContext, guid: str, keys: list[str]) -> None:
     """Start a collect file task on an agent. Save it as pending, or save a failure for its targets.
 
     Args:
-        siemplify: The action object.
-        manager: The Trend Vision One manager.
-        state: The async state.
+        context: The action runtime context and async state.
         guid: The agent GUID.
         keys: The target keys of the agent.
 
     """
     try:
-        task_url = manager.collect_file(
+        task_url = context.manager.collect_file(
             guid=guid,
-            file_path=state["file_path"],
+            file_path=context.state["file_path"],
             description=ACQUIRE_FILE_TASK_DESCRIPTION,
         )
     except Exception as error:
-        siemplify.LOGGER.exception(f"Failed to start the collect file task on agent {guid}.")
-        entry = build_failure_entry(str(error), classify_exception(error)[0], guid, state["file_path"])
-        record_result(state, keys, entry)
+        context.siemplify.LOGGER.exception(f"Failed to start the collect file task on agent {guid}.")
+        entry = build_failure_entry(str(error), classify_exception(error)[0], guid, context.state["file_path"])
+        record_result(context.state, keys, entry)
         return
     task_id = task_url.rstrip("/").rsplit("/", 1)[-1]
-    state["pending"][guid] = {"task_url": task_url, "task_id": task_id, "keys": keys}
+    context.state["pending"][guid] = {"task_url": task_url, "task_id": task_id, "keys": keys}
 
 
-def start_acquisition(siemplify: SiemplifyAction, manager: TrendVisionOneManager, state: SingleJson) -> None:
+def start_acquisition(context: AcquireContext) -> None:
     """Read the parameters, find the agents, and start one collect file task per agent.
 
     Args:
-        siemplify: The action object.
-        manager: The Trend Vision One manager.
-        state: The async state to fill.
+        context: The action runtime context and async state to fill.
 
     """
+    siemplify, state = context.siemplify, context.state
     state["file_path"] = extract_action_param(siemplify, param_name="File Path", is_mandatory=True, print_value=True)
     agent_uuids = string_to_multi_value(extract_action_param(siemplify, param_name="Agent UUID", print_value=True))
     entities = [entity for entity in siemplify.target_entities if entity.entity_type in SUPPORTED_ENTITY_TYPES]
@@ -231,9 +225,9 @@ def start_acquisition(siemplify: SiemplifyAction, manager: TrendVisionOneManager
     state["skipped"] = count_skipped_entities(siemplify.target_entities, SUPPORTED_ENTITY_TYPES)
     if not lookups:
         return
-    manager.test_connectivity()
-    for guid, keys in resolve_targets(siemplify, manager, state, lookups).items():
-        start_task(siemplify, manager, state, guid, keys)
+    context.manager.test_connectivity()
+    for guid, keys in resolve_targets(context, lookups).items():
+        start_task(context, guid, keys)
 
 
 def get_download_folder(siemplify: SiemplifyAction) -> pathlib.Path:
@@ -294,20 +288,11 @@ def attach_file(siemplify: SiemplifyAction, path: pathlib.Path) -> None:
         siemplify.LOGGER.exception(f"Unable to attach {path.name} to the case.")
 
 
-def download_file(
-    siemplify: SiemplifyAction,
-    manager: TrendVisionOneManager,
-    state: SingleJson,
-    guid: str,
-    task: Task,
-    max_seconds: float,
-) -> SingleJson:
+def download_file(context: AcquireContext, guid: str, task: Task, max_seconds: float) -> SingleJson:
     """Download the archive of a succeeded task and build the success result.
 
     Args:
-        siemplify: The action object.
-        manager: The Trend Vision One manager.
-        state: The async state.
+        context: The action runtime context and async state.
         guid: The agent GUID.
         task: The succeeded collect file task.
         max_seconds: The time limit of the download, in seconds.
@@ -317,11 +302,15 @@ def download_file(
 
     """
     raw_task = task.raw_data
-    task_id = task.id or state["pending"][guid]["task_id"]
-    requested_file_path = raw_task.get("filePath") or state["file_path"]
-    destination = get_download_folder(siemplify) / build_file_name(task_id, requested_file_path)
-    local_path = manager.download_collected_file(raw_task.get("resourceLocation"), str(destination), max_seconds)
-    attach_file(siemplify, destination)
+    task_id = task.id or context.state["pending"][guid]["task_id"]
+    requested_file_path = raw_task.get("filePath") or context.state["file_path"]
+    destination = get_download_folder(context.siemplify) / build_file_name(task_id, requested_file_path)
+    local_path = context.manager.download_collected_file(
+        raw_task.get("resourceLocation"),
+        str(destination),
+        max_seconds,
+    )
+    attach_file(context.siemplify, destination)
 
     return {
         "status": RESULT_SUCCESS,
@@ -374,33 +363,26 @@ def is_transient_error(error: Exception) -> bool:
     return error_type in TRANSIENT_ERROR_TYPES or (http_status or 0) >= HTTPStatus.INTERNAL_SERVER_ERROR
 
 
-def poll_task(
-    siemplify: SiemplifyAction,
-    manager: TrendVisionOneManager,
-    state: SingleJson,
-    guid: str,
-    max_seconds: float,
-) -> None:
+def poll_task(context: AcquireContext, guid: str, max_seconds: float) -> None:
     """Check the task of one agent. Save the result of its targets if the task is done.
 
     A transient error keeps the task pending, so that the next poll tries again. A download that passes the run time
     limit 3 times fails the target.
 
     Args:
-        siemplify: The action object.
-        manager: The Trend Vision One manager.
-        state: The async state.
+        context: The action runtime context and async state.
         guid: The agent GUID.
         max_seconds: The time limit of the download, in seconds.
 
     """
+    siemplify, state = context.siemplify, context.state
     pending = state["pending"][guid]
     try:
-        task = manager.get_task(task_url=pending["task_url"])
+        task = context.manager.get_task(task_url=pending["task_url"])
         if task.status in ACQUIRE_FILE_PENDING_STATUSES:
             return
         entry = (
-            download_file(siemplify, manager, state, guid, task, max_seconds)
+            download_file(context, guid, task, max_seconds)
             if task.status == SUCCESS_STATUS
             else build_task_failure(state, guid, task)
         )
@@ -449,7 +431,7 @@ def build_output_message(state: SingleJson, succeeded: list[str], failed: list[s
     if not succeeded and not failed:
         return "No suitable entities or Agent UUIDs were found to acquire the file from."
     target = f'the file "{state["file_path"]}" on the following entities using {INTEGRATION_DISPLAY_NAME}'
-    messages = []
+    messages: list[str] = []
     if succeeded:
         messages.append(f"Successfully acquired {target}: {', '.join(succeeded)}.")
     if failed:
@@ -471,19 +453,13 @@ def get_time_left_ms(deadline_ms: int) -> float:
     return deadline_ms - unix_now() - ACQUIRE_FILE_DEADLINE_MARGIN_MS if deadline_ms else math.inf
 
 
-def poll_tasks(
-    siemplify: SiemplifyAction,
-    manager: TrendVisionOneManager,
-    state: SingleJson,
-) -> tuple[str, bool | str, int]:
+def poll_tasks(context: AcquireContext) -> tuple[str, bool | str, int]:
     """Check all pending tasks, then save the state for the next poll or finish the action.
 
     If this run is close to its own deadline, the tasks that are not checked stay pending for the next poll.
 
     Args:
-        siemplify: The action object.
-        manager: The Trend Vision One manager.
-        state: The async state.
+        context: The action runtime context and async state.
 
     Returns:
         The output message, the result value (the serialized state if tasks are pending), and the execution state.
@@ -492,6 +468,7 @@ def poll_tasks(
         TrendVisionOneTimeoutException: If pending targets cannot be polled again before the async deadline.
 
     """
+    siemplify, state = context.siemplify, context.state
     for guid in list(state["pending"]):
         time_left_ms = min(
             get_time_left_ms(siemplify.execution_deadline_unix_time_ms),
@@ -500,7 +477,7 @@ def poll_tasks(
         if time_left_ms <= 0:
             siemplify.LOGGER.info("This run is close to its deadline. The next poll checks the remaining tasks.")
             break
-        poll_task(siemplify, manager, state, guid, time_left_ms / 1000)
+        poll_task(context, guid, time_left_ms / 1000)
     if state["pending"]:
         polling_interval_ms = (siemplify.async_polling_interval_in_sec or 0) * 1000
         if get_time_left_ms(siemplify.async_total_duration_deadline) <= polling_interval_ms:
@@ -620,10 +597,11 @@ def run_once(siemplify: SiemplifyAction, state: SingleJson, *, is_first_run: boo
     if not is_first_run:
         state.update(load_state(siemplify))
     manager = build_manager(siemplify)
+    context = AcquireContext(siemplify, manager, state)
     if is_first_run:
-        start_acquisition(siemplify, manager, state)
+        start_acquisition(context)
 
-    return poll_tasks(siemplify, manager, state)
+    return poll_tasks(context)
 
 
 @output_handler
@@ -637,7 +615,7 @@ def main(is_first_run: bool) -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = ACQUIRE_FILE_SCRIPT_NAME
     state = new_state()
-    run_error = None
+    run_error: Exception | None = None
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     try:
         output_message, result_value, status = run_once(siemplify, state, is_first_run=is_first_run)

@@ -100,11 +100,14 @@ class TestClassifyException:
 
     def test_http_status_from_cause(self) -> None:
         """Verifies that the HTTP status comes from the HTTPError that validate_response wraps."""
-        assert utils.classify_exception(make_http_error(403)) == (
-            "PERMISSION_DENIED",
-            "TrendVisionOneException",
-            403,
-        )
+        assert utils.classify_exception(make_http_error(403)) == ("PERMISSION_DENIED", "TrendVisionOneException", 403)
+
+    def test_bool_status_code_is_ignored(self) -> None:
+        """Verifies that a boolean status_code attribute is not treated as an HTTP status code."""
+        error = TrendVisionOneException("x")
+        error.status_code = True
+
+        assert utils.classify_exception(error) == ("VENDOR_ERROR", "TrendVisionOneException", None)
 
     def test_wrapped_error_is_unwrapped(self) -> None:
         """Verifies that a generic wrapper is classified by its cause."""
@@ -139,14 +142,16 @@ class TestSummaryLine:
         )
         assert utils.dominant_error_type([]) == "NONE"
 
-    def test_dominant_error_type_ranks_unknown_value_last(self) -> None:
-        """Verifies that a value outside ErrorType does not raise and loses to a known error type."""
-        assert utils.dominant_error_type(["NOT_AN_ERROR_TYPE", "TIMEOUT"]) == "TIMEOUT"
-        assert utils.dominant_error_type(["NOT_AN_ERROR_TYPE"]) == "NOT_AN_ERROR_TYPE"
+    def test_dominant_error_type_normalizes_unknown_value(self) -> None:
+        """Verifies that an unknown error type ranks at UNKNOWN_ERROR and normalizes to UNKNOWN_ERROR."""
+        assert utils.dominant_error_type(["NOT_AN_ERROR_TYPE"]) == "UNKNOWN_ERROR"
+        assert utils.dominant_error_type(["NOT_AN_ERROR_TYPE", "FILE_NOT_FOUND"]) == "UNKNOWN_ERROR"
+        assert utils.dominant_error_type(["NOT_AN_ERROR_TYPE", "AUTHENTICATION_FAILED"]) == "AUTHENTICATION_FAILED"
 
     def test_partial_success_line(self) -> None:
         """Verifies the exact format of a line with one success and one failure."""
-        line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 2, 1, ["ENDPOINT_NOT_FOUND"])
+        summary = utils.ActionResultSummaryInput(EXECUTION_STATE_COMPLETED, 2, 1, ["ENDPOINT_NOT_FOUND"])
+        line = utils.build_action_result_summary(summary)
 
         assert line == (
             "ACTION_RESULT_SUMMARY v=1 outcome=PARTIAL_SUCCESS error_type=ENDPOINT_NOT_FOUND "
@@ -156,8 +161,12 @@ class TestSummaryLine:
 
     def test_default_invalid_input_when_nothing_succeeded(self) -> None:
         """Verify default INVALID_INPUT when succeeded is 0 and no failure reason is present."""
-        zero_target_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 0, 0, [])
-        skipped_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 0, 0, [], skipped=1)
+        zero_target_line = utils.build_action_result_summary(
+            utils.ActionResultSummaryInput(EXECUTION_STATE_COMPLETED, 0, 0, [])
+        )
+        skipped_line = utils.build_action_result_summary(
+            utils.ActionResultSummaryInput(EXECUTION_STATE_COMPLETED, 0, 0, [], skipped=1)
+        )
 
         assert SUMMARY_PATTERN.match(zero_target_line)
         assert "outcome=FAILURE error_type=INVALID_INPUT" in zero_target_line
@@ -167,8 +176,12 @@ class TestSummaryLine:
 
     def test_default_ignored_when_succeeded(self) -> None:
         """Verify the INVALID_INPUT default is not used when at least one target succeeded."""
-        success_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 1, 1, [])
-        partial_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 2, 1, ["ENDPOINT_NOT_FOUND"])
+        success_line = utils.build_action_result_summary(
+            utils.ActionResultSummaryInput(EXECUTION_STATE_COMPLETED, 1, 1, [])
+        )
+        partial_line = utils.build_action_result_summary(
+            utils.ActionResultSummaryInput(EXECUTION_STATE_COMPLETED, 2, 1, ["ENDPOINT_NOT_FOUND"])
+        )
 
         assert SUMMARY_PATTERN.match(success_line)
         assert "outcome=SUCCESS error_type=NONE" in success_line
@@ -177,13 +190,8 @@ class TestSummaryLine:
 
     def test_run_error_line(self) -> None:
         """Verifies that the exception that ended the run decides the error type and HTTP status."""
-        line = utils.build_action_result_summary(
-            EXECUTION_STATE_FAILED,
-            1,
-            0,
-            [],
-            error=make_http_error(401),
-        )
+        summary = utils.ActionResultSummaryInput(EXECUTION_STATE_FAILED, 1, 0, [], error=make_http_error(401))
+        line = utils.build_action_result_summary(summary)
 
         assert line == (
             "ACTION_RESULT_SUMMARY v=1 outcome=FAILURE error_type=AUTHENTICATION_FAILED "
@@ -192,7 +200,7 @@ class TestSummaryLine:
 
     def test_run_error_counts_unfinished_without_resetting_skipped(self) -> None:
         """Verify unfinished targets become failed on run error while skipped entities remain skipped."""
-        line = utils.build_action_result_summary(
+        summary = utils.ActionResultSummaryInput(
             EXECUTION_STATE_FAILED,
             2,
             1,
@@ -200,6 +208,7 @@ class TestSummaryLine:
             skipped=3,
             error=make_http_error(401),
         )
+        line = utils.build_action_result_summary(summary)
 
         assert line == (
             "ACTION_RESULT_SUMMARY v=1 outcome=PARTIAL_SUCCESS error_type=AUTHENTICATION_FAILED "
@@ -214,13 +223,19 @@ class TestSummaryLine:
 
         siemplify.LOGGER.info.assert_not_called()
 
-    def test_log_never_raises(self) -> None:
-        """Verifies that a failure while counting or logging does not raise."""
+    def test_log_warns_and_never_raises(self) -> None:
+        """Verifies that a failure while counting or logging warns without raising, even if warn raises."""
         siemplify = MagicMock()
         siemplify.LOGGER.info.side_effect = RuntimeError("logger down")
 
         utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: (1, 1, [], 0))
+        siemplify.LOGGER.warn.assert_called_once()
+        assert "Failed to log action result summary:" in siemplify.LOGGER.warn.call_args.args[0]
+
+        siemplify.LOGGER.warn.reset_mock()
+        siemplify.LOGGER.warn.side_effect = RuntimeError("warn down")
         utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: 1 / 0)
+        siemplify.LOGGER.warn.assert_called_once()
 
 
 class TestTimeoutMarker:
@@ -260,13 +275,20 @@ class TestTimeoutMarker:
         siemplify.LOGGER.info.assert_not_called()
         assert state == {}
 
-    def test_marker_never_raises(self) -> None:
-        """Verifies that a failure while building the marker does not raise."""
+    def test_marker_warns_and_never_raises(self) -> None:
+        """Verifies that a failure while building or logging the marker warns without raising, even if warn raises."""
         siemplify = self.make_action(unix_now() + 10_000)
 
         utils.log_timeout_marker_once(siemplify, {}, lambda: 1 / 0)
 
         siemplify.LOGGER.info.assert_not_called()
+        siemplify.LOGGER.warn.assert_called_once()
+        assert "Failed to log timeout marker:" in siemplify.LOGGER.warn.call_args.args[0]
+
+        siemplify.LOGGER.warn.reset_mock()
+        siemplify.LOGGER.warn.side_effect = RuntimeError("warn down")
+        utils.log_timeout_marker_once(siemplify, {}, lambda: 1 / 0)
+        siemplify.LOGGER.warn.assert_called_once()
 
     def test_marker_keeps_skipped_count(self) -> None:
         """Verify log_timeout_marker_once keeps the skipped count of the callback."""
@@ -278,14 +300,22 @@ class TestTimeoutMarker:
         assert SUMMARY_PATTERN.match(line)
         assert "targets=1 failed=1 skipped=2" in line
 
+    def test_marker_handles_none_polling_interval_without_warning(self) -> None:
+        """Verify log_timeout_marker_once handles None polling interval and missing deadline without warning."""
+        siemplify = self.make_action(0)
+        siemplify.async_polling_interval_in_sec = None
+
+        utils.log_timeout_marker_once(siemplify, {}, lambda: (1, 0, ["TIMEOUT"], 0))
+        siemplify.async_total_duration_deadline = unix_now() + 3_600_000
+        utils.log_timeout_marker_once(siemplify, {}, lambda: (1, 0, ["TIMEOUT"], 0))
+
+        siemplify.LOGGER.warn.assert_not_called()
+        siemplify.LOGGER.info.assert_not_called()
+
 
 def test_count_skipped_entities() -> None:
     """Verifies that count_skipped_entities counts only unsupported entity types."""
-    entities = [
-        make_entity("h", "HOSTNAME"),
-        make_entity("u", "USERUNIQNAME"),
-        make_entity("f", "FILENAME"),
-    ]
+    entities = [make_entity("h", "HOSTNAME"), make_entity("u", "USERUNIQNAME"), make_entity("f", "FILENAME")]
 
     assert utils.count_skipped_entities(entities, ("HOSTNAME", "ADDRESS")) == 2
     assert utils.count_skipped_entities([], ("HOSTNAME", "ADDRESS")) == 0

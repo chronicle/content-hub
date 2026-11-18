@@ -15,7 +15,7 @@
 from __future__ import annotations
 import sys
 import json
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, Dict, Any
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler, unix_now, convert_dict_to_json_result_dict
@@ -48,7 +48,9 @@ from ..core.TrendVisionOneExceptions import (
 from ..core.TrendVisionOneManager import TrendVisionOneManager
 from ..core.UtilsManager import (
     TASK_STATUS_ERROR_TYPES,
+    ContainmentOperationInput,
     ErrorType,
+    RunSummaryContext,
     add_unfinished_json_result,
     classify_exception,
     get_entity_original_identifier,
@@ -114,20 +116,22 @@ def isolate_agents(
 def start_operation(
     siemplify: SiemplifyAction,
     manager: TrendVisionOneManager,
-    action_start_time: int,
-    description: str,
-    suitable_entities: List,
-    agent_uuids: list[str],
-    result_data: dict[str, Any],
-) -> Tuple[str, bool, int]:
-    result_data.update({
-        "result_urls": {},
-        "result_endpoints": {},
-        "json_results": {},
-        "completed": [],
-        "failed": [],
-    })
-    for entity in suitable_entities:
+    operation: ContainmentOperationInput,
+) -> tuple[str, bool | str, int]:
+    """Resolve targets, start endpoint isolation tasks, and query initial status.
+
+    Args:
+        siemplify: The action object.
+        manager: The Trend Vision One manager.
+        operation: The start time, description, target entities, Agent UUIDs, and async state.
+
+    Returns:
+        The output message, the result value, and the execution state.
+
+    """
+    result_data = operation.result_data
+    result_data.update({"result_urls": {}, "result_endpoints": {}, "json_results": {}, "completed": [], "failed": []})
+    for entity in operation.suitable_entities:
         siemplify.LOGGER.info(f"Started processing entity: {entity.identifier}")
         entity_identifier = get_entity_original_identifier(entity)
         try:
@@ -142,9 +146,7 @@ def start_operation(
                         "result_endpoints"
                     ][endpoint.guid]
                 else:
-                    result_url = manager.isolate_endpoint(
-                        description=description, guid=endpoint.guid
-                    )
+                    result_url = manager.isolate_endpoint(description=operation.description, guid=endpoint.guid)
                     result_data["result_urls"][entity.identifier] = result_url
                     result_data["result_endpoints"][endpoint.guid] = result_url
             else:
@@ -165,12 +167,15 @@ def start_operation(
 
     isolate_agents(
         manager=manager,
-        agent_uuids=agent_uuids,
-        description=description,
+        agent_uuids=operation.agent_uuids,
+        description=operation.description,
         result_data=result_data,
     )
     output_message, result_value, status = query_operation_status(
-        siemplify, manager, result_data, action_start_time
+        siemplify,
+        manager,
+        result_data,
+        operation.action_start_time,
     )
     return output_message, result_value, status
 
@@ -308,7 +313,7 @@ def main(is_first_run):
     result_value = False
     result_data = {}
     status = EXECUTION_STATE_COMPLETED
-    error = None
+    error: Exception | None = None
     suitable_entities = [
         entity
         for entity in siemplify.target_entities
@@ -328,15 +333,14 @@ def main(is_first_run):
             manager.test_connectivity()
 
             if is_first_run:
-                output_message, result_value, status = start_operation(
-                    siemplify,
-                    manager=manager,
+                operation = ContainmentOperationInput(
                     action_start_time=action_start_time,
                     description=description,
                     suitable_entities=suitable_entities,
                     agent_uuids=agent_uuids,
                     result_data=result_data,
                 )
+                output_message, result_value, status = start_operation(siemplify, manager, operation)
             else:
                 result_data = json.loads(
                     extract_action_param(
@@ -385,7 +389,7 @@ def main(is_first_run):
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
     targets = len({entity.identifier for entity in suitable_entities} | set(agent_uuids))
-    log_run_summary(siemplify, status, result_data, targets, SUPPORTED_ENTITY_TYPES, error=error)
+    log_run_summary(siemplify, RunSummaryContext(status, result_data, targets, SUPPORTED_ENTITY_TYPES, error=error))
     if status == EXECUTION_STATE_INPROGRESS:
         result_value = json.dumps(result_data)
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

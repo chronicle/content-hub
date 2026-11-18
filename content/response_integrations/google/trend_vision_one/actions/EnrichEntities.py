@@ -261,7 +261,7 @@ def main():
     status = EXECUTION_STATE_COMPLETED
     output_message = ""
     result = EnrichmentResult()
-    error = None
+    error: Exception | None = None
 
     try:
         manager = TrendVisionOneManager(
