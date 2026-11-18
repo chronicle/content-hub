@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import json
 import sys
@@ -13,12 +27,12 @@ from TIPCommon import (
     extract_action_param,
     flat_dict_to_csv,
 )
-from tanium.core.TaniumManager import TaniumManager
-from tanium.core.TaniumParser import TaniumParser
+from ..core.TaniumManager import TaniumManager
+from ..core.TaniumParser import TaniumParser
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from tanium.core.constants import INTEGRATION_NAME, ENRICH_ENTITIES_SCRIPT_NAME
-from tanium.core.exceptions import TaniumBadRequestException
-from tanium.core.utils import get_entity_original_identifier, string_to_multi_value
+from ..core.constants import INTEGRATION_NAME, ENRICH_ENTITIES_SCRIPT_NAME
+from ..core.exceptions import TaniumBadRequestException
+from ..core.utils import get_entity_original_identifier, string_to_multi_value
 
 
 SUPPORTED_ENTITY_TYPES = [EntityTypes.HOSTNAME, EntityTypes.ADDRESS]
