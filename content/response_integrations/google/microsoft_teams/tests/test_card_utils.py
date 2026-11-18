@@ -20,7 +20,7 @@ import re
 
 import pytest
 
-from microsoft_teams.core.CardUtils import (
+from microsoft_teams.core.card_utils import (
     build_card_attachment,
     build_card_message_payload,
     find_card_attachment_id,
@@ -211,6 +211,23 @@ class TestValidateCard:
 
         warnings = validate_card(_card_with(body=[{"type": "Image", "url": "http://example.com/a.png"}]))
         assert any("image over http" in warning for warning in warnings)
+
+    def test_null_url_is_not_treated_as_the_text_none(self) -> None:
+        card = _card_with(
+            body=[{"type": "Image", "url": None}],
+            actions=[{"type": "Action.OpenUrl", "title": "Open", "url": None}],
+        )
+
+        warnings = validate_card(card)
+
+        assert all("None" not in warning for warning in warnings)
+        assert any("not https" in warning for warning in warnings)
+
+    def test_null_version_gives_an_invalid_version_warning_without_none(self) -> None:
+        warnings = validate_card(_card_with(version=None))
+
+        assert any("not a valid version" in warning for warning in warnings)
+        assert all("'None'" not in warning for warning in warnings)
 
     def test_data_image_is_allowed(self) -> None:
         card = _card_with(body=[{"type": "Image", "url": "data:image/png;base64,AA"}])

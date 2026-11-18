@@ -19,8 +19,12 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from ..core.CardUtils import format_warnings, validate_card, validate_destination
-from ..core.CaseCardBuilder import build_case_card_for_case, resolve_case_id
+from ..core.card_utils import (
+    format_warnings,
+    parse_card,
+    validate_card,
+    validate_destination,
+)
 from ..core.MicrosoftConstants import (
     DEFAULT_API_ROOT,
     DEFAULT_LOGIN_API_ROOT,
@@ -28,7 +32,7 @@ from ..core.MicrosoftConstants import (
     DESTINATION_CHAT,
     INTEGRATION_DISPLAY_NAME,
     INTEGRATION_NAME,
-    UPDATE_CASE_CARD_ACTION,
+    SEND_CARD_MESSAGE_ACTION,
 )
 from ..core.MicrosoftExceptions import (
     MicrosoftTeamsActionError,
@@ -39,9 +43,9 @@ from ..core.MicrosoftManager import MicrosoftTeamsManager
 
 @output_handler
 def main() -> None:
-    """Refresh the case card of an existing Microsoft Teams message."""
+    """Send an Adaptive Card to a Microsoft Teams channel or chat."""
     siemplify = SiemplifyAction()
-    siemplify.script_name = UPDATE_CASE_CARD_ACTION
+    siemplify.script_name = SEND_CARD_MESSAGE_ACTION
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     status = EXECUTION_STATE_COMPLETED
@@ -116,13 +120,12 @@ def main() -> None:
         team_name = extract_action_param(siemplify, param_name="Team Name", print_value=True)
         channel_name = extract_action_param(siemplify, param_name="Channel Name", print_value=True)
         chat_id = extract_action_param(siemplify, param_name="Chat ID", print_value=True)
-        message_id = extract_action_param(siemplify, param_name="Message ID", is_mandatory=True, print_value=True)
-        case_id = extract_action_param(siemplify, param_name="Case ID", input_type=int, print_value=True)
+        raw_card = extract_action_param(siemplify, param_name="Card JSON", is_mandatory=True, print_value=False)
 
         siemplify.LOGGER.info("----------------- Main - Started -----------------")
         validate_destination(destination, team_name, channel_name, chat_id)
-        case_id = resolve_case_id(siemplify, case_id)
-        card, warnings = build_case_card_for_case(siemplify, case_id)
+        warnings: list[str] = []
+        card = parse_card(raw_card, warnings)
         warnings.extend(validate_card(card))
         for warning in warnings:
             siemplify.LOGGER.warn(warning)
@@ -140,40 +143,29 @@ def main() -> None:
 
         try:
             if destination == DESTINATION_CHANNEL:
-                manager.update_card_in_channel(
-                    team_name=team_name,
-                    channel_name=channel_name,
-                    message_id=message_id,
-                    card=card,
-                )
+                message = manager.send_card_to_channel(team_name=team_name, channel_name=channel_name, card=card)
                 output_message = (
-                    f"Successfully updated the case card of message {message_id} in "
-                    f"channel {channel_name} in team {team_name} in "
-                    f"{INTEGRATION_DISPLAY_NAME}."
+                    f"Successfully sent a card to channel {channel_name} in team "
+                    f"{team_name} in {INTEGRATION_DISPLAY_NAME}."
                 )
             else:
-                manager.update_card_in_chat(chat_id=chat_id, message_id=message_id, card=card)
-                output_message = (
-                    f"Successfully updated the case card of message {message_id} in "
-                    f"chat with ID {chat_id} in {INTEGRATION_DISPLAY_NAME}."
-                )
+                message = manager.send_card_to_chat(chat_id=chat_id, card=card)
+                output_message = f"Successfully sent a card in chat with ID {chat_id} in {INTEGRATION_DISPLAY_NAME}."
         except MicrosoftTeamsChannelNotFoundError as error:
             target = (
                 f"chat with ID {chat_id}"
                 if destination == DESTINATION_CHAT
                 else f"channel {channel_name} in team {team_name}"
             )
-            message = (
-                f"message {message_id} in {target} was not found or is not accessible in {INTEGRATION_DISPLAY_NAME}."
-            )
-            raise MicrosoftTeamsActionError(message) from error
+            error_message = f"{target} was not found in {INTEGRATION_DISPLAY_NAME}."
+            raise MicrosoftTeamsActionError(error_message) from error
 
-        siemplify.result.add_result_json({"id": message_id, "status": "updated"})
+        siemplify.result.add_result_json(message.to_json())
         output_message += format_warnings(warnings)
 
     except Exception as e:
-        output_message = f"Error executing action {UPDATE_CASE_CARD_ACTION}. Reason: {e}"
-        siemplify.LOGGER.exception(output_message)
+        output_message = f"Error executing action {SEND_CARD_MESSAGE_ACTION}. Reason: {e}"
+        siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False
 

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING
 
 from .MicrosoftConstants import (
     ACTION_OPEN_URL,
@@ -38,13 +38,16 @@ from .MicrosoftConstants import (
 )
 from .MicrosoftExceptions import MicrosoftTeamsActionError, MicrosoftTeamsCardError
 
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
 JSON_ERROR_HINT = (
     "If the card contains placeholders, make sure the substituted values do not "
     "contain unescaped quotes or line breaks."
 )
 
 
-def parse_card(raw_card: str | dict[str, Any], warnings: list[str] | None = None) -> dict[str, Any]:
+def parse_card(raw_card: str | SingleJson, warnings: list[str] | None = None) -> SingleJson:
     """Parse card input into an Adaptive Card dictionary.
 
     Accepts a bare Adaptive Card or a Bot Framework message envelope that wraps
@@ -81,7 +84,7 @@ def parse_card(raw_card: str | dict[str, Any], warnings: list[str] | None = None
     return card
 
 
-def validate_card(card: dict[str, Any]) -> list[str]:
+def validate_card(card: SingleJson) -> list[str]:
     """Validate an Adaptive Card against what Graph can deliver to Teams.
 
     Args:
@@ -115,7 +118,7 @@ def validate_card(card: dict[str, Any]) -> list[str]:
     return warnings
 
 
-def build_card_attachment(card: dict[str, Any], attachment_id: str | None = None) -> tuple[str, list[dict[str, Any]]]:
+def build_card_attachment(card: SingleJson, attachment_id: str | None = None) -> tuple[str, list[SingleJson]]:
     """Build the message body and attachments that carry a card.
 
     Args:
@@ -140,7 +143,7 @@ def build_card_attachment(card: dict[str, Any], attachment_id: str | None = None
     return body, attachments
 
 
-def build_card_message_payload(card: dict[str, Any], attachment_id: str | None = None) -> dict[str, Any]:
+def build_card_message_payload(card: SingleJson, attachment_id: str | None = None) -> SingleJson:
     """Build the chatMessage request body that carries a card.
 
     Args:
@@ -194,7 +197,7 @@ def format_warnings(warnings: list[str]) -> str:
     return "\nWarnings:\n" + "\n".join(f"- {warning}" for warning in warnings)
 
 
-def find_card_attachment_id(message: dict[str, Any]) -> str | None:
+def find_card_attachment_id(message: SingleJson) -> str | None:
     """Return the ID of the first Adaptive Card attachment of a message.
 
     Args:
@@ -211,7 +214,7 @@ def find_card_attachment_id(message: dict[str, Any]) -> str | None:
     return None
 
 
-def _load_json(raw_card: str | dict[str, Any]) -> object:
+def _load_json(raw_card: str | SingleJson) -> object:
     if not isinstance(raw_card, str):
         return raw_card
 
@@ -224,7 +227,7 @@ def _load_json(raw_card: str | dict[str, Any]) -> object:
         raise MicrosoftTeamsCardError(message) from error
 
 
-def _unwrap_envelope(envelope: dict[str, Any], warnings: list[str]) -> dict[str, Any]:
+def _unwrap_envelope(envelope: SingleJson, warnings: list[str]) -> SingleJson:
     adaptive = [
         attachment
         for attachment in envelope.get("attachments") or []
@@ -247,8 +250,8 @@ def _unwrap_envelope(envelope: dict[str, Any], warnings: list[str]) -> dict[str,
     return content
 
 
-def _check_version(card: dict[str, Any], warnings: list[str]) -> None:
-    version = str(card.get("version", ""))
+def _check_version(card: SingleJson, warnings: list[str]) -> None:
+    version = str(card.get("version") or "")
     try:
         parsed = tuple(int(part) for part in version.split(".")[:2])
     except ValueError:
@@ -289,7 +292,7 @@ def _walk(node: object, path: str, errors: list[str], warnings: list[str]) -> No
 
 
 def _check_action(
-    node: dict[str, Any],
+    node: SingleJson,
     action_type: str,
     path: str,
     errors: list[str],
@@ -298,7 +301,7 @@ def _check_action(
     if action_type in REJECTED_CARD_ACTIONS:
         errors.append(f"{path} uses '{action_type}', which {REJECTED_CARD_ACTIONS[action_type]}")
     elif action_type == ACTION_OPEN_URL:
-        url = str(node.get("url", "")).strip()
+        url = str(node.get("url") or "").strip()
         if url.lower().startswith(UNSAFE_URL_SCHEMES):
             errors.append(f"{path} uses an unsafe URL scheme in '{url[:30]}'")
         elif not url.lower().startswith("https://"):
@@ -310,8 +313,8 @@ def _check_action(
         )
 
 
-def _check_image(node: dict[str, Any], path: str, errors: list[str], warnings: list[str]) -> None:
-    url = str(node.get("url", "")).strip().lower()
+def _check_image(node: SingleJson, path: str, errors: list[str], warnings: list[str]) -> None:
+    url = str(node.get("url") or "").strip().lower()
     if url.startswith(("javascript:", "file:", "vbscript:")):
         errors.append(f"{path} uses an unsafe image URL scheme")
     elif url.startswith("http://"):

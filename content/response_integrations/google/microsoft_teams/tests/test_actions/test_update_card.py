@@ -18,16 +18,14 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from integration_testing.set_meta import set_metadata
+from TIPCommon.base.action import ExecutionState
 
-from microsoft_teams.core.MicrosoftManager import MicrosoftTeamsManager
-from microsoft_teams.tests.conftest import CONFIG
-from microsoft_teams.tests.test_actions.utils import run_action_with_parameters
+from microsoft_teams.actions import update_card
+from microsoft_teams.tests.common import CONFIG_PATH
 
 if TYPE_CHECKING:
-    from unittest.mock import MagicMock
-
-    from pytest_mock import MockerFixture
+    from integration_testing.platform.script_output import MockActionOutput
 
     from microsoft_teams.tests.core.session import MicrosoftTeamsSession
 
@@ -38,133 +36,118 @@ CARD = {
 }
 
 
-pytestmark = pytest.mark.usefixtures("_resolve_names")
+def _parameters(message_id: str = "m1", card: dict | None = None, **destination: str) -> dict[str, str]:
+    return {**destination, "Message ID": message_id, "Card JSON": json.dumps(card or CARD)}
 
 
-def _run(mocker: MockerFixture, **parameters: str) -> MagicMock:
-    return run_action_with_parameters(mocker, "UpdateCard", parameters, CONFIG)
+def _requests(script_session: MicrosoftTeamsSession, method: str) -> list:
+    return [record.request for record in script_session.request_history if record.request.method.value == method]
 
 
-@pytest.fixture
-def _resolve_names(mocker: MockerFixture) -> None:
-    mocker.patch.object(MicrosoftTeamsManager, "get_team_id", return_value="t1")
-    mocker.patch.object(MicrosoftTeamsManager, "get_channel_id", return_value="c1")
-
-
-def _end_args(siemplify: MagicMock) -> tuple:
-    siemplify.end.assert_called_once()
-    return siemplify.end.call_args.args
-
-
-def test_update_card_in_channel_success(mocker: MockerFixture, script_session: MicrosoftTeamsSession) -> None:
-    siemplify = _run(
-        mocker,
-        **{
-            "Destination Type": "Channel",
-            "Team Name": "Team",
-            "Channel Name": "Channel",
-            "Message ID": "m1",
-            "Card JSON": json.dumps(CARD),
-        },
+class TestUpdateCard:
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters=_parameters(**{"Destination Type": "Chat", "Chat ID": "chat1"}),
     )
+    def test_replaces_the_card_of_a_chat_message(
+        self, script_session: MicrosoftTeamsSession, action_output: MockActionOutput
+    ) -> None:
+        update_card.main()
 
-    output_message, result_value, status = _end_args(siemplify)
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is True
+        assert "Successfully updated the card of message m1" in action_output.results.output_message
+        assert action_output.results.json_output.json_result == {"id": "m1", "status": "updated"}
+        assert [record.request.method.value for record in script_session.request_history][-2:] == ["GET", "PATCH"]
+        (patch,) = _requests(script_session, "PATCH")
+        assert patch.url.path == "/v1.0/chats/chat1/messages/m1"
+        attachment = patch.kwargs["json"]["attachments"][0]
+        assert attachment["id"] == "att1"
+        assert json.loads(attachment["content"])["body"] == CARD["body"]
 
-    assert status == EXECUTION_STATE_COMPLETED
-    assert result_value is True
-    assert "Successfully updated the card of message m1" in output_message
-    siemplify.result.add_result_json.assert_called_once_with({"id": "m1", "status": "updated"})
-    methods = [record.request.method.value for record in script_session.request_history]
-    assert methods[-2:] == ["GET", "PATCH"]
-
-
-def test_update_card_in_chat_success(mocker: MockerFixture) -> None:
-    siemplify = _run(
-        mocker,
-        **{
-            "Destination Type": "Chat",
-            "Chat ID": "chat1",
-            "Message ID": "m1",
-            "Card JSON": json.dumps(CARD),
-        },
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters=_parameters(**{"Destination Type": "Channel", "Team Name": "test", "Channel Name": "c1"}),
     )
+    def test_replaces_the_card_of_a_channel_message(
+        self, script_session: MicrosoftTeamsSession, action_output: MockActionOutput
+    ) -> None:
+        update_card.main()
 
-    output_message, result_value, status = _end_args(siemplify)
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert "channel c1 in team test" in action_output.results.output_message
+        (patch,) = _requests(script_session, "PATCH")
+        assert patch.url.path == "/v1.0/teams/id_test_team/channels/id_test_channel/messages/m1"
 
-    assert status == EXECUTION_STATE_COMPLETED
-    assert result_value is True
-    assert "chat with ID chat1" in output_message
-
-
-def test_update_card_message_not_found(mocker: MockerFixture) -> None:
-    siemplify = _run(
-        mocker,
-        **{
-            "Destination Type": "Chat",
-            "Chat ID": "chat1",
-            "Message ID": "m404",
-            "Card JSON": json.dumps(CARD),
-        },
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters=_parameters("m403", **{"Destination Type": "Chat", "Chat ID": "chat1"}),
     )
+    def test_uses_a_new_attachment_id_when_the_message_cannot_be_read(
+        self, script_session: MicrosoftTeamsSession, action_output: MockActionOutput
+    ) -> None:
+        update_card.main()
 
-    output_message, result_value, status = _end_args(siemplify)
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        (patch,) = _requests(script_session, "PATCH")
+        assert patch.kwargs["json"]["attachments"][0]["id"] != "att1"
 
-    assert status == EXECUTION_STATE_FAILED
-    assert result_value is False
-    assert "message m404 in chat with ID chat1 was not found" in output_message
-
-
-def test_update_card_message_without_card(mocker: MockerFixture) -> None:
-    siemplify = _run(
-        mocker,
-        **{
-            "Destination Type": "Chat",
-            "Chat ID": "chat1",
-            "Message ID": "m2",
-            "Card JSON": json.dumps(CARD),
-        },
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters=_parameters("m404", **{"Destination Type": "Chat", "Chat ID": "chat1"}),
     )
+    def test_reports_a_message_that_was_not_found(self, action_output: MockActionOutput) -> None:
+        update_card.main()
 
-    output_message, _, status = _end_args(siemplify)
+        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.results.result_value is False
+        assert "message m404 in chat with ID chat1 was not found" in action_output.results.output_message
 
-    assert status == EXECUTION_STATE_FAILED
-    assert "does not contain an Adaptive Card" in output_message
-
-
-def test_update_card_rejects_submit_without_calling_the_api(
-    mocker: MockerFixture, script_session: MicrosoftTeamsSession
-) -> None:
-    card = {**CARD, "actions": [{"type": "Action.Execute"}]}
-
-    siemplify = _run(
-        mocker,
-        **{
-            "Destination Type": "Chat",
-            "Chat ID": "chat1",
-            "Message ID": "m1",
-            "Card JSON": json.dumps(card),
-        },
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters=_parameters("m2", **{"Destination Type": "Chat", "Chat ID": "chat1"}),
     )
+    def test_reports_a_message_without_a_card(
+        self, script_session: MicrosoftTeamsSession, action_output: MockActionOutput
+    ) -> None:
+        update_card.main()
 
-    output_message, _, status = _end_args(siemplify)
+        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert "does not contain an Adaptive Card" in action_output.results.output_message
+        assert not _requests(script_session, "PATCH")
 
-    assert status == EXECUTION_STATE_FAILED
-    assert "Action.Execute" in output_message
-    assert not script_session.request_history
-
-
-def test_update_card_missing_destination_parameter(mocker: MockerFixture) -> None:
-    siemplify = _run(
-        mocker,
-        **{
-            "Destination Type": "Channel",
-            "Team Name": "Team",
-            "Message ID": "m1",
-            "Card JSON": json.dumps(CARD),
-        },
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters=_parameters(
+            card={**CARD, "actions": [{"type": "Action.Execute"}]},
+            **{"Destination Type": "Chat", "Chat ID": "chat1"},
+        ),
     )
+    def test_rejects_an_unsupported_action_without_calling_the_api(
+        self, script_session: MicrosoftTeamsSession, action_output: MockActionOutput
+    ) -> None:
+        update_card.main()
 
-    output_message, _, status = _end_args(siemplify)
+        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert "Action.Execute" in action_output.results.output_message
+        assert not script_session.request_history
 
-    assert status == EXECUTION_STATE_FAILED
-    assert "Channel Name" in output_message
+    @pytest.mark.parametrize(
+        ("destination", "expected"),
+        [
+            ({"Destination Type": "Channel", "Team Name": "test"}, "Channel Name"),
+            ({"Destination Type": "Chat"}, "Chat ID"),
+        ],
+        ids=["missing_channel", "missing_chat_id"],
+    )
+    def test_reports_missing_destination_parameters(
+        self, action_output: MockActionOutput, destination: dict[str, str], expected: str
+    ) -> None:
+        @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=_parameters(**destination))
+        def run() -> None:
+            update_card.main()
+
+        run()
+
+        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert expected in action_output.results.output_message

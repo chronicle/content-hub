@@ -19,8 +19,8 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from ..core.CardUtils import format_warnings, validate_card, validate_destination
-from ..core.CaseCardBuilder import build_case_card_for_case, resolve_case_id
+from ..core.card_utils import format_warnings, validate_card, validate_destination
+from ..core.case_card_builder import build_case_card_for_case, resolve_case_id
 from ..core.MicrosoftConstants import (
     DEFAULT_API_ROOT,
     DEFAULT_LOGIN_API_ROOT,
@@ -116,7 +116,7 @@ def main() -> None:
         team_name = extract_action_param(siemplify, param_name="Team Name", print_value=True)
         channel_name = extract_action_param(siemplify, param_name="Channel Name", print_value=True)
         chat_id = extract_action_param(siemplify, param_name="Chat ID", print_value=True)
-        case_id = extract_action_param(siemplify, param_name="Case ID", input_type=int, print_value=True)
+        case_id = extract_action_param(siemplify, param_name="Case ID", print_value=True)
 
         siemplify.LOGGER.info("----------------- Main - Started -----------------")
         validate_destination(destination, team_name, channel_name, chat_id)
@@ -163,7 +163,7 @@ def main() -> None:
 
     except Exception as e:
         output_message = f"Error executing action {SEND_CASE_CARD_ACTION}. Reason: {e}"
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False
 

@@ -19,7 +19,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from ..core.CardUtils import (
+from ..core.card_utils import (
     format_warnings,
     parse_card,
     validate_card,
@@ -177,7 +177,7 @@ def main() -> None:
 
     except Exception as e:
         output_message = f"Error executing action {UPDATE_CARD_ACTION}. Reason: {e}"
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False
 

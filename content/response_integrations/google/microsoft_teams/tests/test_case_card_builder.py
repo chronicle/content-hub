@@ -21,8 +21,8 @@ from types import SimpleNamespace
 import pytest
 from TIPCommon.data_models import CaseDetails
 
-from microsoft_teams.core.CardUtils import validate_card
-from microsoft_teams.core.CaseCardBuilder import (
+from microsoft_teams.core.card_utils import validate_card
+from microsoft_teams.core.case_card_builder import (
     CaseCardAlert,
     CaseCardData,
     build_case_card,
@@ -227,9 +227,9 @@ class TestResolveCaseId:
 
 class TestBuildCaseCardForCase:
     def test_builds_card_and_collects_no_warnings(self, mocker: pytest.MockFixture) -> None:
-        mocker.patch("microsoft_teams.core.CaseCardBuilder.get_case_overview_details", return_value=_details())
+        mocker.patch("microsoft_teams.core.case_card_builder.get_case_overview_details", return_value=_details())
         mocker.patch(
-            "microsoft_teams.core.CaseCardBuilder.get_case_wall_records",
+            "microsoft_teams.core.case_card_builder.get_case_wall_records",
             return_value={"wallData": [{"description": "Tag added", "creationTimeUnixTimeInMs": 1}]},
         )
         siemplify = SimpleNamespace()
@@ -240,8 +240,8 @@ class TestBuildCaseCardForCase:
         assert "- Tag added" in _texts(card)
 
     def test_wall_failure_only_leaves_out_the_activity(self, mocker: pytest.MockFixture) -> None:
-        mocker.patch("microsoft_teams.core.CaseCardBuilder.get_case_overview_details", return_value=_details())
-        mocker.patch("microsoft_teams.core.CaseCardBuilder.get_case_wall_records", side_effect=RuntimeError("boom"))
+        mocker.patch("microsoft_teams.core.case_card_builder.get_case_overview_details", return_value=_details())
+        mocker.patch("microsoft_teams.core.case_card_builder.get_case_wall_records", side_effect=RuntimeError("boom"))
         siemplify = SimpleNamespace()
 
         card, warnings = build_case_card_for_case(siemplify, 1234)

@@ -19,7 +19,7 @@ from __future__ import annotations
 import dataclasses
 import datetime as dt
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from TIPCommon.rest.soar_api import get_case_overview_details, get_case_wall_records
 
@@ -40,6 +40,7 @@ from .MicrosoftExceptions import MicrosoftTeamsActionError
 
 if TYPE_CHECKING:
     from soar_sdk.SiemplifyAction import SiemplifyAction
+    from TIPCommon.types import SingleJson
 
 ELLIPSIS = "..."
 ZERO_WIDTH_SPACE = "\u200b"
@@ -47,7 +48,7 @@ MARKDOWN_ESCAPED_CHARS = "\\[]*_`<>"
 EMPTY_ACTIVITY_VALUES = {"", "none", "null"}
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class CaseCardAlert:
     """The alert fields shown on the card."""
 
@@ -58,7 +59,7 @@ class CaseCardAlert:
     events_count: int | None = None
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class CaseCardData:
     """The case fields shown on the card."""
 
@@ -96,7 +97,7 @@ def escape_text(value: object, max_length: int = CASE_CARD_MAX_TEXT_LENGTH) -> s
     return escaped.replace("{{", "{" + ZERO_WIDTH_SPACE + "{")
 
 
-def build_case_card(data: CaseCardData) -> dict[str, Any]:
+def build_case_card(data: CaseCardData) -> SingleJson:
     """Build the Adaptive Card for a case.
 
     Args:
@@ -107,12 +108,12 @@ def build_case_card(data: CaseCardData) -> dict[str, Any]:
 
     """
     style, color = CASE_PRIORITY_STYLES.get(data.priority, CASE_PRIORITY_STYLES["Informational"])
-    body: list[dict[str, Any]] = [_build_header(data, style, color), _build_case_facts(data)]
+    body: list[SingleJson] = [_build_header(data, style, color), _build_case_facts(data)]
     body.extend(_build_alert_section(data.alerts))
     body.extend(_build_tags_section(data.tags))
     body.extend(_build_activity_section(data.activities))
 
-    card: dict[str, Any] = {
+    card: SingleJson = {
         "$schema": ADAPTIVE_CARD_SCHEMA,
         "type": ADAPTIVE_CARD_TYPE,
         "version": ADAPTIVE_CARD_DEFAULT_VERSION,
@@ -209,7 +210,7 @@ def resolve_case_id(siemplify: SiemplifyAction, case_id: int | str | None) -> in
     return resolved
 
 
-def build_case_card_for_case(siemplify: SiemplifyAction, case_id: int | str) -> tuple[dict[str, Any], list[str]]:
+def build_case_card_for_case(siemplify: SiemplifyAction, case_id: int | str) -> tuple[SingleJson, list[str]]:
     """Fetch a case and build its card.
 
     Args:
@@ -232,8 +233,8 @@ def build_case_card_for_case(siemplify: SiemplifyAction, case_id: int | str) -> 
     return build_case_card(case_card_data_from_details(details, activities)), warnings
 
 
-def _build_header(data: CaseCardData, style: str, color: str) -> dict[str, Any]:
-    items: list[dict[str, Any]] = [
+def _build_header(data: CaseCardData, style: str, color: str) -> SingleJson:
+    items: list[SingleJson] = [
         {
             "type": "ColumnSet",
             "columns": [
@@ -281,7 +282,7 @@ def _build_header(data: CaseCardData, style: str, color: str) -> dict[str, Any]:
     return {"type": "Container", "style": style, "bleed": True, "items": items}
 
 
-def _build_case_facts(data: CaseCardData) -> dict[str, Any]:
+def _build_case_facts(data: CaseCardData) -> SingleJson:
     candidates = [
         ("Stage", data.stage),
         ("Status", data.status),
@@ -295,7 +296,7 @@ def _build_case_facts(data: CaseCardData) -> dict[str, Any]:
     }
 
 
-def _build_alert_section(alerts: list[CaseCardAlert]) -> list[dict[str, Any]]:
+def _build_alert_section(alerts: list[CaseCardAlert]) -> list[SingleJson]:
     if not alerts:
         return []
 
@@ -303,7 +304,7 @@ def _build_alert_section(alerts: list[CaseCardAlert]) -> list[dict[str, Any]]:
     section = [_section_heading(heading)]
     for alert in alerts[:CASE_CARD_MAX_ALERTS]:
         facts = _alert_facts(alert)
-        items: list[dict[str, Any]] = [
+        items: list[SingleJson] = [
             {"type": "TextBlock", "text": escape_text(alert.name), "weight": "Bolder", "wrap": True}
         ]
         if facts:
@@ -330,7 +331,7 @@ def _alert_facts(alert: CaseCardAlert) -> list[dict[str, str]]:
     ]
 
 
-def _build_tags_section(tags: list[str]) -> list[dict[str, Any]]:
+def _build_tags_section(tags: list[str]) -> list[SingleJson]:
     if not tags:
         return []
 
@@ -338,7 +339,7 @@ def _build_tags_section(tags: list[str]) -> list[dict[str, Any]]:
     return [_section_heading("Tags"), {"type": "TextBlock", "text": "  |  ".join(shown), "wrap": True}]
 
 
-def _build_activity_section(activities: list[str]) -> list[dict[str, Any]]:
+def _build_activity_section(activities: list[str]) -> list[SingleJson]:
     if not activities:
         return []
 
@@ -349,7 +350,7 @@ def _build_activity_section(activities: list[str]) -> list[dict[str, Any]]:
     ]
 
 
-def _section_heading(text: str) -> dict[str, Any]:
+def _section_heading(text: str) -> SingleJson:
     return {
         "type": "TextBlock",
         "text": text,
@@ -376,7 +377,7 @@ def _tag_name(tag: object) -> str:
     return str(tag)
 
 
-def _record_time(record: dict[str, Any]) -> int | None:
+def _record_time(record: SingleJson) -> int | None:
     value = record.get("creationTimeUnixTimeInMs") or record.get("createTime") or record.get("updateTime")
     if isinstance(value, (int, float)):
         return int(value)
@@ -393,7 +394,7 @@ def _record_time(record: dict[str, Any]) -> int | None:
     return None
 
 
-def _record_text(record: dict[str, Any]) -> str | None:
+def _record_text(record: SingleJson) -> str | None:
     candidates = [record.get("description"), record.get("activityDescription")]
     activity_data = record.get("activityDataJson")
     if isinstance(activity_data, str):
