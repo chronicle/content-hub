@@ -27,6 +27,7 @@ from pytest_mock import MockerFixture
 from google.oauth2 import service_account
 
 from google_forms.core import GoogleFormsAuth, GoogleFormsManager
+from google_forms.tests.common import CONFIG_PATH
 from google_forms.tests.core.product import GoogleForms
 from google_forms.tests.core.session import GoogleFormsSession
 from integration_testing.common import use_live_api
@@ -49,8 +50,7 @@ def fixture_load_config() -> dict[str, str | bool]:
         dict[str, str | bool]: Configuration dictionary.
     """
     integration_config = {}
-    with open("config.json", "r", encoding="UTF-8") as f:
-        data = f.read()
+    data = CONFIG_PATH.read_text(encoding="utf-8")
 
     config = json.loads(data)
 
@@ -139,7 +139,3 @@ def api_manager(
     return GoogleFormsManager.GoogleFormsManager(
         session=script_session, params=IntegrationParameters(siemplify_logger=logger)
     )
-
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
-    return script_session

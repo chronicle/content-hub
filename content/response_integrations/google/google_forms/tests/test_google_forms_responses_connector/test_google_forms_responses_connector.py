@@ -31,6 +31,8 @@ DEF_PATH: pathlib.Path = (
 DEFAULT_PARAMETERS: SingleJson = {
     "DeviceProductField": "Product Name",
     "EventClassId": "event_type",
+    "Environment Field Name": "",
+    "Environment Regex Pattern": ".*",
     "Delegated Email": "abc@smplylab.com",
     "Service Account JSON": DEFAULT_SA,
     "Form IDs To Track": "abcdef",
@@ -39,6 +41,9 @@ DEFAULT_PARAMETERS: SingleJson = {
     "Max Responses To Fetch": 10,
     "Disable Overflow": False,
     "Verify SSL": True,
+    "Proxy Server Address": "",
+    "Proxy Username": "",
+    "Proxy Password": "",
 }
 
 
