@@ -18,6 +18,7 @@ import contextlib
 import dataclasses
 import gzip
 import hashlib
+import os
 import re
 import zlib
 from typing import TYPE_CHECKING
@@ -162,6 +163,30 @@ def hash_acquired_file(raw: bytes) -> SingleJson:
     }
 
 
+def write_file_safely(download_path: str, raw: bytes) -> str:
+    """Write raw bytes to disk, unlinking any partial file on failure.
+
+    Args:
+        download_path: Destination file path.
+        raw: Bytes to write.
+
+    Returns:
+        The written file path.
+
+    Raises:
+        OSError: If writing the file to disk fails.
+    """
+    try:
+        with open(download_path, "wb") as file:
+            file.write(raw)
+
+        return download_path
+    except OSError:
+        with contextlib.suppress(OSError):
+            os.remove(download_path)
+        raise
+
+
 @dataclasses.dataclass(slots=True)
 class ContainmentTaskSpec:
     """Inputs for starting or reusing a machine containment task.
@@ -247,7 +272,8 @@ def create_containment_task_by_machine_id(
             )
         task, outcome = start_or_reuse_containment_task(manager, machine.id, spec)
     except (MicrosoftDefenderATPError, DefenderException) as error:
-        spec.logger.exception(f"Failed to process Machine ID {machine_id}: {error}")
+        spec.logger.info(f"Failed to process Machine ID {machine_id}: {error}")
+        spec.logger.exception(error)
 
         return ContainmentByMachineIdResult(
             tasks=[],

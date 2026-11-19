@@ -745,6 +745,7 @@ def test_acquire_file_setup_error_on_later_poll_keeps_completed_targets(
 def test_acquire_file_unreadable_state_keeps_original_error(
     action_output: MockActionOutput,
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """If the saved state can't be read, the failure hook falls back to failure entries and keeps the error."""
     monkeypatch.setattr(
@@ -752,11 +753,19 @@ def test_acquire_file_unreadable_state_keeps_original_error(
         "_init_api_clients",
         common.raise_error(RuntimeError("Token request failed")),
     )
-    _poll(action_output, monkeypatch, additional_data="{not json")
+    bad_state = "{not json"
+    _poll(action_output, monkeypatch, additional_data=bad_state)
 
     assert action_output.results.execution_state == ExecutionState.FAILED
     assert action_output.results.output_message.endswith("Reason: Token request failed")
     assert _entity_results(action_output) == {HOSTNAME: _failure("Token request failed", "UNKNOWN_ERROR")}
+    with pytest.raises(json.JSONDecodeError) as exc_info:
+        json.loads(bad_state)
+    state_error = str(exc_info.value)
+    assert common.logged_levels(caplog, f"Failed to build the JSON result from the saved state: {state_error}") == [
+        "INFO"
+    ]
+    assert common.logged_levels(caplog, state_error) == ["ERROR"]
 
 
 def _finish_first_of_two_targets(
@@ -1337,6 +1346,8 @@ def test_acquire_file_single_error_log_per_failure(
     error_records = [record for record in caplog.records if record.levelname == "ERROR"]
     assert len(error_records) == 1
     assert f"{stage} boom" in error_records[0].getMessage()
+    reason = f"Failed to retrieve the acquired file: {stage} boom" if stage == "collect" else f"{stage} boom"
+    assert common.logged_levels(caplog, f"Failed to acquire file on {MACHINE_ID}: {reason}") == ["INFO"]
 
 
 def test_acquire_file_widget_allowlists_error_fields_and_styles_failure() -> None:

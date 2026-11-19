@@ -451,6 +451,8 @@ def test_enrich_entities_machine_id_lookup_error_is_failure(
         f"0 entities enriched\n0 entities missed\n1 entities failed\nFailed Entities: {MACHINE_ID}\n"
         "No entities were enriched"
     )
+    assert common.logged_levels(caplog, f"Failed to enrich Machine ID {MACHINE_ID}: Internal server error") == ["INFO"]
+    assert common.logged_levels(caplog, "Internal server error") == ["ERROR"]
     assert common.get_summary_lines(caplog) == [
         common.expected_summary("FAILURE", "VENDOR_ERROR", "COMPLETED", targets=1, failed=1),
     ]

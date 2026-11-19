@@ -258,7 +258,8 @@ def test_create_unisolate_machine_task_opposite_request_pending(
         f"Newest containment task: Isolate (task {pending_task['id']}, Pending)."
     )
     assert action_output.results.output_message == f"Failed to process Machine ID {MACHINE_ID}. {error}"
-    assert common.logged_levels(caplog, f"Failed to process Machine ID {MACHINE_ID}: {error}") == ["ERROR"]
+    assert common.logged_levels(caplog, f"Failed to process Machine ID {MACHINE_ID}: {error}") == ["INFO"]
+    assert common.logged_levels(caplog, error) == ["ERROR"]
     assert action_output.results.json_output is None
 
 
@@ -303,8 +304,9 @@ def test_create_unisolate_machine_task_machine_id_lookup_error_is_failure(
     assert "not found in ATP" not in action_output.results.output_message
     assert action_output.results.output_message == f"Failed to process Machine ID {MACHINE_ID}. Internal server error"
     assert common.logged_levels(caplog, f"Failed to process Machine ID {MACHINE_ID}: Internal server error") == [
-        "ERROR"
+        "INFO"
     ]
+    assert common.logged_levels(caplog, "Internal server error") == ["ERROR"]
     assert common.get_summary_lines(caplog) == [
         common.expected_summary("FAILURE", "VENDOR_ERROR", "COMPLETED", targets=1, failed=1),
     ]

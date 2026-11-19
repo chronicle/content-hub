@@ -43,12 +43,26 @@ from ..core.UtilsManager import (
     hash_acquired_file,
     log_action_result_summary,
     normalize_mde_file_path,
+    write_file_safely,
 )
 
 if TYPE_CHECKING:
     from typing import Never, NoReturn
 
     from TIPCommon.types import SingleJson
+
+
+def _record_target_failure(target: SingleJson, reason: str, error_type: str) -> None:
+    """Store failure details on the mutable per-machine target state.
+
+    Args:
+        target: Mutable per-machine state.
+        reason: Failure reason reported in the output message.
+        error_type: Failure error type reported in the JSON result.
+    """
+    target["status"] = "Failed"
+    target["error"] = reason
+    target["error_type"] = error_type
 
 
 class AcquireFileAction(BaseAction):
@@ -184,7 +198,10 @@ class AcquireFileAction(BaseAction):
                     comment=self.state["comment"],
                 )
         except Exception as error:
-            self._fail_target_from_exception(target, error)
+            reason = str(error)
+            self.logger.info(f"Failed to acquire file on {', '.join(target['entities'])}: {reason}")
+            self.logger.exception(error)
+            _record_target_failure(target, reason, classify_exception(error)[0])
             return
 
         self.logger.info(f"Tracking GetFile action {action['id']} on machine {machine_id}.")
@@ -229,7 +246,10 @@ class AcquireFileAction(BaseAction):
         try:
             action = self.api_client.get_live_response_status(target["action_id"])
         except Exception as error:
-            self._fail_target_from_exception(target, error)
+            reason = str(error)
+            self.logger.info(f"Failed to acquire file on {', '.join(target['entities'])}: {reason}")
+            self.logger.exception(error)
+            _record_target_failure(target, reason, classify_exception(error)[0])
             return
 
         target["status"] = action.get("status")
@@ -257,7 +277,10 @@ class AcquireFileAction(BaseAction):
             hashes = hash_acquired_file(raw)
             download_path = self._save_file(raw)
         except Exception as error:
-            self._fail_target_from_exception(target, error, f"Failed to retrieve the acquired file: {error}")
+            reason = f"Failed to retrieve the acquired file: {error}"
+            self.logger.info(f"Failed to acquire file on {', '.join(target['entities'])}: {reason}")
+            self.logger.exception(error)
+            _record_target_failure(target, reason, classify_exception(error)[0])
             return
 
         try:
@@ -281,27 +304,6 @@ class AcquireFileAction(BaseAction):
             "completed_at": action.get("lastUpdateDateTimeUtc"),
         }
 
-    @staticmethod
-    def _write_file(download_path: str, raw: bytes) -> str:
-        """Write raw bytes to disk, unlinking any partial file on failure.
-
-        Args:
-            download_path: Destination file path.
-            raw: Bytes to write.
-
-        Returns:
-            The written file path.
-        """
-        try:
-            with open(download_path, "wb") as file:
-                file.write(raw)
-
-            return download_path
-        except OSError:
-            with contextlib.suppress(OSError):
-                os.remove(download_path)
-            raise
-
     def _save_file(self, raw: bytes) -> str:
         """Write the vendor artifact as-is under a random name.
 
@@ -314,22 +316,9 @@ class AcquireFileAction(BaseAction):
         suffix = "gz" if raw.startswith(constants.GZIP_MAGIC_BYTES) else "bin"
         filename = f"{uuid.uuid4()}.{suffix}"
         try:
-            return self._write_file(os.path.join(self.soar_action.run_folder, filename), raw)
+            return write_file_safely(os.path.join(self.soar_action.run_folder, filename), raw)
         except (AttributeError, OSError):
-            return self._write_file(os.path.join(tempfile.gettempdir(), filename), raw)
-
-    @staticmethod
-    def _record_target_failure(target: SingleJson, reason: str, error_type: str) -> None:
-        """Store failure details on the mutable per-machine target state.
-
-        Args:
-            target: Mutable per-machine state.
-            reason: Failure reason reported in the output message.
-            error_type: Failure error type reported in the JSON result.
-        """
-        target["status"] = "Failed"
-        target["error"] = reason
-        target["error_type"] = error_type
+            return write_file_safely(os.path.join(tempfile.gettempdir(), filename), raw)
 
     def _fail_target(self, target: SingleJson, reason: str, error_type: str) -> None:
         """Mark a machine as failed and log the failure reason.
@@ -340,19 +329,7 @@ class AcquireFileAction(BaseAction):
             error_type: Failure error type reported in the JSON result.
         """
         self.logger.error(f"Failed to acquire file on {', '.join(target['entities'])}: {reason}")
-        self._record_target_failure(target, reason, error_type)
-
-    def _fail_target_from_exception(self, target: SingleJson, error: Exception, reason: str | None = None) -> None:
-        """Mark a machine as failed and log the exception once with traceback.
-
-        Args:
-            target: Mutable per-machine state.
-            error: Exception raised while handling the machine.
-            reason: Optional failure reason; defaults to str(error).
-        """
-        message = reason or str(error)
-        self.logger.exception(f"Failed to acquire file on {', '.join(target['entities'])}: {message}")
-        self._record_target_failure(target, message, classify_exception(error)[0])
+        _record_target_failure(target, reason, error_type)
 
     def _fail_pending_targets(self, reason: str, error_type: str) -> None:
         """Mark every machine whose acquisition has not finished as failed.
@@ -496,7 +473,8 @@ class AcquireFileAction(BaseAction):
                 self._fail_pending_targets(str(error), error_type)
                 entries = self._collect_outcomes()[2]
         except Exception as state_error:
-            self.logger.exception(f"Failed to build the JSON result from the saved state: {state_error}")
+            self.logger.info(f"Failed to build the JSON result from the saved state: {state_error}")
+            self.logger.exception(state_error)
         entries = entries or self._build_failure_entries(str(error), error_type)
         self._set_target_results(entries)
         self.soar_action.result.add_result_json(convert_dict_to_json_result_dict(entries))

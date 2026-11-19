@@ -80,6 +80,32 @@ def _record_enriched_machine(siemplify: SiemplifyAction, machine: Machine, entit
     return json_data
 
 
+def _build_machine_id_messages(*, enriched: str = "", missing: str = "", failed: str = "") -> list[str]:
+    """Build the status summary lines for a Machine ID enrichment run.
+
+    Args:
+        enriched: Enriched machine ID, if lookup succeeded.
+        missing: Missing machine ID, if no machine was found.
+        failed: Failed machine ID, if lookup raised an error.
+
+    Returns:
+        Formatted status summary lines for the action output message.
+    """
+    messages = [
+        f"{int(bool(enriched))} entities enriched",
+        f"{int(bool(missing))} entities missed",
+        f"{int(bool(failed))} entities failed",
+    ]
+    if enriched:
+        messages.extend([f"Enriched Entities: {enriched}", "Missing Entities: ", "Failed Entities: "])
+    elif missing:
+        messages.extend([f"Missing Entities: {missing}", "Failed Entities: ", "No entities were enriched"])
+    else:
+        messages.extend([f"Failed Entities: {failed}", "No entities were enriched"])
+
+    return messages
+
+
 def _enrich_by_machine_id(
     siemplify: SiemplifyAction,
     manager: MicrosoftDefenderATPManager,
@@ -99,38 +125,16 @@ def _enrich_by_machine_id(
         found_machine = manager.get_machine_by_id(machine_id)
     except DefenderNotFoundException:
         siemplify.LOGGER.info(f"Machine ID {machine_id} was not enriched because nothing was found")
-        messages = [
-            "0 entities enriched",
-            "1 entities missed",
-            "0 entities failed",
-            f"Missing Entities: {machine_id}",
-            "Failed Entities: ",
-            "No entities were enriched",
-        ]
-        return {}, messages, "false", ErrorType.ENDPOINT_NOT_FOUND
+        return {}, _build_machine_id_messages(missing=machine_id), "false", ErrorType.ENDPOINT_NOT_FOUND
     except (MicrosoftDefenderATPError, DefenderException) as error:
-        siemplify.LOGGER.exception(f"Failed to enrich Machine ID {machine_id}: {error}")
-        messages = [
-            "0 entities enriched",
-            "0 entities missed",
-            "1 entities failed",
-            f"Failed Entities: {machine_id}",
-            "No entities were enriched",
-        ]
-        return {}, messages, "false", classify_exception(error)[0]
+        siemplify.LOGGER.info(f"Failed to enrich Machine ID {machine_id}: {error}")
+        siemplify.LOGGER.exception(error)
+        return {}, _build_machine_id_messages(failed=machine_id), "false", classify_exception(error)[0]
 
     _enrich_machine_isolation_status(manager, found_machine, siemplify.LOGGER)
     json_result = {machine_id: _record_enriched_machine(siemplify, found_machine, machine_id)}
-    messages = [
-        "1 entities enriched",
-        "0 entities missed",
-        "0 entities failed",
-        f"Enriched Entities: {machine_id}",
-        "Missing Entities: ",
-        "Failed Entities: ",
-    ]
 
-    return json_result, messages, "true", None
+    return json_result, _build_machine_id_messages(enriched=machine_id), "true", None
 
 
 @output_handler
