@@ -13,70 +13,61 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import InsightSeverity, InsightType
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv
-from ..core.WildfireManager import WildfireManager, WildfireManagerError
+
 import base64
 import time
+from typing import Any
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import InsightSeverity, InsightType
+from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv, output_handler
+from TIPCommon.extraction import extract_action_param
+
+from ..core.WildfireManager import WildfireManager, WildfireManagerError
+
+INTEGRATION_NAME = "Wildfire"
+INTEGRATION_DISPLAY_NAME = "Palo Alto Wildfire"
+ACTION_NAME = "Detonate File"
 
 
-@output_handler
-def main():
-    siemplify = SiemplifyAction()
-    conf = siemplify.get_configuration("Wildfire")
-    api_key = conf["Api Key"]
-    file_paths = siemplify.parameters.get("File Paths", "").split(",")
-
-    # Connect to Wildfire
-    wildfire_manager = WildfireManager(api_key)
-
-    file_infos = {}
-
-    # Upload file to Wildfire
-    for file_path in file_paths:
-        file_infos[file_path] = {
-            "file_info": wildfire_manager.submit_file(file_path),
-            "running": True,
-        }
-
+def _poll_reports(
+    wildfire_manager: WildfireManager,
+    file_infos: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
     all_complete = False
-    reports = {}
+    reports: dict[str, dict[str, Any]] = {}
 
-    # Get reports
     while not all_complete:
-        # Set all_complete to True
         all_complete = True
 
         for file_path, file_info in list(file_infos.items()):
+            if not file_info["running"]:
+                continue
+
+            all_complete = False
+            time.sleep(5)
             try:
-                if file_info["running"]:
-                    # Not all completed - set it to False to enter while loop
-                    # again
-                    all_complete = False
-                    time.sleep(5)
-                    report = wildfire_manager.get_report(file_info["file_info"]["md5"])
-
-                    # Check if report is already available
-                    if (
-                        report
-                        and "task_info" in list(report.keys())
-                        and report["task_info"]
-                    ):
-                        # Report is ready
-                        file_info["running"] = False
-                        reports[file_path] = {
-                            "file_info": report.get("file_info"),
-                            "task_info": report.get("task_info"),
-                        }
-
+                report = wildfire_manager.get_report(file_info["file_info"]["md5"])
             except WildfireManagerError:
-                # Unable to get report - report is not ready yet
-                all_complete = False
+                continue
 
+            if report and report.get("task_info"):
+                file_info["running"] = False
+                reports[file_path] = {
+                    "file_info": report.get("file_info"),
+                    "task_info": report.get("task_info"),
+                }
+
+    return reports
+
+
+def _attach_reports(
+    siemplify: SiemplifyAction,
+    wildfire_manager: WildfireManager,
+    reports: dict[str, dict[str, Any]],
+) -> None:
     for file_path, report in list(reports.items()):
-        # If entity is malware - mark entity as suspicious
         if report["file_info"]["malware"] == "yes":
             insight_msg = f"File {file_path} was found malicious by WildFire"
             siemplify.create_case_insight_internal(
@@ -89,24 +80,60 @@ def main():
                 InsightType.General,
             )
 
-        # Attach reports as csv
         flat_reports = dict_to_flat(report["task_info"])
-
         csv_output = flat_dict_to_csv(flat_reports)
         siemplify.result.add_entity_table(file_path, csv_output)
 
-        # Download reports for file by its MD5 hash
         pdf_reports = wildfire_manager.get_pdf_report(report["file_info"]["md5"])
-
-        # Attach pdf to results
         siemplify.result.add_attachment(
             f"Wildfire report {file_path}",
             pdf_reports["filename"],
             base64.b64encode(pdf_reports["content"]).decode("utf-8"),
         )
 
-    output_message = f'Uploaded {", ".join(file_paths)} and downloaded reports'
-    siemplify.end(output_message, "true")
+
+def _parse_file_paths(file_paths_raw: Any) -> list[str]:
+    file_paths = [path.strip() for path in str(file_paths_raw).split(",") if path.strip()]
+    if not file_paths:
+        msg = "At least one file path must be provided."
+        raise ValueError(msg)
+    return file_paths
+
+
+@output_handler
+def main() -> None:
+    siemplify = SiemplifyAction()
+    siemplify.script_name = f"{INTEGRATION_NAME} - {ACTION_NAME}"
+
+    try:
+        file_paths_raw = extract_action_param(
+            siemplify,
+            param_name="File Paths",
+            is_mandatory=True,
+            print_value=True,
+        )
+        file_paths = _parse_file_paths(file_paths_raw)
+
+        wildfire_manager = WildfireManager.from_siemplify(siemplify)
+        file_infos: dict[str, dict[str, Any]] = {
+            file_path: {
+                "file_info": wildfire_manager.submit_file(file_path),
+                "running": True,
+            }
+            for file_path in file_paths
+        }
+        reports = _poll_reports(wildfire_manager, file_infos)
+        _attach_reports(siemplify, wildfire_manager, reports)
+
+        output_message = (
+            f"Successfully uploaded files and downloaded reports using "
+            f"{INTEGRATION_DISPLAY_NAME}: {', '.join(file_paths)}."
+        )
+        siemplify.end(output_message, True, EXECUTION_STATE_COMPLETED)
+
+    except Exception as e:
+        siemplify.LOGGER.exception("Failed to execute Detonate File action")
+        siemplify.end(f'Error executing action "{ACTION_NAME}". Reason: {e}', False, EXECUTION_STATE_FAILED)
 
 
 if __name__ == "__main__":
