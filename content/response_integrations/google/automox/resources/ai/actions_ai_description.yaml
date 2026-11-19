@@ -1,0 +1,752 @@
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and IP Address entities using device information from Automox.
+    This action retrieves comprehensive device metadata, including operating system
+    details, agent version, compliance status, and connection state. It helps security
+    analysts understand the patch posture and configuration of endpoints within their
+    environment.
+
+
+    ### Flow Description
+
+    1. **Parameter Validation**: Validates that 'Max Patches To Return' is a positive
+    integer if 'Return Patches' is set to true.
+
+    2. **Entity Filtering**: Identifies supported entities (Hostname and IP Address)
+    from the target list.
+
+    3. **Device Retrieval**: For each supported entity, queries the Automox API (`GET
+    api/servers`) to find a matching device based on the entity's identifier.
+
+    4. **Data Enrichment**: If a device is found, extracts metadata (OS, compliance,
+    agent status, etc.) and updates the entity's additional properties.
+
+    5. **Table Creation**: Generates and attaches a data table to the entity containing
+    the flattened device information.
+
+    6. **Patch Retrieval (Optional)**: If requested, fetches the list of pending patches
+    (`GET api/servers/{device_id}/packages`) for the specific device ID and appends
+    them to the JSON results.
+
+    7. **Final Update**: Updates the enriched entities in Google SecOps and returns
+    a summary message of the operation.
+
+
+    ### Additional Notes
+
+    - The action maps Hostname entities to the `display_name` field and IP Address
+    entities to the `ip_addrs_private` field in Automox.
+
+    - If 'Return Patches' is enabled, 'Max Patches To Return' must be greater than
+    0, otherwise the action will fail.
+
+    - Enrichment data added to entities is prefixed with 'Automox'.
+  ai_short_description: >-
+    Enriches Hostname and IP Address entities by retrieving comprehensive device metadata
+    and pending patch information from Automox.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Automox API (GET requests to retrieve devices
+      and patches). It does not mutate external data (no POST/PUT/DELETE requests
+      are made in this script). It updates internal entities by calling `siemplify.update_entities`
+      and adding entity tables, but it does not create insights, modify alert data,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` is defined as `[EntityTypes.HOSTNAME,
+      EntityTypes.ADDRESS]`. Therefore, it targets Hostname and IP Address entities
+      and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches device metadata (OS version, compliance, agent status) and
+      pending patches for Hostname and IP Address entities from Automox. This aligns
+      perfectly with the 'Enrich Asset' expected outcome, as it returns contextual
+      metadata for an internal resource. It does not return threat intelligence or
+      reputation, so it is not 'Enrich IOC'.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Return Patches | Boolean | No | If enabled, action will return a list of patches
+    that need to be updated on the machine. Note: action will not return patches that
+    were installed or the ones that are currently ignored. |
+
+    | Max Patches To Return | Integer | No | Specify how many patches to return. If
+    nothing is provided, action will return 50 patches. |
+Execute Device Command:
+  ai_description: >-
+    ### General Description
+
+    The **Execute Device Command** action allows users to remotely trigger administrative
+    operations on endpoints managed by Automox. It supports operations such as scanning
+    for vulnerabilities, installing specific or all available patches, and rebooting
+    the device. This action operates asynchronously, meaning it initiates the command
+    and then periodically checks the Automox queue until the task is completed or
+    a timeout occurs.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action filters the target entities to include only
+    `HOSTNAME` and `ADDRESS` (IP) entities.
+
+    2. **Device Resolution**: For each suitable entity, it queries the Automox API
+    to find a matching device using the entity's original identifier.
+
+    3. **Connectivity Check**: It verifies that the resolved device is currently online
+    and connected to Automox.
+
+    4. **Queue Check**: It checks the device's command queue to prevent duplicate
+    execution of the same command.
+
+    5. **Command Execution**: It sends a POST request to Automox to queue the requested
+    command (and specific patches if provided).
+
+    6. **Asynchronous Polling**: The action enters a query state where it periodically
+    checks the status of the queued command until a response is received or the execution
+    deadline is reached.
+
+    7. **Result Reporting**: Once finished, it returns the execution details and response
+    from the endpoint in a JSON format.
+
+
+    ### Additional Notes
+
+    - The action is asynchronous. It will poll the Automox API for the status of the
+    command.
+
+    - Ensure the script timeout in Google SecOps is configured appropriately for long-running
+    tasks like patch installations.
+
+    - The action only proceeds if the device is reported as "connected" in Automox.
+  ai_short_description: >-
+    Executes a specified administrative command (such as scanning, installing patches,
+    or restarting) on endpoints managed by Automox.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Queues and executes a command (e.g., scan, install patches, restart) on a specific
+      device in Automox.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Automox API to queue and execute a command
+      on a device, which mutates external data. It does not fetch contextual data
+      for enrichment, update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes `HOSTNAME` and `ADDRESS`.
+      Therefore, it targets Hostname and IP Address entities, filtering strictly by
+      entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action sends a POST request to Automox to execute a command (like scan,
+      install patches, or reboot) on a remote endpoint and retrieves the execution
+      response. This directly aligns with the 'Execute Command on the Host' expected
+      outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Command | Enum | No | Specify a command that needs to be executed on the device.
+    Note: if "Install Specific Patches" is provided, parameter "Patch Names" is mandatory.
+    |
+
+    | Patch Names | String | No | Specify a comma-separated list of patches that need
+    to be installed. |
+Execute Policy:
+  ai_description: "### General Description\nExecutes a specified remediation policy\
+    \ in Automox. This action allows users to trigger policy enforcement either across\
+    \ all devices in the organization or specifically for entities (Hostnames and\
+    \ IP Addresses) identified within the current case context. It first validates\
+    \ the existence of the policy by name and then initiates the execution via the\
+    \ Automox API.\n\n### Flow Description\n1. **Policy Retrieval**: The action searches\
+    \ for the policy ID in Automox that matches the provided `Policy Name`.\n2. **Scope\
+    \ Evaluation**: \n    * If `Remediation Scope` is set to **All Devices**, the\
+    \ action sends a request to Automox to execute the policy on all managed devices.\n\
+    \    * If `Remediation Scope` is set to **Only Entities**, the action proceeds\
+    \ to map entities to Automox devices.\n3. **Device Mapping (Entity Scope only)**:\
+    \ For each supported entity (Hostname or IP Address), the action queries Automox\
+    \ to find the corresponding device ID using the entity's identifier or its 'OriginalIdentifier'\
+    \ attribute.\n4. **Policy Execution**: \n    * For 'All Devices', a single organization-wide\
+    \ command is sent.\n    * For 'Only Entities', the action iterates through the\
+    \ mapped device IDs and triggers the policy for each device individually.\n5.\
+    \ **Result Reporting**: The action tracks the success or failure of the execution\
+    \ for each entity and provides a summary message and a JSON result mapping.\n\n\
+    ### Additional Notes\n- Supported entities are Hostname and IP Address.\n- The\
+    \ action uses the `OriginalIdentifier` property of the entity if available to\
+    \ find the corresponding device in Automox."
+  ai_short_description: >-
+    Executes a specified remediation policy in Automox, targeting either all devices
+    in the organization or specific Hostname and IP Address entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Executes a remediation policy on devices managed by Automox.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches policy and device data from Automox to map entities to devices.
+      It then mutates external data by executing a remediation policy on the target
+      devices via the Automox API. It does not mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: true
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (which includes HOSTNAME
+      and ADDRESS). It also uses `get_entity_original_identifier(entity)` which checks
+      the entity's identifier and `additional_properties` for 'OriginalIdentifier'.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a remediation policy on devices in Automox. This does not
+      directly match any of the specific outcome categories like 'Contain Host' (which
+      specifically isolates an endpoint) or 'Execute Command on the Host' (which expects
+      STDOUT to be returned). Therefore, no outcome categories are selected.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Remediation Scope | Dropdown | Yes | Specify the remediation scope for the action.
+    If 'Only Entities' is selected, then action will execute policies only on the
+    valid entities in the scope. If 'All Devices' is selected, then action will execute
+    the policy on all devices in the organization. |
+
+    | Policy Name | String | Yes | Specify the name of the policy that needs to be
+    executed. |
+List Policies:
+  ai_description: >-
+    ### General Description
+
+    The **List Policies** action retrieves a list of available policies from the Automox
+    platform. This utility action allows security analysts to audit existing policies
+    or identify specific policy IDs required for other automated tasks, such as executing
+    a policy on a specific device. The results are presented as both a raw JSON object
+    and a formatted data table.
+
+
+    ### Flow Description
+
+    1. Extracts the action parameters: Filter Key, Filter Logic, Filter Value, and
+    Max Records To Return.
+
+    2. Initializes the Automox API client.
+
+    3. Makes a GET request to the `/api/policies` endpoint to fetch the list of policies.
+
+    4. Applies client-side filtering to the retrieved policies based on the provided
+    filter criteria (Equal or Contains).
+
+    5. Returns the filtered list of policies as a JSON result and renders an "Available
+    Policies" data table.
+
+
+    ### Additional Notes
+
+    - If the Filter Value is left empty or Filter Logic is set to "Not Specified",
+    the action will retrieve all policies up to the limit without applying any filters.
+
+    - If a filter value and logic are provided, a Filter Key must also be selected,
+    otherwise the action will fail.
+  ai_short_description: >-
+    Retrieves a list of available policies from the Automox platform, optionally filtering
+    by specific attributes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Automox API to fetch policies. It does
+      not mutate external data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process any entities. It operates independently
+      of case entities to fetch policy data from the Automox platform.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of policies from Automox. It does not match any
+      of the specific outcome categories such as enriching IOCs/assets, mutating alerts/tickets,
+      or executing containment actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Filter Key | Dropdown | No | Specify the key that needs\
+    \ to be used to filter policy. |\n| Filter Logic | Dropdown | No | Specify what\
+    \ filter logic should be applied. Filtering logic is working based on the value\
+    \ provided in the \u201CFilter Key\u201D parameter. |\n| Filter Value | String\
+    \ | No | Specify what value should be used in the filter. If \u201CEqual\u201C\
+    \ is selected, action will try to find the exact match among results and if \u201C\
+    Contains\u201C is selected, action will try to find results that contain that\
+    \ substring. If nothing is provided in this parameter, the filter will not be\
+    \ applied. Filtering logic is working based on the value provided in the \u201C\
+    Filter Key\u201D parameter. |\n| Max Records To Return | Integer | No | Specify\
+    \ how many records to return. If nothing is provided, action will return 50 records.\
+    \ |"
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a diagnostic tool used to verify the connectivity between Google
+    SecOps and the Automox server. It ensures that the provided API credentials and
+    the API Root URL are correct and that the network path is open.
+
+
+    ### Flow Description
+
+    1. The action retrieves the integration configuration parameters (API Root, API
+    Key, Verify SSL).
+
+    2. It initializes the AutomoxManager with the retrieved credentials.
+
+    3. The manager executes a GET request to the `api/orgs` endpoint of the Automox
+    API.
+
+    4. The action validates the HTTP response. A status code of 200 or 201 indicates
+    a successful connection.
+
+    5. If the request is successful, it returns a success message; otherwise, it catches
+    the exception and reports a failure with the error details.
+
+
+    ### Additional Notes
+
+    * This action is typically used during the initial setup of the integration or
+    for troubleshooting connection issues.
+
+    * As per standard SOAR practices, Ping actions are not categorized as enrichment
+    actions.
+  ai_short_description: >-
+    A diagnostic action that verifies connectivity between Google SecOps and the Automox
+    server by making a test API call.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only performs a GET request to test connectivity. It does not fetch
+      contextual data for alerts/entities, mutate external or internal data, update
+      entities, or create insights/comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It is a standalone
+      connectivity test.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not perform any enrichment,
+      containment, ticketing, or other operations that match the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
