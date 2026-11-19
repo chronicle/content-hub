@@ -1,16 +1,22 @@
+from __future__ import annotations
+
 from collections import namedtuple
 import json
-import os
-import pytest
+from typing import TYPE_CHECKING
 
+import pytest
 from TIPCommon.types import JSON
 
 from google_cloud_policy_intelligence.core.exceptions import (
     GoogleCloudPolicyIntelligenceError,
 )
 from google_cloud_policy_intelligence.core.GoogleCloudPolicyIntelligenceManager import (
-    GoogleCloudPolicyIntelligenceManager
+    GoogleCloudPolicyIntelligenceManager,
 )
+from google_cloud_policy_intelligence.tests.common import CONFIG_PATH, TESTS_DIR
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 GoogleAPIResponse = namedtuple(
     'GoogleAPIResponse',
@@ -23,8 +29,9 @@ DUMMY_CONTENT = {"status": 200}
 
 
 @pytest.fixture
-def manager(mocker) -> GoogleCloudPolicyIntelligenceManager:
-    with open("config.json", "r", encoding="utf-8") as config_file:
+def manager(mocker: MockerFixture) -> GoogleCloudPolicyIntelligenceManager:
+    """Create a GoogleCloudPolicyIntelligenceManager with a mocked HTTP client."""
+    with CONFIG_PATH.open(encoding="utf-8") as config_file:
         config = json.load(config_file)
 
     api_root = config.get("API Root")
@@ -191,7 +198,5 @@ class TestGoogleCloudPolicyIntelligence:
         - json.JSONDecoderError: If the file content is not valid JSON.
         """
 
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        with open(os.path.join(dir_path, file_name), 'r') as f:
-            response = json.load(f)
-        return response
+        with (TESTS_DIR / file_name).open(encoding="utf-8") as response_file:
+            return json.load(response_file)

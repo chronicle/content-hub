@@ -1,7 +1,13 @@
 from __future__ import annotations
-import pathlib
+
 import json
-from integration_testing.common import get_def_file_content
-INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
-CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / 'config.json'
-CONFIG: dict = get_def_file_content(CONFIG_PATH) if CONFIG_PATH.exists() else {}
+import pathlib
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+TESTS_DIR: pathlib.Path = pathlib.Path(__file__).parent
+INTEGRATION_PATH: pathlib.Path = TESTS_DIR.parent
+CONFIG_PATH: pathlib.Path = TESTS_DIR / "config.json"
+CONFIG: SingleJson = json.loads(CONFIG_PATH.read_text(encoding="utf-8")) if CONFIG_PATH.exists() else {}
