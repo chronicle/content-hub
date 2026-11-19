@@ -556,13 +556,18 @@ class PanoramaManager:
         if non_existing_urls_in_blocklist_to_add:
             params = {
                 "type": "config",
-                "xpath": f"/config/devices/entry[@name='{device_name}']/device-group/entry[@name='{device_group_name}']/profiles/custom-url-category/entry[@name='{policy_name}']/list",
+                "xpath": f"/config/devices/entry[@name='{device_name}']/device-group/entry[@name='{device_group_name}']/profiles/custom-url-category/entry[@name='{policy_name}']",
             }
             for urls_chunk in self.chunks(
                 list(non_existing_urls_in_blocklist_to_add), ITEMS_PER_REQUEST
             ):
                 ips_xml = "".join(f"<member>{url}</member>" for url in urls_chunk)
-                params.update({"element": ips_xml, "action": "set"})
+                params.update(
+                    {
+                        "element": f"<list>{ips_xml}</list><type>URL List</type>",
+                        "action": "set",
+                    }
+                )
                 r = self.session.get(self.server_address, params=params)
                 r.raise_for_status()
 
