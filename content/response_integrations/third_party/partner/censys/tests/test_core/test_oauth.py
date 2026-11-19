@@ -201,6 +201,28 @@ class TestTokenCaching:
         assert post.call_count == 1
         assert "different Client ID" in " ".join(c.args[0] for c in logger.info.call_args_list)
 
+    def test_unreadable_cached_token_is_logged_and_replaced(self) -> None:
+        """A token that cannot be decrypted (changed credentials) is logged and replaced."""
+        soar = FakeSiemplify()
+        with patch(TOKEN_POST, return_value=_response(200, _token_body("tok-1"))):
+            _manager(soar).get_access_token()
+
+        logger = MagicMock()
+        params = IntegrationParams(
+            organization_id="org",
+            use_oauth=True,
+            client_id="cid",
+            client_secret="rotated-secret",
+        )
+        with patch(TOKEN_POST, return_value=_response(200, _token_body("tok-2"))) as post:
+            manager = build_oauth_manager(params, soar, logger=logger)
+            assert manager.get_access_token() == "tok-2"
+
+        messages = " ".join(c.args[0] for c in logger.info.call_args_list)
+        assert post.call_count == 1
+        assert "could not be read" in messages
+        assert "tok-1" not in messages
+
     def test_adapter_authentication_error_is_reported_as_unauthorized(self) -> None:
         """An AuthenticationError from the adapter becomes UnauthorizedErrorException."""
         manager = _manager(FakeSiemplify())
@@ -211,6 +233,25 @@ class TestTokenCaching:
         ):
             with pytest.raises(UnauthorizedErrorException, match="rejected"):
                 manager.force_refresh()
+
+
+class TestSecureDefaults:
+    """SSL verification is on unless the Verify SSL parameter turns it off."""
+
+    def test_adapter_verifies_ssl_by_default(self) -> None:
+        """The adapter verifies certificates when no value is given."""
+        assert CensysOAuthAdapter("cid", "secret").verify_ssl is True
+
+    def test_integration_params_verify_ssl_by_default(self) -> None:
+        """IntegrationParams verifies certificates when no value is given."""
+        assert IntegrationParams(organization_id="org").verify_ssl is True
+
+    def test_configured_value_reaches_the_token_request(self) -> None:
+        """The Verify SSL value is passed to the token endpoint call."""
+        with patch(TOKEN_POST, return_value=_response(200, _token_body())) as post:
+            CensysOAuthAdapter("cid", "secret", verify_ssl=False).refresh_token()
+
+        assert post.call_args.kwargs["verify"] is False
 
 
 class TestAdapterErrors:
@@ -237,11 +278,20 @@ class TestAdapterErrors:
             with pytest.raises(CensysException, match="Invalid OAuth token response"):
                 CensysOAuthAdapter("cid", "secret").refresh_token()
 
+    @pytest.mark.parametrize("body", [[1, 2], "not-json-object", 42, None])
+    def test_non_object_token_body_raises_clean_error(self, body: object) -> None:
+        """A token response that is not a JSON object becomes a CensysException, not a crash."""
+        with patch(TOKEN_POST, return_value=_response(200, body)):
+            with pytest.raises(CensysException, match="Invalid OAuth token response"):
+                CensysOAuthAdapter("cid", "secret").refresh_token()
+
     def test_connection_error_raises_censys_exception(self) -> None:
         """A network failure while requesting the token is reported clearly."""
         with patch(TOKEN_POST, side_effect=requests.ConnectionError("no route")):
-            with pytest.raises(CensysException, match="Failed to connect to the Censys OAuth"):
+            with pytest.raises(CensysException, match="Failed to connect to the Censys OAuth") as error:
                 CensysOAuthAdapter("cid", "secret").refresh_token()
+
+        assert isinstance(error.value.__cause__, requests.ConnectionError)
 
     def test_expiry_includes_safety_buffer(self) -> None:
         """The stored lifetime is expires_in minus the 60 second safety buffer."""

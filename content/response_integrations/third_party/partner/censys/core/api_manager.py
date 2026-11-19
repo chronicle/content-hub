@@ -59,20 +59,25 @@ from .params import IntegrationParams
 from .utils import HandleExceptions
 
 
-def _validate_credentials(params: IntegrationParams) -> None:
+def _validate_credentials(params: IntegrationParams, siemplify: ChronicleSOAR | None) -> None:
     """Stop before any request when the credentials for the selected method are missing.
 
     Args:
         params: Integration configuration.
+        siemplify: SOAR object; OAuth needs it because the access token is cached in its context.
 
     Raises:
         ValidationException: If the API Key (OAuth off) or the Client ID and Client Secret
-            (OAuth on) are empty.
+            (OAuth on) are empty, or OAuth is on without a SOAR object.
     """
     if params.use_oauth:
         if not params.client_id or not params.client_secret:
             raise ValidationException(
                 "Client ID and Client Secret are required when OAuth authentication is enabled."
+            )
+        if siemplify is None:
+            raise ValidationException(
+                "Chronicle SOAR instance is required when OAuth authentication is enabled."
             )
     elif not params.api_key:
         raise ValidationException("API Key is required when OAuth authentication is disabled.")
@@ -110,7 +115,7 @@ class APIManager:
                 and SSL verification).
             siemplify: Chronicle SOAR SDK instance for logging
         """
-        _validate_credentials(params)
+        _validate_credentials(params, siemplify)
 
         self.siemplify = siemplify
         self.api_root = API_ROOT

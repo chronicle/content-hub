@@ -148,6 +148,21 @@ class TestAuthenticationSetup:
         post.assert_not_called()
         request.assert_not_called()
 
+    def test_oauth_without_a_soar_object_raises_before_any_request(self) -> None:
+        """OAuth caches the token in the SOAR context, so a missing SOAR object is a clear error."""
+        params = IntegrationParams(
+            organization_id="org",
+            use_oauth=True,
+            client_id="cid",
+            client_secret="secret",
+        )
+        with patch(TOKEN_POST) as post, patch(SESSION_REQUEST) as request:
+            with pytest.raises(ValidationException, match="Chronicle SOAR instance is required"):
+                APIManager(params, siemplify=None)
+
+        post.assert_not_called()
+        request.assert_not_called()
+
 
 class TestUnauthorizedHandling:
     """A 401 refreshes the token once in OAuth mode and is final in API Key mode."""

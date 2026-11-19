@@ -22,6 +22,7 @@ from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
 from TIPCommon.oauth import (
     AuthenticationError,
     CredStorage,
+    EncryptionError,
     OAuthAdapter,
     OauthManager,
     OauthToken,
@@ -43,6 +44,16 @@ from .constants import (
 from .params import IntegrationParams
 
 PBKDF2_ITERATIONS: int = 200_000
+
+# Failures seen when the cached token was encrypted with a different key (changed credentials) or is
+# corrupted: TIPCommon can raise its own errors, or fail while unpadding or parsing the decrypted text.
+UNREADABLE_TOKEN_ERRORS: tuple[type[Exception], ...] = (
+    EncryptionError,
+    AuthenticationError,
+    ValueError,
+    KeyError,
+    TypeError,
+)
 
 
 class InfoLogger(Protocol):
@@ -119,7 +130,7 @@ class CensysOAuthAdapter(OAuthAdapter):
         self,
         client_id: str,
         client_secret: str,
-        verify_ssl: bool = False,
+        verify_ssl: bool = True,
     ) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
@@ -152,7 +163,7 @@ class CensysOAuthAdapter(OAuthAdapter):
                 timeout=DEFAULT_REQUEST_TIMEOUT,
             )
         except requests.RequestException as e:
-            raise CensysException(f"Failed to connect to the Censys OAuth server: {e}")
+            raise CensysException(f"Failed to connect to the Censys OAuth server: {e}") from e
 
         if response.status_code == UNAUTHORIZED_STATUS_CODE:
             raise UnauthorizedErrorException(
@@ -167,7 +178,7 @@ class CensysOAuthAdapter(OAuthAdapter):
             data = response.json()
             access_token = data["access_token"]
         except (KeyError, ValueError, TypeError) as e:
-            raise CensysException(f"Invalid OAuth token response: {e}")
+            raise CensysException(f"Invalid OAuth token response: {e}") from e
 
         expires_in = _usable_lifetime_seconds(data.get("expires_in"))
 
@@ -200,11 +211,13 @@ class CensysOAuthManager(OauthManager):
         """Load the cached token, treating anything that cannot be read as no token.
 
         Decrypting with a different key (changed credentials) does not always raise the
-        ``EncryptionError`` that TIPCommon expects; it can also fail while unpadding or parsing.
+        ``EncryptionError`` that TIPCommon expects; it can also fail while unpadding or parsing,
+        which is why every error in ``UNREADABLE_TOKEN_ERRORS`` counts as "no token".
         """
         try:
             return self._cred_storage.get_token()
-        except Exception:
+        except UNREADABLE_TOKEN_ERRORS as e:
+            self._log(f"Cached access token could not be read ({type(e).__name__}). It will be replaced.")
             return None
 
     def _token_is_expired(self) -> bool:
@@ -255,7 +268,7 @@ class CensysOAuthManager(OauthManager):
         try:
             self._refresh_token()
         except AuthenticationError as e:
-            raise UnauthorizedErrorException(str(e))
+            raise UnauthorizedErrorException(str(e)) from e
         self.save_token()
         remaining = (self._token.expiration_time - unix_now()) // NUM_OF_MILLI_IN_SEC
         self._log(f"New access token obtained and stored (valid for {remaining}s).")

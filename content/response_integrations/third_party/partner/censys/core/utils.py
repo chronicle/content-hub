@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any, List, Optional, Tuple, Union
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
+from TIPCommon.types import ChronicleSOAR
 
 from .censys_exceptions import (
     CensysException,
@@ -16,7 +17,7 @@ from .constants import ENRICHMENT_PREFIX, INTEGRATION_NAME, PING_ACTION_IDENTIFI
 from .params import IntegrationParams
 
 
-def get_integration_params(siemplify: Any) -> IntegrationParams:
+def get_integration_params(siemplify: ChronicleSOAR) -> IntegrationParams:
     """
     Retrieve the integration parameters from Siemplify configuration.
 

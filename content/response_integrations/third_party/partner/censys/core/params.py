@@ -31,7 +31,7 @@ class IntegrationParams:
     """
 
     organization_id: str
-    verify_ssl: bool = False
+    verify_ssl: bool = True
     use_oauth: bool = False
     api_key: str = ""
     client_id: str = ""
