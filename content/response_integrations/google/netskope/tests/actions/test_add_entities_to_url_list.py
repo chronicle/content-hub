@@ -131,5 +131,9 @@ class TestAddEntitiesToURLList:
 
             mock_siemplify.end.assert_called_once()
             args, _ = mock_siemplify.end.call_args
-            assert "Successfully added the following entities" in args[0]
-            assert "target1.com" in args[0]
+            expected_message = (
+                "Successfully added the following entities to the "
+                "'WhiteList' list in Netskope: target1.com. "
+                "Changes are pending deployment.\n"
+            )
+            assert args[0] == expected_message

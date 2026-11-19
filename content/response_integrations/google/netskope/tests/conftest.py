@@ -1,11 +1,16 @@
 from __future__ import annotations
+
+import sys
 from unittest.mock import MagicMock
 
 import pytest
+import soar_sdk  # noqa: F401
+
+sys.stdout = sys.__stdout__
 
 
 @pytest.fixture(autouse=True)
-def mock_siemplify(monkeypatch) -> MagicMock:
+def mock_siemplify(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Mock SiemplifyAction for all actions to prevent sys.argv crashes.
 
     Args:
@@ -36,15 +41,10 @@ def mock_siemplify(monkeypatch) -> MagicMock:
     for action in actions:
         try:
             monkeypatch.setattr(
-                f"Integrations.Netskope.ActionsScripts.{action}.SiemplifyAction",
+                f"netskope.actions.{action}.SiemplifyAction",
                 MagicMock(return_value=mock_api, LOGGER=mock_api.LOGGER),
             )
-        except AttributeError:
-            # If the module hasn't been imported yet or doesn't exist, we
-            # might get an error if we try to patch it directly like this
-            # without it being loaded.
-            # But pytest runs from root, so it might work if it's imported in the test.
-            # Usually, monkeypatch can patch modules if you give the full path string.
+        except (AttributeError, ModuleNotFoundError):
             pass
 
     return mock_api

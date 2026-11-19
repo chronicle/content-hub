@@ -1,26 +1,26 @@
 from __future__ import annotations
+
+from collections.abc import Generator
 import datetime
 from itertools import islice
 import json
-import os
-from collections.abc import Generator
+import pathlib
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-from netskope.core.datamodels import Client
-
 import requests
-import netskopeManager as NM
-from netskope.core.NetskopeManager import NetskopeManager
-from netskope.core.NetskopeManagerV2 import NetskopeManagerV2
-from netskope.core.NetskopeManagerFactory import NetskopeManagerFactory
+
+from netskope.core import NetskopeManager as NM
+from netskope.core.datamodels import Client
 from netskope.core.NetskopeAuth import NetskopeV1Auth, NetskopeV2BearerAuth, NetskopeV2OAuth
+from netskope.core.NetskopeManager import NetskopeManager
+from netskope.core.NetskopeManagerFactory import NetskopeManagerFactory
+from netskope.core.NetskopeManagerV2 import NetskopeManagerV2
 
 # Load mock data
-DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-MOCK_DATA_PATH = os.path.join(DIR_PATH, "mock_data.json")
+MOCK_DATA_PATH = pathlib.Path(__file__).parent / "mock_data.json"
 
-with open(MOCK_DATA_PATH, "r", encoding="utf-8") as f:
+with MOCK_DATA_PATH.open(encoding="utf-8") as f:
     MOCK_DATA = json.load(f)
 
 
@@ -134,7 +134,7 @@ class TestNetskopeManager:
             mock_get.side_effect = [mock_response_1, mock_response_2]
 
             manager = NetskopeManager("https://test.com", "api_key")
-            with patch("NetskopeManager.MAX_CLIENTS_LIMIT_V1", 2):
+            with patch("netskope.core.NetskopeManager.MAX_CLIENTS_LIMIT_V1", 2):
                 clients_gen = manager.get_clients()
                 clients = list(clients_gen)
 
@@ -463,7 +463,7 @@ class TestNetskopeManagerV2:
             mock_get.side_effect = [mock_response_1, mock_response_2]
 
             manager = NetskopeManagerV2("https://test.com", "v2_token")
-            with patch("NetskopeManagerV2.MAX_EVENTS_LIMIT_V2", 2):
+            with patch("netskope.core.NetskopeManagerV2.MAX_EVENTS_LIMIT_V2", 2):
                 events_gen = manager.get_events()
                 events = list(events_gen)
 
@@ -489,7 +489,7 @@ class TestNetskopeManagerV2:
             mock_get.side_effect = [mock_response_1, mock_response_2]
 
             manager = NetskopeManagerV2("https://test.com", "v2_token")
-            with patch("NetskopeManagerV2.MAX_CLIENTS_LIMIT_V2", 2):
+            with patch("netskope.core.NetskopeManagerV2.MAX_CLIENTS_LIMIT_V2", 2):
                 clients_gen = manager.get_clients()
                 clients = list(clients_gen)
 
@@ -532,7 +532,7 @@ class TestNetskopeManagerV2:
             mock_get.side_effect = [mock_response_1, mock_response_2]
 
             manager = NetskopeManagerV2("https://test.com", "v2_token")
-            with patch("NetskopeManagerV2.MAX_EVENTS_LIMIT_V2", 2):
+            with patch("netskope.core.NetskopeManagerV2.MAX_EVENTS_LIMIT_V2", 2):
                 alerts_gen = manager.get_alerts()
                 alerts = list(alerts_gen)
 
@@ -554,7 +554,7 @@ class TestNetskopeManagerFactory:
         Returns:
             None
         """
-        with patch("NetskopeManagerFactory.extract_script_param") as mock_extract:
+        with patch("netskope.core.NetskopeManagerFactory.extract_script_param") as mock_extract:
 
             def side_effect(*_: Any, **kwargs: Any) -> Any:
                 param_name = kwargs.get("param_name")
@@ -582,7 +582,7 @@ class TestNetskopeManagerFactory:
         Returns:
             None
         """
-        with patch("NetskopeManagerFactory.extract_script_param") as mock_extract:
+        with patch("netskope.core.NetskopeManagerFactory.extract_script_param") as mock_extract:
 
             def side_effect(*_: Any, **kwargs: Any) -> Any:
                 param_name = kwargs.get("param_name")
@@ -610,9 +610,10 @@ class TestNetskopeManagerFactory:
         Returns:
             None
         """
-        with patch(
-            "NetskopeManagerFactory.extract_script_param"
-        ) as mock_extract, patch("requests.Session.request") as mock_request:
+        with (
+            patch("netskope.core.NetskopeManagerFactory.extract_script_param") as mock_extract,
+            patch("requests.Session.request") as mock_request,
+        ):
 
             def side_effect(*_: Any, **kwargs: Any) -> Any:
                 param_name = kwargs.get("param_name")
