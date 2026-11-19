@@ -29,6 +29,7 @@ from ..core.FireEyeHXManager import FireEyeHXManager
 from ..core.UtilsManager import parse_bulk_acquisition_id
 
 INTEGRATION_NAME: str = "FireEyeHX"
+INTEGRATION_DISPLAY_NAME: str = "FireEye HX"
 SCRIPT_NAME: str = "Get Bulk Acquisition"
 
 
@@ -87,10 +88,13 @@ def main() -> None:
         state = acquisition_data.get("state", "UNKNOWN")
         result_value = state
         siemplify.result.add_result_json(acquisition_data)
-        output_message = f"Successfully retrieved bulk acquisition {clean_bulk_id}. State: {state}"
+        output_message = (
+            f'Successfully returned information about the bulk acquisition with ID "{clean_bulk_id}" in '
+            f"{INTEGRATION_DISPLAY_NAME}. State: {state}."
+        )
 
     except Exception as err:
-        output_message = f"Error executing {SCRIPT_NAME}: {err}"
+        output_message = f'Error executing action "{SCRIPT_NAME}". Reason: {err}'
         siemplify.LOGGER.exception(output_message)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
