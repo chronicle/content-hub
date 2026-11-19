@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import shlex
 from unittest import mock
 
 import pytest
@@ -169,3 +170,151 @@ def test_list_iptables_rules_builds_expected_command(
     run_command.assert_called_once_with(expected_command)
     assert status_code == 0
     assert data_table == ["-,Chain,Rule", "-P,INPUT,ACCEPT"]
+
+
+@pytest.mark.parametrize(
+    "ip_address",
+    ["1.1.1.1; id;", "1.1.1.1 -j ACCEPT", "-j", "!1.1.1.1", "", None],
+)
+def test_block_ip_in_iptables_rejects_injection_before_connecting(
+    ip_address: str | None,
+) -> None:
+    """An invalid address must be rejected before any SSH session is opened."""
+    manager = SshManager("10.0.0.1", "user", "pass")
+    with (
+        mock.patch.object(manager, "_create_ssh_client") as create_client,
+        mock.patch.object(manager, "_run_command") as run_command,
+    ):
+        with pytest.raises(SshManagerError):
+            manager.block_ip_in_iptables(ip_address)
+
+    create_client.assert_not_called()
+    run_command.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("ip_address", "expected_arg"),
+    [
+        ("192.168.1.1", "192.168.1.1"),
+        (" 10.0.0.0/24 ", "10.0.0.0/24"),
+        ("1.1.1.1;id", "'1.1.1.1;id'"),
+        ("$(id)", "'$(id)'"),
+    ],
+)
+def test_block_ip_in_iptables_builds_expected_commands(
+    ip_address: str, expected_arg: str
+) -> None:
+    """Check (-C) then insert (-I) commands are built with the shell-safe address."""
+    manager = SshManager("10.0.0.1", "user", "pass")
+    manager.client = mock.MagicMock()
+    with (
+        mock.patch.object(manager, "_create_ssh_client"),
+        mock.patch.object(
+            manager,
+            "_run_command",
+            side_effect=[(1, None, None), (0, None, None)],
+        ) as run_command,
+    ):
+        _, status_code = manager.block_ip_in_iptables(ip_address)
+
+    assert run_command.call_args_list == [
+        mock.call(f"iptables -C INPUT -s {expected_arg} -j DROP"),
+        mock.call(f"iptables -I INPUT -s {expected_arg} -j DROP"),
+    ]
+    assert status_code == 0
+
+
+def test_block_ip_in_iptables_skips_insert_when_rule_exists() -> None:
+    """If the DROP rule already exists (-C returns 0), no insert command is run."""
+    manager = SshManager("10.0.0.1", "user", "pass")
+    manager.client = mock.MagicMock()
+    with (
+        mock.patch.object(manager, "_create_ssh_client"),
+        mock.patch.object(
+            manager, "_run_command", return_value=(0, None, None)
+        ) as run_command,
+    ):
+        message, _ = manager.block_ip_in_iptables("192.168.1.1")
+
+    run_command.assert_called_once_with("iptables -C INPUT -s 192.168.1.1 -j DROP")
+    assert "Already blocking" in message
+
+
+def _run_manager_method(method_name: str, value: str) -> str:
+    """Call an SshManager method with mocked SSH and return the command it ran."""
+    manager = SshManager("10.0.0.1", "user", "pass")
+    manager.client = mock.MagicMock()
+    with (
+        mock.patch.object(manager, "_create_ssh_client"),
+        mock.patch.object(
+            manager, "_run_command", return_value=(0, None, None)
+        ) as run_command,
+    ):
+        getattr(manager, method_name)(value)
+
+    run_command.assert_called_once()
+    return run_command.call_args.args[0]
+
+
+@pytest.mark.parametrize(
+    ("username", "expected_args"),
+    [
+        ("bob", ["pkill", "-KILL", "-u", "bob"]),
+        ("bob'; id; '", ["pkill", "-KILL", "-u", "bob'; id; '"]),
+        ("$(id)", ["pkill", "-KILL", "-u", "$(id)"]),
+    ],
+)
+def test_logoff_user_passes_username_as_single_argument(
+    username: str, expected_args: list[str]
+) -> None:
+    """The username is always one literal argument, even with quotes or metacharacters."""
+    command = _run_manager_method("logoff_user", username)
+    assert shlex.split(command) == expected_args
+
+
+@pytest.mark.parametrize(
+    ("process", "expected_command"),
+    [
+        ("1234", "kill -9 1234"),
+        ("nginx", "pkill nginx"),
+        ("-f nginx", "pkill -f nginx"),
+        ("sshd; id", "pkill 'sshd;' id"),
+        ("$(id)", "pkill '$(id)'"),
+    ],
+)
+def test_terminate_process_keeps_arguments_and_neutralizes_shell(
+    process: str, expected_command: str
+) -> None:
+    """Normal values build the same command as before; metacharacters stay literal."""
+    assert _run_manager_method("terminate_process", process) == expected_command
+
+
+@pytest.mark.parametrize(
+    ("wait_time", "expected_command"),
+    [
+        ("now", "shutdown -h now"),
+        ("+5", "shutdown -h +5"),
+        ("+5 going down", "shutdown -h +5 going down"),
+        ("now; id", "shutdown -h 'now;' id"),
+        ("`id`", "shutdown -h '`id`'"),
+    ],
+)
+def test_shutdown_keeps_arguments_and_neutralizes_shell(
+    wait_time: str, expected_command: str
+) -> None:
+    """Normal values build the same command as before; metacharacters stay literal."""
+    assert _run_manager_method("shutdown", wait_time) == expected_command
+
+
+def test_shell_escape_arguments_rejects_unbalanced_quotes() -> None:
+    """Unbalanced quotes are rejected before any SSH session is opened."""
+    manager = SshManager("10.0.0.1", "user", "pass")
+    with (
+        mock.patch.object(manager, "_create_ssh_client") as create_client,
+        mock.patch.object(manager, "_run_command") as run_command,
+    ):
+        with pytest.raises(SshManagerError):
+            manager.shutdown("+5 'going down")
+
+    run_command.assert_not_called()
+    create_client.assert_not_called()

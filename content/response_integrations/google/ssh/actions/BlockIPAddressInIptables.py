@@ -13,8 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import *
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.SshManager import SshManager, SshManagerError
 
 
@@ -37,10 +40,10 @@ def main():
         )
     except SshManagerError as err:
         siemplify.end(
-            f'Error executing action "Block IP Address In Iptables". Reason: {err}',
+            f'Error executing action "Block IP Address in iptables". Reason: {err}',
             "False",
+            EXECUTION_STATE_FAILED,
         )
-        return
 
     if status_code == 0:
         results = "True"

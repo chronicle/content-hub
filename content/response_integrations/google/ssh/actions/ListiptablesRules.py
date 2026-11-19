@@ -13,8 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import *
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.SshManager import SshManager, SshManagerError
 
 
@@ -37,11 +40,11 @@ def main():
     try:
         status_code, output, error = ssh_wrapper.list_iptables_rules(chain)
     except SshManagerError as err:
-        siemplify.result.add_result_json(json_results)
         siemplify.end(
-            f'Error executing action "List iptables Rules". Reason: {err}', "False"
+            f'Error executing action "List iptables Rules". Reason: {err}',
+            "False",
+            EXECUTION_STATE_FAILED,
         )
-        return
 
     if status_code == 0:
         siemplify.result.add_data_table("Results:", output)

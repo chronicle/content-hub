@@ -36,7 +36,7 @@ from paramiko import client, Transport
 #             CONSTANTS               #
 # =====================================
 CON_LIST_RUNNING_PROCESS = "ps -aux"  # List all running processes
-CON_LOGOFF_USER = "pkill -KILL -u '{0}'"  # Logoff user
+CON_LOGOFF_USER = "pkill -KILL -u {0}"  # Logoff user (argument is shlex-quoted)
 CON_KILL_PROCESS = "kill -9 {0}"  # Kill process by PID
 CON_PKILL_PROCESS = "pkill {0}"  # Kill processes by name
 CON_KILLALL_PROCESS = "killall -9 {0}"  # Kill all processes by name
@@ -151,6 +151,28 @@ def sanitize_ip_address(ip_address: str | None) -> str:
     return safe_value
 
 
+def shell_escape_arguments(value: str | None) -> str:
+    """Re-quote each whitespace-separated argument so the remote shell runs it literally.
+
+    Keeps multi-argument values (e.g. "-f nginx", "+5 going down") working
+    exactly as before, while shell metacharacters (';', '|', '$()', ...) are
+    passed as plain text instead of being interpreted.
+
+    Args:
+        value: Raw value from the action parameters.
+
+    Returns:
+        The same arguments, each one shell-escaped.
+
+    Raises:
+        SshManagerError: If the value has unbalanced quotes.
+    """
+    try:
+        return shlex.join(shlex.split(value or ""))
+    except ValueError as err:
+        raise SshManagerError(f"Invalid value '{value}': {err}.") from err
+
+
 class SshManager:
     """
     Responsible for all SSH operations functionality
@@ -263,7 +285,7 @@ class SshManager:
         :return: {boolean}
         """
         self._create_ssh_client()
-        logoff_command = CON_LOGOFF_USER.format(username)
+        logoff_command = CON_LOGOFF_USER.format(shlex.quote(username))
         status_code, output, error = self._run_command(logoff_command)
         self.client.close()
         return status_code
@@ -274,11 +296,11 @@ class SshManager:
         :param process: {string} The process name or ID to terminate
         :return: {boolean}
         """
-        self._create_ssh_client()
         if process.isdigit():
             kill_command = CON_KILL_PROCESS.format(process)
         else:
-            kill_command = CON_PKILL_PROCESS.format(process)
+            kill_command = CON_PKILL_PROCESS.format(shell_escape_arguments(process))
+        self._create_ssh_client()
         status_code, output, error = self._run_command(kill_command)
         self.client.close()
         return status_code
@@ -289,8 +311,8 @@ class SshManager:
         :param wait_time: {string} Time to wait before shutdown in minutes
         :return: {boolean}
         """
+        shutdown_command = CON_SHUTDOWN_COMMAND.format(shell_escape_arguments(wait_time))
         self._create_ssh_client()
-        shutdown_command = CON_SHUTDOWN_COMMAND.format(wait_time)
         status_code, output, error = self._run_command(shutdown_command)
         print(status_code)
         self.client.close()
