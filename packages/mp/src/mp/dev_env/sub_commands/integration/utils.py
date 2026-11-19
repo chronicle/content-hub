@@ -32,6 +32,7 @@ from mp.build_project.sub_commands.integration.build import (
 from mp.build_project.sub_commands.repository.build import build_repository
 from mp.core.custom_types import RepositoryType
 from mp.core.data_models.integrations.action.parameter import ActionParamType
+from mp.core.data_models.integrations.connector.parameter import ParamMode
 from mp.core.data_models.integrations.integration import Integration
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.utils import to_snake_case
@@ -346,7 +347,7 @@ def _normalize_unzipped_integration(dest: Path) -> None:
 
 def _normalize_param_type(
     raw_type: str | int | None,
-    enum_cls: type[ScriptParamType | ActionParamType],
+    enum_cls: type[ScriptParamType | ActionParamType | ParamMode],
     default: int,
 ) -> int:
     """Normalize a raw parameter type to its integer enum value.
@@ -405,6 +406,20 @@ def _normalize_action_param_type(
 
     """
     return _normalize_param_type(raw_type, ActionParamType, default)
+
+
+def _normalize_connector_param_mode(raw_mode: str | int | None, default: int = ParamMode.REGULAR.value) -> int:
+    """Normalize a raw connector parameter mode to its integer enum value.
+
+    Args:
+        raw_mode: Raw parameter mode from definition or JSON.
+        default: Fallback integer value.
+
+    Returns:
+        The integer representation of the connector parameter mode.
+
+    """
+    return _normalize_param_type(raw_mode, ParamMode, default)
 
 
 def _normalize_integration_properties(def_data: SingleJson, identifier: str) -> None:
@@ -534,7 +549,7 @@ def _normalize_connector_def(item_def: SingleJson, identifier: str) -> None:
             cp.setdefault("IsMandatory", cp.get("Mandatory", False))
             cp.setdefault("IsAdvanced", cp.get("IsAdvanced", False))
             cp.setdefault("DefaultValue", cp.get("DefaultValue"))
-            cp.setdefault("Mode", cp.get("Mode", 0))
+            cp["Mode"] = _normalize_connector_param_mode(cp.get("Mode", 0), default=ParamMode.REGULAR.value)
             cp["Type"] = _normalize_script_param_type(
                 cp.get("Type", 2),
                 default=ScriptParamType.STRING.value,
