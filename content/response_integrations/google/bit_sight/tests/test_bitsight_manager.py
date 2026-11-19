@@ -1,55 +1,36 @@
 from __future__ import annotations
 
-import os
 import json
+import os
 import unittest
 from typing import List
-from unittest.mock import patch, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from bit_sight.core.datamodels import Company, VulnerabilityStats
-from bit_sight.core.BitSightManager import BitSightManager
 from bit_sight.core.BitSightExceptions import BitSightException
+from bit_sight.core.BitSightManager import BitSightManager
+from bit_sight.core.datamodels import Company, VulnerabilityStats
+from bit_sight.tests.common import CONFIG
 
-# from Tests.integrations.BitSight.conftest import (
-#     mock_get_companies_response,
-#     mock_get_vulnerabilities_response
-#
-from integration_testing.logger import Logger
+with open(os.path.join(os.path.dirname(__file__), "companies.json"), encoding="utf-8") as companies_file:
+    COMPANIES_DATA = json.load(companies_file)
 
-
-################################################
-#       Class based approach - Unittests       #
-################################################
-
-
-COMPANIES_DATA = json.load(
-    open(
-        os.path.join(os.path.dirname(__file__), "companies.json")
-    )
-)
 
 class TestBitsightManager(unittest.TestCase):
     def setUp(self) -> None:
-        with open("config.json", "r") as f:
-            data = f.read()
-
-        config = json.loads(data)
-        api_root = config.get("API Root")
-        api_key = config.get("API Key")
-        verify_ssl = config.get("Verify SSL")
+        api_root = CONFIG.get("API Root")
+        api_key = CONFIG.get("API Key")
+        verify_ssl = CONFIG.get("Verify SSL")
         if isinstance(verify_ssl, str):
-            verify_ssl = (
-                True if verify_ssl.lower() == "true" else False
-            )
+            verify_ssl = verify_ssl.lower() == "true"
         self.manager = BitSightManager(
-            api_root=api_root,
-            api_key=api_key,
-            verify_ssl=verify_ssl,
-            siemplify_logger=Logger()
+            api_root=str(api_root),
+            api_key=str(api_key),
+            verify_ssl=bool(verify_ssl),
+            siemplify_logger=MagicMock(),
         )
-        self.test_company_id = ''
+        self.test_company_id = ""
 
     def test_connectivity_success(self) -> None:
         """
