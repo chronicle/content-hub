@@ -1,16 +1,18 @@
 import json
 import unittest
-import os
+from unittest.mock import Mock
+
 import pytest
 import requests
-from unittest.mock import Mock
+
+from microsoft_intune.core.exceptions import (
+    MicrosoftIntuneManagerError,
+)
 from microsoft_intune.core.MicrosoftIntuneManager import (
     MicrosoftIntuneManager,
-    SiemplifyLogger
+    SiemplifyLogger,
 )
-from microsoft_intune.core.exceptions import (
-    MicrosoftIntuneManagerError
-)
+from microsoft_intune.tests.common import CONFIG_PATH, TESTS_DIR
 
 
 class CustomReponse:
@@ -71,7 +73,8 @@ class TestMicrosoftIntuneManager(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        with open("config.json", "r", encoding="utf-8") as config_file:
+        """Initialize a TestableMicrosoftIntuneManager from test config."""
+        with CONFIG_PATH.open(encoding="utf-8") as config_file:
             config = json.load(config_file)
 
         azure_ad_endpoint = config.get("Azure AD endpoint")
@@ -285,8 +288,5 @@ class TestMicrosoftIntuneManager(unittest.TestCase):
             Returns:
                 json
             """
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        conf_path = os.path.join(dir_path, file_name)
-        with open(conf_path, 'r') as f:
-            hash_response = json.load(f)
-        return hash_response
+        with (TESTS_DIR / file_name).open(encoding="utf-8") as response_file:
+            return json.load(response_file)

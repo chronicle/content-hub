@@ -1,7 +1,6 @@
 """
 Tests configuration file
 """
-pytest_plugins = ("integration_testing.conftest",)
 import sys
 import os
 import pkgutil
@@ -129,7 +128,3 @@ def mock_wipe_devices_to_raise_manager_error(
         "wipe_managed_device",
         mock_raise_manager_error,
     )
-
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
-    return script_session
