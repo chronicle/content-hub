@@ -309,7 +309,53 @@ def test_get_case_sla_no_sla_configured_completes_with_false_result(
 
     assert action_output.results.execution_state == ExecutionState.COMPLETED
     assert action_output.results.result_value is False
-    assert action_output.results.json_output is None
+    assert action_output.results.json_output is not None
+    assert action_output.results.json_output.json_result == {
+        "SLA_unix": None,
+        "SLA": None,
+        "critical_SLA_unix": None,
+        "critical_SLA": None,
+        "expiration_status": "NoSla",
+        "remaining_time_since_last_pause_ms": None,
+        "remaining_time_since_last_pause": None,
+    }
+    assert action_output.results.output_message == "SLA was not set for case 123."
+
+
+@set_metadata(integration_config={}, parameters=dict(DEFAULT_PARAMS), input_context=copy.deepcopy(ALERT_1_CONTEXT))
+def test_get_case_sla_legacy_no_sla_normalizes_status_and_returns_json_result(
+    monkeypatch: pytest.MonkeyPatch,
+    tools: Tools,
+    action_output: MockActionOutput,
+) -> None:
+    monkeypatch.setattr(sys, "argv", [arg for arg in sys.argv if arg != "--onePlatformSupport"])
+    tools.set_case_metadata({
+        "id": 123,
+        "name": "Legacy Case Without SLA",
+        "priority": 40,
+        "status": 1,
+        "sla": {
+            "slaExpirationTime": None,
+            "criticalExpirationTime": None,
+            "expirationStatus": 2,
+            "remainingTimeSinceLastPause": None,
+        },
+    })
+
+    GetCaseSla.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.result_value is False
+    assert action_output.results.json_output is not None
+    assert action_output.results.json_output.json_result == {
+        "SLA_unix": None,
+        "SLA": None,
+        "critical_SLA_unix": None,
+        "critical_SLA": None,
+        "expiration_status": "NoSla",
+        "remaining_time_since_last_pause_ms": None,
+        "remaining_time_since_last_pause": None,
+    }
     assert action_output.results.output_message == "SLA was not set for case 123."
 
 

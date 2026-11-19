@@ -34,6 +34,7 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 CASE_EXPAND_FIELDS: list[str] = ["sla"]
 PAUSED_STATUS_LABEL = "Paused"
 PAUSED_STATUS_KEY = "paused"
+NO_SLA_STATUS_LABEL = "NoSla"
 NO_SLA_STATUS_KEYS = frozenset({"nosla", "no_sla"})
 LEGACY_NO_SLA_STATUS = 2
 MS_PER_SECOND = 1000
@@ -148,7 +149,7 @@ def _extract_case_sla_details(case_data: SingleJson) -> _CaseSlaDetails:
     return _CaseSlaDetails(
         sla_expiration=None,
         critical_expiration=None,
-        expiration_status=_extract_expiration_status(sla_data) or _extract_expiration_status(stage_sla_data),
+        expiration_status=NO_SLA_STATUS_LABEL,
         remaining_time_ms=None,
         is_paused=False,
     )
@@ -193,7 +194,7 @@ def _format_output_message(
     sla_details: _CaseSlaDetails,
     json_result: SingleJson,
 ) -> str:
-    """Build the output message for an active or paused case SLA."""
+    """Build the output message for an active, paused, or unset case SLA."""
     if sla_details.is_paused:
         if json_result["remaining_time_since_last_pause"] is not None:
             return (
@@ -201,6 +202,8 @@ def _format_output_message(
                 f"Remaining time since last pause: {json_result['remaining_time_since_last_pause']}."
             )
         return f"SLA is paused for case {case_id}."
+    if sla_details.sla_expiration is None:
+        return f"SLA was not set for case {case_id}."
     return f"Stage SLA: {json_result['SLA']}, Critical Stage SLA: {json_result['critical_SLA']}"
 
 
@@ -228,16 +231,11 @@ def main() -> None:
             case_expand=CASE_EXPAND_FIELDS,
         )
         sla_details = _extract_case_sla_details(response.to_json())
-
-        if sla_details.sla_expiration is None and not sla_details.is_paused:
-            result_value = False
-            output_message = f"SLA was not set for case {siemplify.case_id}."
-            siemplify.LOGGER.info(output_message)
-        else:
-            json_result = _build_sla_result(sla_details, dt_format)
-            siemplify.result.add_result_json(json_result)
-            output_message = _format_output_message(siemplify.case_id, sla_details, json_result)
-            siemplify.LOGGER.info(output_message)
+        json_result = _build_sla_result(sla_details, dt_format)
+        siemplify.result.add_result_json(json_result)
+        result_value = sla_details.sla_expiration is not None or sla_details.is_paused
+        output_message = _format_output_message(siemplify.case_id, sla_details, json_result)
+        siemplify.LOGGER.info(output_message)
 
     except (
         requests.RequestException,
