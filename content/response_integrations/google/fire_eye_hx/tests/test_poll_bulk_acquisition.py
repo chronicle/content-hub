@@ -31,27 +31,29 @@ from ..core.FireEyeHXManager import (
     FireEyeHXNotFoundError,
 )
 
+NOW_MS: int = 1_700_000_000_000
+
 SAMPLE_BULK_ACQUISITION: dict[str, Any] = {
     "_id": 1209,
     "state": "STOPPED",
     "scripts": [
         {
-            "_id": "10b9c51ba96ac7cf45c096b0a2245e980ac06203",
-            "url": "/hx/api/v3/scripts/10b9c51ba96ac7cf45c096b0a2245e980ac06203",
-            "download": "/hx/api/v3/scripts/10b9c51ba96ac7cf45c096b0a2245e980ac06203.xml",
+            "_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "url": "/hx/api/v3/scripts/xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "download": "/hx/api/v3/scripts/xxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xml",
             "platform": "win",
         }
     ],
-    "comment": "Created By Bulk Acquisition Manager",
+    "comment": "",
     "update_time": "2026-11-16T11:06:50.811Z",
     "create_time": "2026-11-16T10:04:27.972Z",
-    "update_actor": {"_id": 1002, "username": "fe_services"},
-    "create_actor": {"_id": 1002, "username": "fe_services"},
+    "update_actor": {"_id": 1006, "username": "user"},
+    "create_actor": {"_id": 1006, "username": "user"},
     "max_size_in_mb": None,
     "_revision": "20261116110650811574390937",
     "disable_cef": False,
     "url": "/hx/api/v3/acqs/bulk/1209",
-    "host_set": {"_id": 9, "url": "/hx/api/v3/host_sets/9", "name": "all_hosts"},
+    "host_set": {"_id": 9, "url": "/hx/api/v3/host_sets/9", "name": "hosts"},
     "stats": {
         "total_size": 893,
         "run_time": {
@@ -116,7 +118,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
         mock_manager.logout.assert_called_once()
         end_args = mock_siemplify.end.call_args[0]
         self.assertIn("Waiting for results for the following bulk acquisition: 1209.", end_args[0])
-        self.assertIn("NEW: 2, QUEUED: 0", end_args[0])
+        self.assertIn("NEW: 2, QUEUED: 0, REFRESH: 0", end_args[0])
         self.assertEqual(end_args[1], "false")
         self.assertEqual(end_args[2], EXECUTION_STATE_INPROGRESS)
 
@@ -145,7 +147,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
         mock_siemplify.result.add_result_json.assert_not_called()
         end_args = mock_siemplify.end.call_args[0]
         self.assertIn("Waiting for results for the following bulk acquisition: 1209.", end_args[0])
-        self.assertIn("NEW: 0, QUEUED: 3", end_args[0])
+        self.assertIn("NEW: 0, QUEUED: 3, REFRESH: 0", end_args[0])
         self.assertEqual(end_args[1], "false")
         self.assertEqual(end_args[2], EXECUTION_STATE_INPROGRESS)
 
@@ -153,7 +155,37 @@ class TestPollBulkAcquisition(unittest.TestCase):
     @patch.object(poll_module, "extract_action_param")
     @patch.object(poll_module, "extract_configuration_param")
     @patch.object(poll_module, "SiemplifyAction")
-    def test_poll_in_progress_when_hosts_in_new_and_queued_states(
+    def test_poll_in_progress_when_hosts_in_refresh_state(
+        self,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+        mock_extract_action.side_effect = _make_action_param_side_effect("1209")
+
+        payload = copy.deepcopy(SAMPLE_BULK_ACQUISITION)
+        payload["state"] = "RUNNING"
+        payload["stats"]["running_state"]["REFRESH"] = 2
+        payload["stats"]["running_state"]["COMPLETE"] = 1
+        mock_manager.get_bulk_acquisition.return_value = payload
+
+        poll_module.main()
+
+        mock_siemplify.result.add_result_json.assert_not_called()
+        end_args = mock_siemplify.end.call_args[0]
+        self.assertIn("Waiting for results for the following bulk acquisition: 1209.", end_args[0])
+        self.assertIn("Pending hosts: 2 (NEW: 0, QUEUED: 0, REFRESH: 2) out of 3", end_args[0])
+        self.assertEqual(end_args[1], "false")
+        self.assertEqual(end_args[2], EXECUTION_STATE_INPROGRESS)
+
+    @patch.object(poll_module, "FireEyeHXManager")
+    @patch.object(poll_module, "extract_action_param")
+    @patch.object(poll_module, "extract_configuration_param")
+    @patch.object(poll_module, "SiemplifyAction")
+    def test_poll_in_progress_when_hosts_in_new_queued_and_refresh_states(
         self,
         mock_siemplify_action: MagicMock,
         mock_extract_config: MagicMock,
@@ -168,6 +200,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
         payload["state"] = "RUNNING"
         payload["stats"]["running_state"]["NEW"] = 1
         payload["stats"]["running_state"]["QUEUED"] = 2
+        payload["stats"]["running_state"]["REFRESH"] = 1
         payload["stats"]["running_state"]["FAILED"] = 1
         payload["stats"]["running_state"]["COMPLETE"] = 4
         mock_manager.get_bulk_acquisition.return_value = payload
@@ -177,7 +210,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
         mock_siemplify.result.add_result_json.assert_not_called()
         end_args = mock_siemplify.end.call_args[0]
         self.assertIn("Waiting for results for the following bulk acquisition: 1209.", end_args[0])
-        self.assertIn("Pending hosts: 3 (NEW: 1, QUEUED: 2) out of 8", end_args[0])
+        self.assertIn("Pending hosts: 4 (NEW: 1, QUEUED: 2, REFRESH: 1) out of 9", end_args[0])
         self.assertEqual(end_args[1], "false")
         self.assertEqual(end_args[2], EXECUTION_STATE_INPROGRESS)
 
@@ -185,7 +218,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
     @patch.object(poll_module, "extract_action_param")
     @patch.object(poll_module, "extract_configuration_param")
     @patch.object(poll_module, "SiemplifyAction")
-    def test_poll_stops_when_all_hosts_not_in_new_or_queued_state(
+    def test_poll_stops_when_all_hosts_not_in_new_queued_or_refresh_state(
         self,
         mock_siemplify_action: MagicMock,
         mock_extract_config: MagicMock,
@@ -205,7 +238,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
             "COMPLETE": 2,
             "ABORTED": 1,
             "DELETED": 0,
-            "REFRESH": 1,
+            "REFRESH": 0,
             "CANCELLED": 1,
         }
         mock_manager.get_bulk_acquisition.return_value = payload
@@ -218,7 +251,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
             'Successfully polled bulk acquisition with ID "1209" in FireEye HX. State: RUNNING.',
             end_args[0],
         )
-        self.assertIn("no hosts remain in NEW or QUEUED state", end_args[0])
+        self.assertIn("no hosts remain in NEW, QUEUED, or REFRESH state", end_args[0])
         self.assertEqual(end_args[1], "true")
         self.assertEqual(end_args[2], EXECUTION_STATE_COMPLETED)
 
@@ -357,7 +390,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
     @patch.object(poll_module, "extract_action_param")
     @patch.object(poll_module, "extract_configuration_param")
     @patch.object(poll_module, "SiemplifyAction")
-    def test_poll_stops_when_stopped_even_with_new_and_queued_hosts(
+    def test_poll_stops_when_stopped_even_with_new_queued_and_refresh_hosts(
         self,
         mock_siemplify_action: MagicMock,
         mock_extract_config: MagicMock,
@@ -372,6 +405,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
         payload["state"] = "STOPPED"
         payload["stats"]["running_state"]["NEW"] = 5
         payload["stats"]["running_state"]["QUEUED"] = 3
+        payload["stats"]["running_state"]["REFRESH"] = 2
         mock_manager.get_bulk_acquisition.return_value = payload
 
         poll_module.main()
@@ -569,7 +603,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
         self.assertEqual(end_args[1], "true")
         self.assertEqual(end_args[2], EXECUTION_STATE_COMPLETED)
 
-    @patch.object(poll_module, "unix_now", return_value=1_700_000_000_000)
+    @patch.object(poll_module, "unix_now", return_value=NOW_MS)
     @patch.object(poll_module, "FireEyeHXManager")
     @patch.object(poll_module, "extract_action_param")
     @patch.object(poll_module, "extract_configuration_param")
@@ -584,7 +618,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_siemplify.async_total_duration_deadline = 0
-        mock_siemplify.execution_deadline_unix_time_ms = 1_700_000_030_000  # 30s remaining (< 1m threshold)
+        mock_siemplify.execution_deadline_unix_time_ms = NOW_MS + 30_000
         mock_manager = mock_manager_cls.return_value
         mock_extract_action.side_effect = _make_action_param_side_effect("1209")
 
@@ -608,7 +642,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
             EXECUTION_STATE_FAILED,
         )
 
-    @patch.object(poll_module, "unix_now", return_value=1_700_000_000_000)
+    @patch.object(poll_module, "unix_now", return_value=NOW_MS)
     @patch.object(poll_module, "FireEyeHXManager")
     @patch.object(poll_module, "extract_action_param")
     @patch.object(poll_module, "extract_configuration_param")
@@ -622,8 +656,8 @@ class TestPollBulkAcquisition(unittest.TestCase):
         _mock_unix_now: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
-        mock_siemplify.async_total_duration_deadline = 1_700_000_010_000  # 10s remaining (< 1m threshold)
-        mock_siemplify.execution_deadline_unix_time_ms = 1_700_000_600_000
+        mock_siemplify.async_total_duration_deadline = NOW_MS + 10_000
+        mock_siemplify.execution_deadline_unix_time_ms = NOW_MS + 600_000
         mock_manager = mock_manager_cls.return_value
         mock_extract_action.side_effect = _make_action_param_side_effect("1209")
 
@@ -645,7 +679,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
             EXECUTION_STATE_FAILED,
         )
 
-    @patch.object(poll_module, "unix_now", return_value=1_700_000_000_000)
+    @patch.object(poll_module, "unix_now", return_value=NOW_MS)
     @patch.object(poll_module, "FireEyeHXManager")
     @patch.object(poll_module, "extract_action_param")
     @patch.object(poll_module, "extract_configuration_param")
@@ -659,7 +693,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
         _mock_unix_now: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
-        mock_siemplify.async_total_duration_deadline = 1_700_000_005_000  # 5s remaining
+        mock_siemplify.async_total_duration_deadline = NOW_MS + 5_000
         mock_manager = mock_manager_cls.return_value
         mock_extract_action.side_effect = _make_action_param_side_effect("1209")
 
@@ -671,11 +705,11 @@ class TestPollBulkAcquisition(unittest.TestCase):
 
         mock_siemplify.result.add_result_json.assert_called_once_with(payload)
         end_args = mock_siemplify.end.call_args[0]
-        self.assertIn("no hosts remain in NEW or QUEUED state", end_args[0])
+        self.assertIn("no hosts remain in NEW, QUEUED, or REFRESH state", end_args[0])
         self.assertEqual(end_args[1], "true")
         self.assertEqual(end_args[2], EXECUTION_STATE_COMPLETED)
 
-    @patch.object(poll_module, "unix_now", return_value=1_700_000_000_000)
+    @patch.object(poll_module, "unix_now", return_value=NOW_MS)
     @patch.object(poll_module, "FireEyeHXManager")
     @patch.object(poll_module, "extract_action_param")
     @patch.object(poll_module, "extract_configuration_param")
@@ -689,7 +723,7 @@ class TestPollBulkAcquisition(unittest.TestCase):
         _mock_unix_now: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
-        mock_siemplify.async_total_duration_deadline = 1_700_000_300_000  # 5m remaining
+        mock_siemplify.async_total_duration_deadline = NOW_MS + 300_000
         mock_manager = mock_manager_cls.return_value
         mock_extract_action.side_effect = _make_action_param_side_effect("1209")
 

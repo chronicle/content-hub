@@ -19,7 +19,11 @@ from unittest.mock import MagicMock, patch
 
 import requests
 
-from ..core.FireEyeHXManager import FireEyeHXManager, FireEyeHXNotFoundError
+from ..core.FireEyeHXManager import (
+    FireEyeHXManager,
+    FireEyeHXManagerError,
+    FireEyeHXNotFoundError,
+)
 
 
 class TestFireEyeHXManagerBulk(unittest.TestCase):
@@ -178,6 +182,9 @@ class TestFireEyeHXManagerBulk(unittest.TestCase):
 
         self.assertEqual(result, {})
 
+    def test_not_found_error_is_subclass_of_manager_error(self) -> None:
+        self.assertTrue(issubclass(FireEyeHXNotFoundError, FireEyeHXManagerError))
+
     def test_get_bulk_acquisition_not_found_json_raises_not_found_error(self) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 404
@@ -198,6 +205,29 @@ class TestFireEyeHXManagerBulk(unittest.TestCase):
 
         with self.assertRaises(FireEyeHXNotFoundError):
             self.manager.get_bulk_acquisition(9999)
+
+    def test_get_bulk_acquisition_server_error_raises_manager_error(self) -> None:
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.content = b"Internal Server Error"
+        mock_response.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
+        mock_response.json.side_effect = ValueError("No JSON")
+        self.mock_session.get.return_value = mock_response
+
+        with self.assertRaises(FireEyeHXManagerError) as ctx:
+            self.manager.get_bulk_acquisition(9999)
+        self.assertNotIsInstance(ctx.exception, FireEyeHXNotFoundError)
+
+    def test_validate_response_not_found_non_json_raises_manager_error(self) -> None:
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.content = b"<html>Not Found</html>"
+        mock_response.raise_for_status.side_effect = requests.HTTPError("404 Client Error")
+        mock_response.json.side_effect = ValueError("No JSON")
+
+        with self.assertRaises(FireEyeHXManagerError) as ctx:
+            FireEyeHXManager.validate_response(mock_response, "Unable to obtain token")
+        self.assertNotIsInstance(ctx.exception, FireEyeHXNotFoundError)
 
     def test_stop_bulk_acquisition(self) -> None:
         mock_response = MagicMock()

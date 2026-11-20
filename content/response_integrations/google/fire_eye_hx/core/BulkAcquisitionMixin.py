@@ -14,9 +14,12 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any
 
 import requests
+
+from .exceptions import FireEyeHXManagerError, FireEyeHXNotFoundError
 
 
 class BulkAcquisitionMixin:
@@ -122,7 +125,12 @@ class BulkAcquisitionMixin:
         """
         url = f"{self.api_root}/acqs/bulk/{bulk_acquisition_id}"
         response = self.session.get(url)
-        self.validate_response(response, f"Unable to fetch status for bulk acquisition {bulk_acquisition_id}")
+        try:
+            self.validate_response(response, f"Unable to fetch status for bulk acquisition {bulk_acquisition_id}")
+        except FireEyeHXManagerError as err:
+            if response.status_code == HTTPStatus.NOT_FOUND:
+                raise FireEyeHXNotFoundError(str(err)) from err
+            raise
         return response.json().get("data") or {}
 
     def stop_bulk_acquisition(self, bulk_acquisition_id: str | int) -> bool:

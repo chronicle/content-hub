@@ -44,6 +44,7 @@ INTEGRATION_DISPLAY_NAME: str = "FireEye HX"
 SCRIPT_NAME: str = "Poll Bulk Acquisition"
 NEW_HOST_STATE: str = "NEW"
 QUEUED_HOST_STATE: str = "QUEUED"
+REFRESH_HOST_STATE: str = "REFRESH"
 
 
 def _init_manager(siemplify: SiemplifyAction) -> FireEyeHXManager:
@@ -95,23 +96,24 @@ def _safe_host_count(value: Any) -> int:
         return 0
 
 
-def _count_running_state_hosts(acquisition_data: dict[str, Any]) -> tuple[int, int, int]:
-    """Extract total, NEW, and QUEUED host counts from stats.running_state.
+def _count_running_state_hosts(acquisition_data: dict[str, Any]) -> tuple[int, int, int, int]:
+    """Extract total, NEW, QUEUED, and REFRESH host counts from stats.running_state.
 
     Args:
         acquisition_data: Bulk acquisition payload returned by FireEye HX.
 
     Returns:
-        Tuple of (total_hosts, new_hosts, queued_hosts).
+        Tuple of (total_hosts, new_hosts, queued_hosts, refresh_hosts).
     """
     stats = acquisition_data.get("stats")
     running_state = stats.get("running_state") if isinstance(stats, dict) else None
     if not isinstance(running_state, dict) or not running_state:
-        return 0, 0, 0
+        return 0, 0, 0, 0
 
     total_hosts = 0
     new_hosts = 0
     queued_hosts = 0
+    refresh_hosts = 0
     for host_state, raw_count in running_state.items():
         count = _safe_host_count(raw_count)
         total_hosts += count
@@ -120,8 +122,10 @@ def _count_running_state_hosts(acquisition_data: dict[str, Any]) -> tuple[int, i
             new_hosts += count
         elif normalized_state == QUEUED_HOST_STATE:
             queued_hosts += count
+        elif normalized_state == REFRESH_HOST_STATE:
+            refresh_hosts += count
 
-    return total_hosts, new_hosts, queued_hosts
+    return total_hosts, new_hosts, queued_hosts, refresh_hosts
 
 
 def _evaluate_poll_result(
@@ -160,7 +164,7 @@ def _evaluate_poll_result(
             True,
         )
 
-    total_hosts, new_hosts, queued_hosts = _count_running_state_hosts(acquisition_data)
+    total_hosts, new_hosts, queued_hosts, refresh_hosts = _count_running_state_hosts(acquisition_data)
     if total_hosts == 0:
         return (
             f'Successfully polled bulk acquisition with ID "{bulk_id}" in {INTEGRATION_DISPLAY_NAME}. '
@@ -171,12 +175,12 @@ def _evaluate_poll_result(
             True,
         )
 
-    pending_hosts = new_hosts + queued_hosts
+    pending_hosts = new_hosts + queued_hosts + refresh_hosts
     if pending_hosts == 0:
         return (
             f'Successfully polled bulk acquisition with ID "{bulk_id}" in {INTEGRATION_DISPLAY_NAME}. '
             f"State: {state}. "
-            "Stopping polling because no hosts remain in NEW or QUEUED state.",
+            "Stopping polling because no hosts remain in NEW, QUEUED, or REFRESH state.",
             "true",
             EXECUTION_STATE_COMPLETED,
             True,
@@ -195,7 +199,8 @@ def _evaluate_poll_result(
     return (
         f"Waiting for results for the following bulk acquisition: {bulk_id}. "
         f"State: {state}. "
-        f"Pending hosts: {pending_hosts} (NEW: {new_hosts}, QUEUED: {queued_hosts}) out of {total_hosts}.",
+        f"Pending hosts: {pending_hosts} "
+        f"(NEW: {new_hosts}, QUEUED: {queued_hosts}, REFRESH: {refresh_hosts}) out of {total_hosts}.",
         "false",
         EXECUTION_STATE_INPROGRESS,
         False,
