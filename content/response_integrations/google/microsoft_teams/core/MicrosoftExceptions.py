@@ -39,3 +39,7 @@ class MicrosoftTeamsClientError(MicrosoftTeamsManagerError):
 
 class MicrosoftTeamsActionError(MicrosoftTeamsTeamNotFoundError):
     """Raise MicrosoftTeamsActionError in case of specific exceptions raised."""
+
+
+class MicrosoftTeamsCardError(MicrosoftTeamsManagerError):
+    """Raised when an Adaptive Card is invalid or cannot be sent to Teams."""
