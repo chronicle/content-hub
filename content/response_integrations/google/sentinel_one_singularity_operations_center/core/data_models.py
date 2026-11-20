@@ -26,6 +26,7 @@ from .constants import (
     EVENT_TYPE_FIELD,
     INTEGRATION_DISPLAY_NAME,
     LAST_SEEN_AT_FIELD,
+    OBSERVABLE_TYPE_CANONICAL_KEYS,
     SEVERITY_MAP,
     EventType,
 )
@@ -33,6 +34,8 @@ from .exceptions import AlertUpdateError
 
 if TYPE_CHECKING:
     from datetime import datetime
+
+    from TIPCommon.types import SingleJson
 
 
 class IntegrationParameters(NamedTuple):
@@ -193,9 +196,18 @@ class SentinelOneAlert(BaseAlert):
         if self.details:
             events.append(self.details.as_event())
 
-        events.extend(obs.as_event(self.last_seen_at) for obs in self.observables)
+        seen_observable_keys = set()
+        for ind in self.indicators:
+            events.append(ind.as_event(self.last_seen_at))
+            for obs in ind.observables:
+                events.append(obs.as_event(self.last_seen_at))
+                seen_observable_keys.add(obs.dedup_key)
 
-        events.extend(ind.as_event(self.last_seen_at) for ind in self.indicators)
+        for obs in self.observables:
+            if obs.dedup_key in seen_observable_keys:
+                continue
+            events.append(obs.as_event(self.last_seen_at))
+            seen_observable_keys.add(obs.dedup_key)
 
         events.extend(asset.as_event(self.last_seen_at) for asset in self.assets)
 
@@ -312,8 +324,13 @@ class SentinelOneAlertDetails:
 class AlertObservable:
     """Data model representing a SentinelOne Alert Observable."""
 
-    def __init__(self, raw_data: dict) -> None:
+    def __init__(
+        self,
+        raw_data: SingleJson,
+        parent_indicator: AlertIndicator | None = None,
+    ) -> None:
         self.raw_data = raw_data
+        self.parent_indicator = parent_indicator
 
     @property
     def id(self) -> str | None:
@@ -335,33 +352,55 @@ class AlertObservable:
         """The observable type."""
         return self.raw_data.get("type")
 
-    def as_event(self, alert_timestamp: str | None) -> dict:
+    @property
+    def type_name(self) -> str | None:
+        """The observable type name."""
+        return self.raw_data.get("typeName")
+
+    @property
+    def dedup_key(self) -> tuple[str | None, str | None, str | None]:
+        """The deduplication key for the observable."""
+        return (self.type.upper() if self.type else None, self.value, self.name)
+
+    def as_event(self, alert_timestamp: str | None) -> SingleJson:
         """Serialize observable to a flat Siemplify event dictionary.
 
         Args:
-            alert_timestamp (str, optional): The timestamp of the alert.
+            alert_timestamp: The timestamp of the alert.
 
         Returns:
-            dict: The flattened event dictionary.
+            The flattened event dictionary.
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.OBSERVABLE.value
         data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt")
         if self.name:
             data[self.name] = self.value
+        if self.type and self.value:
+            type_lower = self.type.lower()
+            data[type_lower] = self.value
+            for canonical_key in OBSERVABLE_TYPE_CANONICAL_KEYS.get(type_lower, ()):
+                data[canonical_key] = self.value
+        if self.parent_indicator:
+            data.update(self.parent_indicator.to_context_dict())
         return dict_to_flat(data)
 
 
 class AlertIndicator:
     """Data model representing a SentinelOne Alert Indicator."""
 
-    def __init__(self, raw_data: dict) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         self.raw_data = raw_data
 
     @property
     def id(self) -> str | None:
         """The indicator ID."""
         return self.raw_data.get("id")
+
+    @property
+    def uid(self) -> str | None:
+        """The indicator UID."""
+        return self.raw_data.get("uid")
 
     @property
     def value(self) -> str | None:
@@ -373,16 +412,55 @@ class AlertIndicator:
         """The indicator type."""
         return self.raw_data.get("type")
 
-    def as_event(self, alert_timestamp: str | None) -> dict:
+    @property
+    def message(self) -> str | None:
+        """The indicator message."""
+        return self.raw_data.get("message")
+
+    @property
+    def event_time(self) -> str | None:
+        """The indicator event timestamp string."""
+        return self.raw_data.get("eventTime")
+
+    @property
+    def severity(self) -> str | None:
+        """The indicator severity."""
+        return self.raw_data.get("severity")
+
+    @property
+    def observables(self) -> list[AlertObservable]:
+        """Observables linked directly under this indicator."""
+        raw_obs = self.raw_data.get("observables") or []
+        return [AlertObservable(obs, parent_indicator=self) for obs in raw_obs]
+
+    def to_context_dict(self) -> SingleJson:
+        """Serialize indicator context fields for attached observables.
+
+        Returns:
+            The indicator context fields.
+        """
+        context: SingleJson = {}
+        if self.uid:
+            context["indicator_uid"] = self.uid
+        if self.type:
+            context["indicator_type"] = self.type
+        if self.message:
+            context["indicator_message"] = self.message
+        if self.severity:
+            context["indicator_severity"] = self.severity
+        return context
+
+    def as_event(self, alert_timestamp: str | None) -> SingleJson:
         """Serialize indicator to a flat Siemplify event dictionary.
 
         Args:
-            alert_timestamp (str, optional): The timestamp of the alert.
+            alert_timestamp: The timestamp of the alert.
 
         Returns:
-            dict: The flattened event dictionary.
+            The flattened event dictionary.
         """
         data = self.raw_data.copy()
+        data.pop("observables", None)
         data[EVENT_TYPE_FIELD] = EventType.INDICATOR.value
         data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt")
         return dict_to_flat(data)
@@ -413,10 +491,10 @@ class AlertAsset:
         """Serialize asset to a flat Siemplify event dictionary.
 
         Args:
-            alert_timestamp (str, optional): The timestamp of the alert.
+            alert_timestamp: The timestamp of the alert.
 
         Returns:
-            dict: The flattened event dictionary.
+            The flattened event dictionary.
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.ASSET.value
@@ -494,7 +572,11 @@ class AlertUpdateResult:
                         f"Singularity Operations Center. Please check the spelling."
                     )
                 else:
-                    msg = f"Alert update encountered failures for alert '{alert_id}': {', '.join(failures)}"
+                    failures_str = ", ".join(failures)
+                    msg = (
+                        f"Alert update encountered failures for alert "
+                        f"'{alert_id}': {failures_str}"
+                    )
                 raise AlertUpdateError(msg)
 
             return cls(
@@ -508,7 +590,11 @@ class AlertUpdateResult:
             error_msgs = [
                 e.get("errorMessage") for e in errors if e.get("errorMessage")
             ]
-            msg = f"Failed to update SentinelOne alert '{alert_id}' due to API error: {', '.join(error_msgs)}"
+            err_str = ", ".join(error_msgs)
+            msg = (
+                f"Failed to update SentinelOne alert '{alert_id}' due to "
+                f"API error: {err_str}"
+            )
             raise AlertUpdateError(msg)
 
         if typename == "TriggerActionsScheduled":

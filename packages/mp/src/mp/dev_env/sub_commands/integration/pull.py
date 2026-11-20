@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import tempfile
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 
@@ -26,6 +26,10 @@ from mp.dev_env.sub_commands.integration import utils
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
+
+if TYPE_CHECKING:
+    from mp.core.custom_types import SingleJson
+    from mp.dev_env.interfaces import DevEnvClient
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -67,7 +71,11 @@ def pull_integration(
     try:
         zip_path = _pull_integration_zip_from_soar(integration, dst)
         deconstruct_integration: Path = _deconstruct_integration(zip_path, dst)
-        logger.info("✅ Integration %s pulled successfully to %s.", integration, deconstruct_integration)
+        logger.info(
+            "✅ Integration %s pulled successfully to %s.",
+            integration,
+            deconstruct_integration,
+        )
 
     except Exception as e:
         logger.exception("Pull failed for %s", integration)
@@ -79,14 +87,17 @@ def pull_integration(
 
 
 def _pull_integration_zip_from_soar(integration: str, dst: Path) -> Path:
-    config = load_dev_env_config()
-    backend_api = get_backend_api(config)
-    resp = backend_api.download_integration(integration)
-    return utils.save_integration_as_zip(integration, resp, dst)
+    config: SingleJson = load_dev_env_config()
+    backend_api: DevEnvClient = get_backend_api(config)
+    data: bytes = backend_api.download_integration(integration)
+    return utils.save_integration_as_zip(integration, data, dst)
 
 
 def _deconstruct_integration(zip_path: Path, dst: Path) -> Path:
     with tempfile.TemporaryDirectory() as tmp_dir:
-        temp_path = Path(tmp_dir)
-        unzipped_integration_path = utils.unzip_integration(zip_path, temp_path)
+        temp_path: Path = Path(tmp_dir)
+        unzipped_integration_path: Path = utils.unzip_integration(
+            zip_path,
+            temp_path,
+        )
         return utils.deconstruct_integration(unzipped_integration_path, dst)

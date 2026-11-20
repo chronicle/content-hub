@@ -1,47 +1,89 @@
 # `mp` and development environment commands
 
-Commands for interacting with the development environment (playground). This suite of commands helps you manage your connection to the Google SecOps SOAR environment and deploy your integrations for testing.
+Commands for interacting with the development environment (playground). This suite of commands helps you manage your connection to the Google SecOps environment and deploy your integrations and playbooks for testing.
+
+## Authentication modes
+
+`mp login` supports two modes:
+
+- **Google Chronicle SOAR** — Chronicle REST API using Google Cloud IAM (Service Account JSON key file or Application Default Credentials). Provide the instance's `--api-root` (or `--credentials-file` / `--gcp`).
+- **Legacy SOAR** — an API root URL plus an API key (or username/password) for on-prem/legacy environments.
+
+> [!IMPORTANT]
+> Content pulled from a legacy SOAR instance should be pushed back to a legacy instance; content pulled over the Chronicle API should be pushed back over the Chronicle API.
 
 ## Getting Your Credentials
 
-To use these commands, you'll need the API Root URL and an API Key (or Username/Password).
+### Google Chronicle SOAR (Service Account Key / ADC)
 
-### API Root
+For Chronicle SOAR authentication, you can pass the **API Root** URL (matching the format in the Google Chronicle integration in SecOps) along with your Service Account key file:
+
+```bash
+mp login --api-root "https://<location>-chronicle.googleapis.com/v1alpha/projects/<project>/locations/<location>/instances/<instance_uuid>" --credentials-file /path/to/sa_key.json
+```
+
+#### Minimum API Permissions & IAM Roles
+When creating a Service Account for `mp`, assign the following:
+
+* **Predefined IAM Roles:**
+  * `roles/chronicle.admin` (Chronicle Admin), or a custom role with Chronicle SOAR permissions.
+* **Minimum Granular IAM Permissions:**
+  * **Integrations (Push / Pull):**
+    * `chronicle.instances.get`
+    * `chronicle.integrations.get`, `chronicle.integrations.list`
+    * `chronicle.integrations.import` *(Push / Upload)*
+    * `chronicle.integrations.export` *(Pull / Download)*
+  * **Playbooks (Push / Pull):**
+    * `chronicle.legacyPlaybooks.get`, `chronicle.legacyPlaybooks.list`
+    * `chronicle.legacyPlaybooks.import` *(Push / Upload)*
+    * `chronicle.legacyPlaybooks.export` *(Pull / Download)*
+* **OAuth Scope:**
+  * `https://www.googleapis.com/auth/cloud-platform`
+
+### Legacy SOAR (On-Prem API Key / User & Pass)
 
 1. Open your SecOps environment in a web browser.
-2. Open the browser's Developer Console (F12).
-3. Execute: `localStorage['soar_server-addr']`
-4. Copy the returned URL. This is your API Root.
-
-### API Key
-
-1. Log into your SecOps environment.
-2. Navigate to **Settings** → **SOAR Settings** → **Advanced** → **API Keys**.
-3. Click **Create**.
-4. Set **Permission Groups** to `Admins`.
-5. Copy the generated API Key.
+2. Open the browser's Developer Console (F12) and execute: `localStorage['soar_server-addr']` to get your API Root.
+3. In SecOps, navigate to **Settings** → **SOAR Settings** → **Advanced** → **API Keys**, create an API key with `Admins` permissions, and copy it.
 
 ## Subcommands
 
 ### `login`
 
-Authenticate to the dev environment.
+Authenticate to the dev environment. See [Authentication modes](#authentication-modes) for supported modes.
 
 **Usage:**
 
 ```bash
-mp login [OPTIONS]
+# Google Chronicle SOAR (Service Account Key + API Root)
+mp login --api-root "https://us-chronicle.googleapis.com/v1alpha/projects/<PROJECT_ID>/locations/us/instances/<INSTANCE_UUID>" --credentials-file /path/to/sa.json
+
+# Google Chronicle SOAR (Application Default Credentials - ADC)
+mp login --gcp --api-root "https://us-chronicle.googleapis.com/v1alpha/projects/<PROJECT_ID>/locations/us/instances/<INSTANCE_UUID>"
+
+# Legacy SOAR (API key)
+mp login --api-root https://your-env.siemplify-soar.com --api-key <API_KEY>
+
+# Legacy SOAR (Username / Password)
+mp login --api-root https://your-env.siemplify-soar.com --username <USERNAME> --password <PASSWORD>
 ```
+
+Run `mp login` with no options to be prompted interactively.
 
 **Options:**
 
-| Option        | Description                                            | Type   | Default |
-|:--------------|:-------------------------------------------------------|:-------|:--------|
-| `--api-root`  | API root URL (e.g., `https://your-env.siemplify.com`). | `str`  | `None`  |
-| `--username`  | Authentication username.                               | `str`  | `None`  |
-| `--password`  | Authentication password.                               | `str`  | `None`  |
-| `--api-key`   | Authentication API key.                                | `str`  | `None`  |
-| `--no-verify` | Skip credential verification after saving.             | `bool` | `False` |
+| Option               | Description                                                                           | Type   | Default |
+|:---------------------|:--------------------------------------------------------------------------------------|:-------|:--------|
+| `--api-root`         | API root URL (legacy SOAR URL or Chronicle instance URL).                             | `str`  | `None`  |
+| `--credentials-file` | Path to a GCP Service Account JSON credentials file.                                  | `str`  | `None`  |
+| `--username`         | Authentication username (legacy SOAR auth).                                           | `str`  | `None`  |
+| `--password`         | Authentication password (legacy SOAR auth).                                           | `str`  | `None`  |
+| `--api-key`          | Authentication API key (legacy SOAR auth).                                            | `str`  | `None`  |
+| `--gcp`              | Force Chronicle API auth using GCP credentials (ADC or Service Account).              | `bool` | `False` |
+| `--project`          | GCP project ID (optional if present in `--api-root` or `--credentials-file`).         | `str`  | `None`  |
+| `--location`         | Chronicle region, e.g. `us` (optional if present in `--api-root`; defaults to `us`).   | `str`  | `None`  |
+| `--instance`         | Chronicle instance UUID (optional if present in `--api-root`).                        | `str`  | `None`  |
+| `--no-verify`        | Skip credential verification after saving.                                            | `bool` | `False` |
 
 ### `push integration`
 

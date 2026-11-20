@@ -39,6 +39,8 @@ from .utils_manager import validate_response
 if TYPE_CHECKING:
     import logging
 
+    from TIPCommon.types import SingleJson
+
     from .datamodels import Alert
 
 
@@ -144,7 +146,7 @@ class FireEyeETPManager:
     def test_connectivity(self) -> None:
         """Test connectivity to the FireEye ETP API."""
         request_url: str = self._get_full_url("test_connectivity")
-        payload: dict[str, Any] = {
+        payload: SingleJson = {
             "date_range": {
                 "from": "2026-01-01T00:00:00.000Z",
                 "to": "2026-01-01T00:01:00.000Z",
@@ -168,7 +170,7 @@ class FireEyeETPManager:
         request_url: str = self._get_full_url("get_alerts")
         start_time_str: str = self._convert_datetime_to_api_format(start_time)
         end_time_str: str = self._convert_datetime_to_api_format(datetime.datetime.now(datetime.UTC))
-        payload: dict[str, Any] = {
+        payload: SingleJson = {
             "date_range": {"from": start_time_str, "to": end_time_str},
             "size": DEFAULT_FETCH_SIZE,
         }
@@ -191,8 +193,14 @@ class FireEyeETPManager:
         request_url: str = self._get_full_url("get_alert_details", alert_id=alert_id)
         response: requests.Response = self.session.get(request_url, timeout=30)
         validate_response(response, f"Unable to get alert details for {alert_id}")
+        res_json: SingleJson = response.json()
+        alert_data: SingleJson = (
+            res_json.get("data")
+            if isinstance(res_json, dict) and "data" in res_json and isinstance(res_json.get("data"), dict)
+            else res_json
+        )
         return self.parser.build_siemplify_alert_obj(
-            alert_data=response.json().get("data", {}),
+            alert_data=alert_data,
             timezone_offset=timezone_offset,
         )
 

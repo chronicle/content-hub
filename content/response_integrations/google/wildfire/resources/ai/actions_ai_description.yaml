@@ -147,33 +147,28 @@ GetFile:
   ai_description: >-
     ### General Description
 
-    Downloads a malware sample from Palo Alto WildFire based on a provided file hash
-    and attaches it to the corresponding entity in Google SecOps.
+    Downloads a file sample from Palo Alto WildFire based on a provided file hash parameter
+    or FileHash target entities, and attaches it in Google SecOps.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities provided in the case.
+    1. Checks if the 'File Hash' parameter is provided; if so, validates the hash (MD5 or SHA256)
+    and downloads the sample directly.
 
-    2. Filters the entities to include only File Hash entities.
+    2. If no parameter is provided, iterates through target `FILEHASH` entities (MD5 or SHA256).
 
-    3. Further filters the hashes to ensure they are either MD5 (32 characters) or
-    SHA256 (64 characters).
+    3. Calls the WildFire `get/sample` API endpoint to retrieve the sample file.
 
-    4. Makes an API call to WildFire (`wfapi.sample`) to retrieve the sample file
-    associated with the hash.
-
-    5. Attaches the downloaded sample to the corresponding entity in Google SecOps
-    using base64 encoding.
+    4. Attaches the downloaded sample to the action result or corresponding entity using base64 encoding.
 
 
     ### Additional Notes
 
-    This action only supports MD5 and SHA256 hashes. If a sample is not found in WildFire,
-    an error will be logged in the action's output.
+    Supports both standalone WildFire API key and Strata Cloud Manager (SCM) OAuth authentication.
+    Only MD5 and SHA256 hashes are supported.
   ai_short_description: >-
-    Downloads a malware sample from Palo Alto WildFire using a file hash and attaches
-    it to the entity in Google SecOps.
+    Downloads a malware sample from Palo Alto WildFire using a file hash or entity and attaches it.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -278,7 +273,12 @@ GetFile:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: There are no parameters for this action
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Hash | String | No | The MD5 or SHA256 hash of the file sample to download from WildFire. If not provided, the action processes FileHash entities in the scope. |
 GetPcap:
   ai_description: >-
     ### General Description
@@ -422,42 +422,37 @@ GetReport:
   ai_description: >-
     ### General Description
 
-    Retrieves a detonation report for FileHash entities from Palo Alto Networks WildFire.
-    This action fetches threat intelligence and file information, evaluates the malware
-    status, and attaches the detailed analysis report to the entity.
+    Retrieves a detonation report from Palo Alto Networks WildFire using a provided
+    file hash parameter or FileHash target entities. Fetches XML threat intelligence,
+    evaluates malware status, attaches task information as CSV, and retrieves the PDF report.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities and filters for `FILEHASH` entities.
+    1. Checks if the 'File Hash' action parameter is provided; if so, queries WildFire
+    for the hash's report directly.
 
-    2. Validates that the hash identifier is either MD5 (32 characters) or SHA256
-    (64 characters).
+    2. If no parameter is provided, iterates through target `FILEHASH` entities (MD5 or SHA256).
 
-    3. Makes an API call to WildFire to retrieve the XML detonation report for the
-    hash.
+    3. Makes an API call to WildFire `get/report` endpoint to retrieve the XML detonation report.
 
-    4. Evaluates the report; if the file is identified as malware, marks the entity
-    as suspicious and creates an insight.
+    4. Evaluates the report; if the file is identified as malware, marks the entity as suspicious
+    and creates an insight.
 
-    5. Enriches the entity's additional properties with the retrieved file information.
+    5. Enriches entity properties with file information.
 
-    6. Attaches the task information as a CSV table to the entity.
+    6. Attaches the task information as a CSV table.
 
-    7. Makes a second API call to WildFire to retrieve the PDF version of the report
-    and attaches it to the entity.
-
-    8. Updates the enriched entities within Google SecOps.
+    7. Retrieves the PDF version of the report and attaches it.
 
 
     ### Additional Notes
 
-    - Only processes MD5 and SHA256 hashes.
+    - Supports both standalone WildFire API key and Strata Cloud Manager (SCM) OAuth authentication.
 
-    - Requires a valid WildFire API key configured in the integration settings.
+    - Only processes MD5 and SHA256 hashes.
   ai_short_description: >-
-    Retrieves a detonation report for FileHash entities from Palo Alto Networks WildFire,
-    enriches the entities with threat intelligence, and attaches the report as a PDF.
+    Retrieves XML and PDF detonation reports from Palo Alto WildFire for a file hash or entity.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -560,34 +555,36 @@ GetReport:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: There are no parameters for this action
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Hash | String | No | The MD5 or SHA256 hash of the file to retrieve the detonation report for from WildFire. If not provided, the action processes FileHash entities in the scope. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Palo Alto Wildfire service to ensure the integration
-    is configured correctly and can communicate with the API.
+    Tests connectivity and authentication to the Palo Alto WildFire service using either
+    an API key or Strata Cloud Manager (SCM) OAuth credentials.
 
 
     ### Flow Description
 
-    1. Retrieves the API key from the integration configuration.
+    1. Retrieves authentication credentials (API Key or Client ID, Client Secret, and TSG ID) from integration settings.
 
-    2. Initializes the Wildfire API client.
+    2. If SCM OAuth is configured, generates an OAuth access token from the authentication service.
 
-    3. Makes an API call to submit predefined test URLs to the Wildfire service.
+    3. Sends a POST request to WildFire's `get/verdict` endpoint using a standard test hash to verify API connectivity.
 
-    4. Returns a successful result if the API accepts the submission without errors.
+    4. Returns a successful result if the API responds without errors.
 
 
     ### Additional Notes
 
-    This action is primarily used for diagnostic purposes to verify that the provided
-    credentials and network settings allow successful communication with Palo Alto
-    Wildfire.
+    Verifies both standalone API key and Strata Cloud Manager (SCM) token-based authentication workflows.
   ai_short_description: >-
-    Tests connectivity to the Palo Alto Wildfire service by submitting predefined
-    test URLs.
+    Tests connectivity and authentication against the Palo Alto WildFire service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false

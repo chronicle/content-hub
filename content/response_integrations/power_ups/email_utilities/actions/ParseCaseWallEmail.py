@@ -152,6 +152,11 @@ def main():
     attachment_content = attachment_record.getvalue()
     siemplify.LOGGER.info(f"Extracting from Case Wall Attachment: {attachment_name}")
     parsed_email = email_mgr.parse_email(attachment_name, attachment_content)
+    if not parsed_email:
+        output_message += f"\nFailed to parse attachment: {attachment_name}"
+        siemplify.LOGGER.error(f"Failed to parse attachment: {attachment_name}")
+        siemplify.end(output_message, False, status)
+
     parsed_email["attachment_name"] = (
         f"{attachment['evidenceName']}{attachment['fileType']}"
     )

@@ -15,5 +15,16 @@
 from __future__ import annotations
 
 import pathlib
+from typing import TYPE_CHECKING
+
+from integration_testing.common import get_def_file_content
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
+MOCK_DATA_PATH: pathlib.Path = INTEGRATION_PATH / "tests" / "mock_data.json"
+MOCK_DATA: SingleJson = get_def_file_content(MOCK_DATA_PATH)
+
+SAMPLE_EMAIL_WITH_ENTITIES: SingleJson = MOCK_DATA["sample_email_with_entities"]
+

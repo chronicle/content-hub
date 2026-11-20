@@ -31,6 +31,7 @@ JsonString: TypeAlias = str
 JobName: TypeAlias = str
 WidgetName: TypeAlias = str
 ManagerName: TypeAlias = str
+SingleJson: TypeAlias = dict[str, Any]
 YamlFileContent: TypeAlias = Mapping[str, Any]
 
 

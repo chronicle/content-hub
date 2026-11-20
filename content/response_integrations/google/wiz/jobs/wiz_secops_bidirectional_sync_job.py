@@ -191,6 +191,7 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             job_case.alert_metadata[alert.identifier] = SyncMetadata(
                 status=threat_issue.status,
                 severity=threat_issue.severity,
+                closure_reason=threat_issue.resolution_reason,
             )
 
     @property
@@ -303,14 +304,27 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             f"[SecOps & Wiz Sync Job] {threat_id}: Alert was closed "
             f"because the corresponding Wiz Threat was marked {wiz_status}."
         )
+        meta: SyncMetadata | None = job_case.alert_metadata.get(alert.identifier)
+        wiz_reason: str | None = None
+        if meta and meta.closure_reason:
+            wiz_reason = meta.closure_reason
+        elif getattr(alert, "incident", None) is not None:
+            wiz_reason = getattr(alert.incident, "resolution_reason", None)
+        reason, root_cause = self._determine_secops_closure_details(wiz_reason)
         self.sync_product_status_to_case(
             case_id=str(job_case.case_detail.id_),
             alert_id=alert.identifier,
-            reason="Inconclusive",
-            root_cause="No clear conclusion",
+            reason=reason,
+            root_cause=root_cause,
             comment=comment,
         )
         self._wiz_alerts_closed_this_run = True
+
+    @staticmethod
+    def _determine_secops_closure_details(wiz_reason: str | None) -> tuple[str, str]:
+        if not wiz_reason:
+            return constants.DEFAULT_SECOPS_CLOSURE
+        return constants.WIZ_REASON_TO_SECOPS_CLOSURE.get(wiz_reason.strip().upper(), constants.DEFAULT_SECOPS_CLOSURE)
 
     def _reopen_alert_inbound(
         self,
@@ -548,9 +562,7 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                     )
                     return True
         except Exception as error:  # ruff: ignore[blind-except]
-            self.logger.warning(
-                f"Could not verify status of linked SecOps case {case_id}: {error}"
-            )
+            self.logger.warn(f"Could not verify status of linked SecOps case {case_id}: {error}")
         return False
 
     def _are_all_linked_cases_closed(
@@ -570,9 +582,7 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         try:
             threat_issue: Issue = self.api_client.get_issue_details(threat_id)
         except Exception as error:  # ruff: ignore[blind-except]
-            self.logger.warning(
-                f"Could not fetch latest details for Wiz threat {threat_id}: {error}"
-            )
+            self.logger.warn(f"Could not fetch latest details for Wiz threat {threat_id}: {error}")
             return True
 
         for ticket in getattr(threat_issue, "service_tickets", []):
@@ -597,6 +607,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 )
             }
 
+        case_closure_fetched: bool = False
+        fetched_case_reason: str | None = None
+
         for threat_id in threat_ids:
             alerts: list[AlertCard] = full_mapping.get(threat_id, [])
             if not alerts:
@@ -617,17 +630,50 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             ):
                 continue
 
-            wiz_reason: str = self._determine_wiz_resolution_reason(job_case)
+            close_reason: str | None = getattr(job_case.case_detail, "close_reason", None)
+            if (
+                not case_closure_fetched
+                and job_case.case_detail.status == CaseDataStatus.CLOSED
+                and (
+                    not close_reason
+                    or close_reason == constants.REASON_UNSPECIFIED
+                )
+            ):
+                fetched_case_reason = self._get_case_closure_reason(job_case)
+                case_closure_fetched = True
+
+            wiz_reason: str = self._determine_wiz_resolution_reason(
+                job_case,
+                alerts=alerts,
+                fetched_case_reason=fetched_case_reason,
+            )
             self._sync_single_threat_status_outbound(
                 job_case, threat_id, wiz_reason, alerts
             )
 
-    @staticmethod
-    def _determine_wiz_resolution_reason(job_case: JobCase) -> str:
+    def _determine_wiz_resolution_reason(
+        self,
+        job_case: JobCase,
+        alerts: list[AlertCard] | None = None,
+        fetched_case_reason: str | None = None,
+    ) -> str:
         close_reason: str = (
-            getattr(job_case.case_detail, "close_reason", "REASON_UNSPECIFIED")
-            or "REASON_UNSPECIFIED"
+            getattr(job_case.case_detail, "close_reason", constants.REASON_UNSPECIFIED)
+            or constants.REASON_UNSPECIFIED
         )
+        if (
+            close_reason == constants.REASON_UNSPECIFIED
+            and fetched_case_reason
+            and fetched_case_reason.strip().upper()
+            != constants.REASON_UNSPECIFIED
+        ):
+            close_reason = fetched_case_reason
+
+        if close_reason == constants.REASON_UNSPECIFIED and alerts:
+            alert_reason: str | None = self._get_alerts_closure_reason(alerts)
+            if alert_reason:
+                close_reason = alert_reason
+
         close_verdict: int = (
             getattr(
                 job_case.case_detail,
@@ -636,13 +682,51 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             )
             or constants.DEFAULT_FALLBACK_VALUE
         )
-        if close_reason in constants.CLOSE_REASON_TO_WIZ_REASON:
-            return constants.CLOSE_REASON_TO_WIZ_REASON[close_reason]
-        if close_reason == "REASON_UNSPECIFIED":
+        normalized_reason: str = close_reason.strip().upper()
+        if normalized_reason in constants.CLOSE_REASON_TO_WIZ_REASON:
+            return constants.CLOSE_REASON_TO_WIZ_REASON[normalized_reason]
+        if normalized_reason == constants.REASON_UNSPECIFIED:
             return constants.CLOSE_VERDICT_TO_WIZ_REASON.get(
                 close_verdict, constants.WIZ_REASON_INCONCLUSIVE_THREAT
             )
         return constants.WIZ_REASON_INCONCLUSIVE_THREAT
+
+    def _get_case_closure_reason(self, job_case: JobCase) -> str | None:
+        try:
+            closure_details: list[SingleJson] = self.soar_job.get_case_closure_details([job_case.case_detail.id_])
+
+        except Exception as error:  # ruff: ignore[blind-except]
+            self.logger.warn(f"Could not fetch closure details for case {job_case.case_detail.id_}: {error}.")
+            return None
+
+        if not isinstance(closure_details, list) or not closure_details:
+            return None
+
+        first_detail: Any = closure_details[0]
+        if not isinstance(first_detail, dict):
+            return None
+
+        reason: Any = first_detail.get("reason")
+        if reason is not None and str(reason).strip():
+            return str(reason).strip()
+        return None
+
+    @staticmethod
+    def _get_alerts_closure_reason(alerts: list[AlertCard]) -> str | None:
+        for alert in alerts:
+            closure_details: Any = getattr(alert, "closure_details", None)
+            if not isinstance(closure_details, dict):
+                continue
+            reason: Any = closure_details.get("reason")
+            if reason is None:
+                continue
+            cleaned_reason: str = str(reason).strip()
+            if (
+                cleaned_reason
+                and cleaned_reason.upper() != constants.REASON_UNSPECIFIED
+            ):
+                return cleaned_reason
+        return None
 
     def _update_wiz_threat_status(
         self, threat_id: str, wiz_reason: str
@@ -663,42 +747,25 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 resolution_reason="False Positive",
                 note="Closed via SecOps Case Sync",
             )
-            return (
-                constants.STATUS_REJECTED,
-                constants.WIZ_REASON_FALSE_POSITIVE,
-            )
+            return constants.STATUS_REJECTED, constants.WIZ_REASON_FALSE_POSITIVE
 
-        if wiz_reason == constants.WIZ_REASON_MALICIOUS_THREAT:
-            self.api_client.resolve_issue(
-                issue_id=threat_id,
-                resolution_reason="Malicious Threat",
-                resolution_note="Closed via SecOps Case Sync",
-            )
-            return (
-                constants.STATUS_RESOLVED,
-                constants.WIZ_REASON_MALICIOUS_THREAT,
-            )
-
-        if wiz_reason == constants.WIZ_REASON_PLANNED_ACTION_THREAT:
-            self.api_client.resolve_issue(
-                issue_id=threat_id,
-                resolution_reason="Planned Action Threat",
-                resolution_note="Closed via SecOps Case Sync",
-            )
-            return (
-                constants.STATUS_RESOLVED,
-                constants.WIZ_REASON_PLANNED_ACTION_THREAT,
-            )
-
+        resolve_labels: dict[str, str] = {
+            constants.WIZ_REASON_NOT_MALICIOUS_THREAT: "Not Malicious Threat",
+            constants.WIZ_REASON_MALICIOUS_THREAT: "Malicious Threat",
+            constants.WIZ_REASON_SECURITY_TEST_THREAT: "Security Test Threat",
+            constants.WIZ_REASON_PLANNED_ACTION_THREAT: "Planned Action Threat",
+        }
+        target_reason: str = (
+            wiz_reason
+            if wiz_reason in resolve_labels
+            else constants.WIZ_REASON_INCONCLUSIVE_THREAT
+        )
         self.api_client.resolve_issue(
             issue_id=threat_id,
-            resolution_reason="Inconclusive Threat",
+            resolution_reason=resolve_labels.get(target_reason, "Inconclusive Threat"),
             resolution_note="Closed via SecOps Case Sync",
         )
-        return (
-            constants.STATUS_RESOLVED,
-            constants.WIZ_REASON_INCONCLUSIVE_THREAT,
-        )
+        return constants.STATUS_RESOLVED, target_reason
 
     def _sync_single_threat_status_outbound(
         self,

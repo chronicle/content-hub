@@ -26,9 +26,12 @@
 # ============================= IMPORTS ===================================== #
 
 from __future__ import annotations
+
+from typing import Any
+
 import requests
-from simple_salesforce import Salesforce
-from pypika import Query, Table, Field
+from pypika import Field, Query, Table
+from simple_salesforce import Salesforce, format_soql
 
 from .constants import DEFAULT_API_VERSION
 
@@ -117,21 +120,36 @@ class SalesforceManager:
         self.get_cases()
         return True
 
-    def get_case_by_number(self, case_number):
+    def get_case_by_number(self, case_number: str | None) -> dict[str, Any]:
+        """Get a case by CaseNumber.
+
+        The value is quoted with SOQL backslash escaping (format_soql), so
+        user input can never terminate the string literal.
+
+        Args:
+            case_number: The case's CaseNumber.
+
+        Returns:
+            The case info.
+
+        Raises:
+            SalesforceManagerError: If the case number is empty or not found.
+
         """
-        Get a case by CaseNumber
-        :param case_number: {str} The case's CaseNumber
-        :return: {dict} The case info
-        """
-        _table = Table("Case")
-        query = Query.from_(_table)
-        for case_property in CASE_PROPERTIES:
-            query = query.select(Field(case_property))
-        query = query.where(_table.CaseNumber == case_number)
-        case = self.run_query(query.get_sql(quote_char=""))
+        if not case_number or not str(case_number).strip():
+            msg = "Case Number cannot be empty."
+            raise SalesforceManagerError(msg)
+        case_number = str(case_number).strip()
+        query: str = format_soql(
+            "SELECT {:literal} FROM Case WHERE CaseNumber = {}",
+            ", ".join(CASE_PROPERTIES),
+            case_number,
+        )
+        case = self.run_query(query)
 
         if not case:
-            raise SalesforceManagerError(f"Case {case_number} was not found.")
+            msg = f"Case {case_number} was not found."
+            raise SalesforceManagerError(msg)
 
         return case[0]
 
@@ -141,12 +159,12 @@ class SalesforceManager:
         :param case_id: {str} The case id
         :return: {dict} The case info
         """
-        _table = Table("Case")
-        query = Query.from_(_table)
-        for case_property in CASE_PROPERTIES:
-            query = query.select(Field(case_property))
-        query = query.where(_table.Id == case_id)
-        case = self.run_query(query.get_sql(quote_char=""))
+        query: str = format_soql(
+            "SELECT {:literal} FROM Case WHERE Id = {}",
+            ", ".join(CASE_PROPERTIES),
+            case_id,
+        )
+        case = self.run_query(query)
 
         if not case:
             raise SalesforceManagerError(f"Case {case_id} was not found.")
