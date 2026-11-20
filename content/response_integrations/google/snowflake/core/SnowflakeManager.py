@@ -24,11 +24,18 @@ import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat, load_pem_private_key
 
-from .constants import ALL_FIELDS_WILDCARD, ENDPOINTS, EXECUTION_FINISHED, EXECUTION_IN_PROGRESS
+from .constants import (
+    ALL_FIELDS_WILDCARD,
+    ENDPOINTS,
+    EXECUTION_FINISHED,
+    EXECUTION_IN_PROGRESS,
+    MULTI_STATEMENT_COUNT_PARAMETER,
+)
 from .query_validation import (
     validate_fields_to_return,
-    validate_identifier,
+    validate_sort_field,
     validate_sort_order,
+    validate_table,
     validate_where_filter,
 )
 from .SnowflakeParser import SnowflakeParser
@@ -166,13 +173,22 @@ class SnowflakeManager:
         response = self.session.post(request_url, json=payload)
         validate_response(response)
 
-    def submit_query(self, query, database, schema, limit):
+    def submit_query(
+        self,
+        query: str,
+        database: str,
+        schema: str | None,
+        limit: int,
+        statement_count: int | None = None,
+    ) -> str | None:
         """
         Submit query
         :param query: {str} The query to submit
         :param database: {str} The database to use
         :param schema: {str} Schema to use
         :param limit: {int} Results limit
+        :param statement_count: {int} Exact number of statements Snowflake accepts in the request.
+            If not provided, the account or user setting applies.
         :return: {str} Query id
         """
         request_url = self._get_full_url("submit_query")
@@ -184,6 +200,8 @@ class SnowflakeManager:
         }
         if schema:
             payload["schema"] = schema
+        if statement_count is not None:
+            payload["parameters"] = {MULTI_STATEMENT_COUNT_PARAMETER: str(statement_count)}
 
         response = self.session.post(request_url, json=payload)
         validate_response(response)
@@ -207,12 +225,11 @@ class SnowflakeManager:
         fields: str = validate_fields_to_return(fields_to_return) if fields_to_return else ALL_FIELDS_WILDCARD
         query_string = f"SELECT {fields}"
         if table:
-            query_string += f" FROM {validate_identifier(table, 'Table')}"
+            query_string += f" FROM {validate_table(table)}"
         if where_filter:
             query_string += f" WHERE ({validate_where_filter(where_filter)})"
         if sort_field:
-            order_by: str = validate_identifier(sort_field, "Sort Field")
-            query_string += f" ORDER BY {order_by} {validate_sort_order(sort_order)}"
+            query_string += f" ORDER BY {validate_sort_field(sort_field)} {validate_sort_order(sort_order)}"
 
         return query_string
 

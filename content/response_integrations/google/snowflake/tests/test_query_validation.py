@@ -20,50 +20,12 @@ import pytest
 
 from ..core.query_validation import (
     validate_fields_to_return,
-    validate_identifier,
+    validate_sort_field,
     validate_sort_order,
+    validate_table,
     validate_where_filter,
 )
 from ..core.SnowflakeExceptions import InvalidQueryParameterError, SnowflakeException
-
-
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [
-        ("users", "users"),
-        ("  users  ", "users"),
-        ("MY_DB.PUBLIC.USERS", "MY_DB.PUBLIC.USERS"),
-        ("_tbl$1", "_tbl$1"),
-        ('"My Table"', '"My Table"'),
-        ('"db"."schema"."tab;le"', '"db"."schema"."tab;le"'),
-        ('"say ""hi"""', '"say ""hi"""'),
-    ],
-)
-def test_validate_identifier_accepts_valid_names(value: str, expected: str) -> None:
-    """Valid plain, qualified and quoted names are returned stripped."""
-    assert validate_identifier(value, "Table") == expected
-
-
-@pytest.mark.parametrize(
-    "value",
-    [
-        "",
-        "users; DROP TABLE users",
-        "users WHERE 1=1",
-        "users--",
-        "users UNION SELECT * FROM secrets",
-        "1users",
-        "a.b.c.d.e",
-        "users.",
-        '"unclosed',
-        '"a" "b"',
-        "(SELECT 1)",
-    ],
-)
-def test_validate_identifier_rejects_injection(value: str) -> None:
-    """Anything that is not a plain or qualified name is rejected."""
-    with pytest.raises(InvalidQueryParameterError, match='"Table"'):
-        validate_identifier(value, "Table")
 
 
 def test_invalid_query_parameter_error_is_snowflake_exception() -> None:
@@ -74,34 +36,127 @@ def test_invalid_query_parameter_error_is_snowflake_exception() -> None:
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
-        ("*", "*"),
-        ("id", "id"),
-        ("id,name", "id, name"),
-        (" id , users.name , u.* ", "id, users.name, u.*"),
-        ('"First Name", email', '"First Name", email'),
+        ("users", "users"),
+        ("  users  ", "users"),
+        ("MY_DB.PUBLIC.USERS", "MY_DB.PUBLIC.USERS"),
+        ("MY_DB..USERS", "MY_DB..USERS"),
+        ("_tbl$1", "_tbl$1"),
+        ('"My Table"', '"My Table"'),
+        ('"db"."schema"."tab;le"', '"db"."schema"."tab;le"'),
+        ('"say ""hi"""', '"say ""hi"""'),
+        ('"select"', '"select"'),
+        ("users u", "users u"),
+        ("users AS u", "users AS u"),
+        ('PUBLIC.USERS as "User Alias"', 'PUBLIC.USERS as "User Alias"'),
+        ("users asset", "users asset"),
     ],
 )
-def test_validate_fields_to_return_accepts_field_lists(value: str, expected: str) -> None:
-    """Field names, "*" and "table.*" are accepted and re-joined with ", "."""
-    assert validate_fields_to_return(value) == expected
+def test_validate_table_accepts_table_names_with_optional_alias(value: str, expected: str) -> None:
+    """Plain, qualified and quoted table names, with or without an alias, are returned stripped."""
+    assert validate_table(value) == expected
 
 
 @pytest.mark.parametrize(
     "value",
     [
-        "id,",
-        "id,,name",
-        "id FROM secrets --",
-        "id; DROP TABLE users",
-        "(SELECT password FROM secrets)",
-        "COUNT(*)",
-        "id AS user_id",
+        "",
+        "users; DROP TABLE users",
+        "users WHERE 1=1",
+        "users--",
+        "users UNION SELECT * FROM secrets",
+        "users, secrets",
+        "users JOIN secrets ON users.id = secrets.id",
+        "users JOIN",
+        "users AS",
+        "users u extra",
+        "1users",
+        "a.b.c.d",
+        "users.",
+        '"unclosed',
+        "(SELECT 1)",
+        "TABLE(RESULT_SCAN(LAST_QUERY_ID()))",
     ],
 )
-def test_validate_fields_to_return_rejects_injection(value: str) -> None:
-    """Expressions, empty items and SQL keywords are rejected."""
-    with pytest.raises(InvalidQueryParameterError, match='"Fields To Return"'):
+def test_validate_table_rejects_other_values(value: str) -> None:
+    """Joins, extra tables, subqueries, statements and invalid names are rejected."""
+    with pytest.raises(InvalidQueryParameterError, match="Only a table name with an optional alias is allowed"):
+        validate_table(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "*",
+        "id",
+        "id,name",
+        "id , users.name , u.*",
+        '"First Name", email',
+        "COUNT(*)",
+        "id AS user_id",
+        "UPPER(name)",
+        "DISTINCT name",
+        "COUNT(DISTINCT id), MAX(created_at) AS last_seen",
+        "price * quantity AS total",
+        "raw:user::string AS user_name",
+        "'from' AS source, \"SELECT\"",
+        "updated_from, selected, table_name, col1from",
+    ],
+)
+def test_validate_fields_to_return_accepts_column_expressions(value: str) -> None:
+    """Column names, wildcards, functions, aliases and expressions are accepted."""
+    assert validate_fields_to_return(f"  {value}  ") == value
+
+
+@pytest.mark.parametrize(
+    ("value", "reason"),
+    [
+        ("id FROM secrets --", "semicolons"),
+        ("id; DROP TABLE users", "semicolons"),
+        ("(SELECT password FROM secrets)", "subqueries"),
+        ("* FROM secrets UNION SELECT *", "subqueries"),
+        ("id FROM secrets", "subqueries"),
+        ("1from secrets", "subqueries"),
+        ("1e5from secrets", "subqueries"),
+        ("id, (select max(id) from secrets)", "subqueries"),
+        ("a INTERSECT b", "subqueries"),
+        ("a MINUS b", "subqueries"),
+        ("value FROM LATERAL FLATTEN(input => data)", "subqueries"),
+        ("COUNT(*", "parentheses"),
+        ("name = 'unclosed", "unclosed quote"),
+        ("$$x$$", "semicolons"),
+        ("   ", "it is empty"),
+    ],
+)
+def test_validate_fields_to_return_rejects_other_values(value: str, reason: str) -> None:
+    """Subqueries, other tables, statement separators, comments and unbalanced values are rejected."""
+    with pytest.raises(InvalidQueryParameterError, match=f'"Fields To Return".*{reason}'):
         validate_fields_to_return(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["created_at", "name, id", "name DESC, id", "t.created_at", '"Created At"', "LOWER(name)", "1"],
+)
+def test_validate_sort_field_accepts_column_expressions(value: str) -> None:
+    """One or more column expressions, with optional directions, are accepted."""
+    assert validate_sort_field(f" {value} ") == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "id; DROP TABLE users",
+        "id --",
+        "(SELECT 1 FROM secrets)",
+        "id) UNION (SELECT 1",
+        "id UNION SELECT id FROM secrets",
+        "",
+    ],
+)
+def test_validate_sort_field_rejects_other_values(value: str) -> None:
+    """Subqueries, statement separators, comments and empty values are rejected."""
+    with pytest.raises(InvalidQueryParameterError, match='"Sort Field"'):
+        validate_sort_field(value)
 
 
 @pytest.mark.parametrize(
@@ -162,7 +217,7 @@ def test_validate_where_filter_accepts_single_conditions(value: str) -> None:
         ("   ", "it is empty"),
     ],
 )
-def test_validate_where_filter_rejects_injection(value: str, reason: str) -> None:
+def test_validate_where_filter_rejects_values_that_leave_the_where_clause(value: str, reason: str) -> None:
     """Statement separators, comments and unbalanced quotes or parentheses are rejected."""
     with pytest.raises(InvalidQueryParameterError, match=reason):
         validate_where_filter(value)
