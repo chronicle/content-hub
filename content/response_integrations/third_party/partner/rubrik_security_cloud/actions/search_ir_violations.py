@@ -1,0 +1,117 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from TIPCommon.base.action.data_models import DataTable
+from TIPCommon.transformation import construct_csv
+
+from ..core.base_action import RubrikAction
+from ..core.constants import (
+    DEFAULT_MAX_RESULTS,
+    ERROR_DETECTION_DATE_ORDER,
+    ERROR_UPDATE_DATE_ORDER,
+    MAX_TABLE_RECORDS,
+    MAX_VIOLATIONS,
+    SEARCH_IR_VIOLATIONS_SCRIPT_NAME,
+)
+from ..core.validators import (
+    parse_connection,
+    parse_dspm_severity_param,
+    parse_ir_category_param,
+    parse_ir_identity_provider_param,
+    parse_ir_identity_tag_param,
+    parse_ir_policy_types_param,
+    parse_ir_sort_by_param,
+    parse_sort_order_param,
+    parse_status_param,
+    validate_date_ranges,
+    validate_max_results,
+)
+from ..core.violation_datamodels import IRViolation
+from ..core.violations_api import IRViolationSearchFilter, Page, SortSpec
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+# (start parameter, end parameter, error when end is not after start)
+DATE_RANGE_PARAMS: tuple[tuple[str, str, str], ...] = (
+    ("Detection Start Date", "Detection End Date", ERROR_DETECTION_DATE_ORDER),
+    ("Update Start Date", "Update End Date", ERROR_UPDATE_DATE_ORDER),
+)
+TABLE_TITLE: str = "IR Violations"
+NO_RESULTS_MESSAGE: str = "No IR violations found matching the applied filters."
+
+
+class SearchIRViolations(RubrikAction):
+    """Search IR violations in Rubrik Security Cloud using the given filters."""
+
+    graphql_error_prefix = "API error during Search IR Violations"
+
+    def __init__(self) -> None:
+        super().__init__(SEARCH_IR_VIOLATIONS_SCRIPT_NAME)
+        self.json_results: list[SingleJson] = []
+
+    def _extract_action_parameters(self) -> None:
+        super()._extract_action_parameters()
+        self.params.raw_dates = {
+            name: self._extract_string_param(name) for start, end, _ in DATE_RANGE_PARAMS for name in (start, end)
+        }
+        self.params.max_results = self._extract_string_param("Max Results")
+        self.params.next_page_token = self._extract_string_param("Next Page Token")
+
+    def _validate_params(self) -> None:
+        soar_action = self.soar_action
+        search_filter = IRViolationSearchFilter(
+            policy_types=parse_ir_policy_types_param(soar_action),
+            statuses=parse_status_param(soar_action),
+            severities=parse_dspm_severity_param(soar_action),
+            categories=parse_ir_category_param(soar_action),
+            idp_types=parse_ir_identity_provider_param(soar_action),
+            identity_tags=parse_ir_identity_tag_param(soar_action),
+            sort=SortSpec(
+                sort_by=parse_ir_sort_by_param(soar_action),
+                sort_order=parse_sort_order_param(soar_action),
+            ),
+        )
+        # Dates are validated after the enum parameters, matching the original error order.
+        search_filter.detection_date, search_filter.update_date = validate_date_ranges(
+            self.params.raw_dates,
+            DATE_RANGE_PARAMS,
+        )
+        self.params.search_filter = search_filter
+        self.params.page = Page(
+            first=validate_max_results(
+                self.params.max_results,
+                default=DEFAULT_MAX_RESULTS,
+                max_allowed=MAX_VIOLATIONS,
+            ),
+            after_cursor=self.params.next_page_token or None,
+        )
+
+    def _perform_action(self, _: object = None) -> None:
+        data: SingleJson = self.api_client.search_ir_violations(self.params.search_filter, self.params.page)
+        policy_violations: SingleJson = data.get("policyViolations") or {}
+        nodes, next_cursor = parse_connection(policy_violations)
+        if not nodes:
+            # Keep an empty JSON result, as before, so playbooks can always read it.
+            self.soar_action.result.add_result_json([])
+            self.output_message = NO_RESULTS_MESSAGE
+            return
+
+        self.json_results = nodes
+        table_rows = [IRViolation(node).to_csv() for node in nodes][:MAX_TABLE_RECORDS]
+        self.data_tables.append(DataTable(title=TABLE_TITLE, data_table=construct_csv(table_rows)))
+        self.output_message = (
+            f"Successfully retrieved {len(nodes)} IR violation(s) "
+            f"(total matching: {policy_violations.get('count', 0)})."
+        )
+        if next_cursor:
+            self.output_message += f" Use Next Page Token '{next_cursor}' to retrieve the next page."
+
+
+def main() -> None:
+    SearchIRViolations().run()
+
+
+if __name__ == "__main__":
+    main()

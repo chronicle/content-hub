@@ -18,6 +18,7 @@ class RubrikSession(MockSession[MockRequest, MockResponse, RubrikSecurityCloud])
         return [
             self.graphql_endpoint,
             self.token_endpoint,
+            self.file_download_endpoint,
         ]
 
     @router.post(r"/api/graphql")
@@ -42,6 +43,43 @@ class RubrikSession(MockSession[MockRequest, MockResponse, RubrikSecurityCloud])
 
             if "deploymentVersion" in query:
                 return MockResponse(content=self._product.get_deployment_version(), status_code=200)
+            # Violation queries are matched first: the file list query also contains
+            # "policyObj", and list queries ("policyViolations") contain the detail
+            # query's "policyViolation".
+            elif "bulkUpdatePolicyViolations" in query:
+                return MockResponse(
+                    content=self._product.get_update_violation_status(), status_code=200
+                )
+            elif "IRViolationsListQuery" in query:
+                return MockResponse(
+                    content=self._product.get_search_ir_violations(), status_code=200
+                )
+            elif "DataSecurityViolationsListQuery" in query:
+                return MockResponse(
+                    content=self._product.get_search_dspm_violations(), status_code=200
+                )
+            elif "policyViolation(" in query and "IdentityMetadata" in query:
+                return MockResponse(
+                    content=self._product.get_ir_violation_details(), status_code=200
+                )
+            elif "policyViolation(" in query:
+                return MockResponse(
+                    content=self._product.get_dspm_violation_details(), status_code=200
+                )
+            elif "fileResultConnection" in query:
+                return MockResponse(
+                    content=self._product.get_violation_file_list(), status_code=200
+                )
+            elif "downloadSnapshotResultsCsv" in query:
+                return MockResponse(
+                    content=self._product.get_download_snapshot_results_csv(), status_code=200
+                )
+            elif "createViolationRemediation" in query:
+                return MockResponse(
+                    content=self._product.get_create_violation_remediation(), status_code=200
+                )
+            elif "allUserFiles" in query:
+                return MockResponse(content=self._product.get_all_user_files(), status_code=200)
             elif "clusterConnection" in query and "geoLocation" in query:
                 return MockResponse(
                     content=self._product.get_cdm_cluster_location(), status_code=200
@@ -78,6 +116,10 @@ class RubrikSession(MockSession[MockRequest, MockResponse, RubrikSecurityCloud])
             return MockResponse(content={"data": {}}, status_code=200)
         except Exception as e:
             return MockResponse(content={"errors": [{"message": str(e)}]}, status_code=400)
+
+    @router.get(r"/file-downloads/.+")
+    def file_download_endpoint(self, request: MockRequest) -> MockResponse:
+        return MockResponse(content=self._product.file_download_content, status_code=200)
 
     @router.post(r"/api/client_token")
     def token_endpoint(self, request: MockRequest) -> MockResponse:
