@@ -1,0 +1,968 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Add Comment To Incident:
+  ai_description: >-
+    ### General Description
+
+    Adds a comment to a specific incident in Microsoft 365 Defender. This action is
+    used to document findings, provide updates, or add context to an existing incident
+    within the Microsoft 365 Defender portal directly from Google SecOps.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Microsoft 365 Defender manager
+    using the provided integration configuration.
+
+    2. **Parameter Validation**: It extracts and validates the `Incident ID` and `Comment`
+    parameters. The `Incident ID` is converted to an integer format required by the
+    API.
+
+    3. **API Interaction**: The action sends a POST request to the Microsoft Graph
+    API endpoint (`/v1.0/security/incidents/{incident_id}/comments`) containing the
+    comment text.
+
+    4. **Error Handling**: If the incident is not found (404 error), it raises a specific
+    `NotFoundItemException`. Other API errors are caught and reported as execution
+    failures.
+
+    5. **Completion**: Upon a successful API response, the action returns a success
+    status and an informative output message.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Adds a comment to a specific incident in Microsoft 365 Defender.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a comment to a specific incident in Microsoft 365 Defender via the Microsoft
+      Graph API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a POST request to the Microsoft Graph API to add a comment
+      to an external incident, which mutates external data. It does not fetch data
+      for enrichment, nor does it mutate internal SecOps data, update entities, or
+      create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or filter any entities. It relies entirely on the
+      explicitly provided 'Incident ID' parameter to target the specific incident
+      in Microsoft 365 Defender.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds a comment to an incident in Microsoft 365 Defender. This does
+      not align with any of the predefined outcome categories such as updating internal
+      alerts, enriching IOCs, or interacting with an ITSM ticketing system.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident ID | String | Yes | Specify the id of the incident that needs to be
+    updated. |
+
+    | Comment | String | Yes | Specify the comment that needs to be added to the incident.
+    |
+Execute Custom Query:
+  ai_description: >-
+    ### General Description
+
+    Executes a custom Kusto Query Language (KQL) hunting query against Microsoft 365
+    Defender's advanced hunting data. This action allows security analysts to perform
+    flexible, ad-hoc searches across various data tables (like DeviceProcessEvents,
+    EmailEvents, etc.) within the Microsoft 365 Defender environment. The results
+    are returned as a structured data table and a JSON object for further automation
+    steps.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves connection settings and action parameters
+    (`Query`, `Time Frame`, `Start Time`, `End Time`, and `Max Results To Return`).
+
+    2. **Query Preparation**: It appends a time filter (if selected) and a `| limit`
+    clause to the user-provided query to ensure the result set size is controlled.
+
+    3. **API Execution**: It first attempts to execute the query using the Microsoft
+    Graph API (`/beta/security/runHuntingQuery`). If the Graph API call fails due
+    to a permission error (403), it automatically falls back to the Legacy Microsoft
+    365 Defender API (`/api/advancedhunting/run`).
+
+    4. **Data Processing**: The raw response is parsed into a list of results.
+
+    5. **Output Generation**: If data is found, it populates a SOAR data table named
+    'Results' and adds the raw JSON to the action's result object. If no data is found,
+    it reports a successful execution with a 'No data found' message.
+
+
+    ### Additional Notes
+
+    The action automatically appends a limit clause, so the 'top' or 'limit' keywords
+    are not required in the input string. If "Custom" is selected for the time frame,
+    the start time must be provided.
+  ai_short_description: >-
+    Executes a custom Kusto Query Language (KQL) hunting query against Microsoft 365
+    Defender's advanced hunting data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Microsoft Graph API (or legacy API) to
+      execute a hunting query and fetch data. It does not mutate any external data,
+      nor does it update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the user-provided KQL query string to fetch data, meaning
+      it does not run on specific entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a custom KQL query to search for historical logs and telemetry
+      data in Microsoft 365 Defender's advanced hunting tables. This perfectly aligns
+      with the 'Search Events' outcome category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query | String | Yes | Specify the query that needs to be executed. Use this
+    parameter to provide \|where clauses. Note: you don't need to provide a limiting
+    ("top" keyword). |
+
+    | Time Frame | Dropdown | No | Specify a time frame for the results. If "Custom"
+    is selected, you also need to provide "Start Time". Note: If you are using this
+    parameter then remove the "Timestamp" filter from the "Query" parameter. The time
+    filter is applied after the query, so the query must keep the "Timestamp" column
+    and shouldn't limit rows before it (for example, with "take" or "top"). |
+
+    | Start Time | String | No | Specify the start time for the results. This parameter
+    is mandatory, if "Custom" is selected for the "Time Frame" parameter. Format: ISO
+    8601 |
+
+    | End Time | String | No | Specify the end time for the results. Format: ISO 8601.
+    If nothing is provided and "Custom" is selected for the "Time Frame" parameter
+    then this parameter will use current time. |
+
+    | Max Results To Return | Integer | No | Specify how many results to return. Default:
+    50. |
+Execute Entity Query:
+  ai_description: >-
+    ### General Description
+
+    Executes advanced hunting queries in Microsoft 365 Defender based on the entities
+    present in the current Google SecOps context. This action automatically constructs
+    a Kusto Query Language (KQL) 'where' clause by mapping entity identifiers (IPs,
+    Hostnames, Users, Hashes, and URLs) to specific table columns defined in the action
+    parameters. It allows for complex cross-entity logic (AND/OR) and supports custom
+    timeframes and result sorting. The retrieved data is returned as a structured
+    data table and a JSON result for downstream automation.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Retrieves integration credentials and action parameters,
+    including table names and entity-to-column mappings.
+
+    2. **Entity Categorization:** Scans the scope for supported entities (IP, Hostname,
+    User, File Hash, URL) and groups them by type. It also checks the user entity's
+    additional properties to determine if it is an email address.
+
+    3. **Query Construction:** Builds a KQL query string. It creates `where` filters
+    for each entity type using the provided keys and joins them using the `Cross Entity
+    Operator`.
+
+    4. **Execution:** Sends the generated query to Microsoft 365 Defender's hunting
+    endpoint.
+
+    5. **Result Processing:** Parses the response into a CSV-formatted data table
+    and a JSON object, which are then attached to the action output.
+
+
+    ### Additional Notes
+
+    - **Entity Mapping:** You must provide the correct column names (keys) for the
+    tables you are querying. For example, if querying `DeviceLogonEvents`, the `User
+    Entity Key` should likely be `AccountName`.
+
+    - **API Fallback:** The action attempts to use the Microsoft Graph API first and
+    falls back to the legacy Defender Advanced Hunting API if permission issues occur.
+  ai_short_description: >-
+    Executes advanced hunting queries in Microsoft 365 Defender based on the entities
+    present in the current Google SecOps context.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by executing a hunting query via the Microsoft 365 Defender
+      API. It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
+    filters_by_additional_properties: true
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITY_TYPES` (ADDRESS, HOSTNAME, USER,
+      FILEHASH, URL). It also checks `entity.additional_properties` for the 'Email'
+      key when processing USER entities to distinguish between regular users and email
+      addresses.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes an advanced hunting query in Microsoft 365 Defender to retrieve
+      historical logs, telemetry data, or device events matching the provided entities.
+      This aligns with the 'Search Events' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Table Names | String | Yes | Specify what tables should be queried (comma-separated).
+    |
+
+    | Time Frame | Dropdown | No | Specify a time frame for the results. If "Custom"
+    is selected, you also need to provide "Start Time". |
+
+    | Start Time | String | No | Specify the start time for the results. This parameter
+    is mandatory if "Custom" is selected for the "Time Frame" parameter. Format: ISO
+    8601. |
+
+    | End Time | String | No | Specify the end time for the results. Format: ISO 8601.
+    If nothing is provided and "Custom" is selected for the "Time Frame" parameter
+    then this parameter will use current time. |
+
+    | Fields To Return | String | No | Specify what fields to return (comma-separated).
+    |
+
+    | Sort Field | String | No | Specify what parameter should be used for sorting.
+    |
+
+    | Sort Order | Dropdown | No | Specify the order of sorting (ASC or DESC). |
+
+    | Max Results To Return | Integer | No | Specify how many results to return. Default:
+    50. |
+
+    | IP Entity Key | String | No | Specify what key should be used with IP entities.
+    |
+
+    | Hostname Entity Key | String | No | Specify what key should be used with Hostname
+    entities. |
+
+    | File Hash Entity Key | String | No | Specify what key should be used with File
+    Hash entities. |
+
+    | User Entity Key | String | No | Specify what key should be used with User entities.
+    |
+
+    | URL Entity Key | String | No | Specify what key should be used with URL entities.
+    |
+
+    | Email Address Entity Key | String | No | Specify what key should be used with
+    Email Address (User entity with email regex) entities. |
+
+    | Stop If Not Enough Entities | Boolean | Yes | If enabled, action will not start
+    execution unless all of the entity types are available for the specified Entity
+    Keys. |
+
+    | Cross Entity Operator | Dropdown | Yes | Specify what should be the logical
+    operator used between different entity types (OR, AND). |
+Execute Query:
+  ai_description: >-
+    ### General Description
+
+    Executes an advanced hunting query in Microsoft 365 Defender to retrieve data
+    from specified tables using Kusto Query Language (KQL). This action allows users
+    to perform complex searches across various Defender data schemas, supporting filtering
+    by time range, selecting specific fields, and sorting results.
+
+
+    ### Flow Description
+
+    1. Extracts configuration and action parameters.
+
+    2. Calculates the start and end timestamps based on the selected time frame.
+
+    3. Constructs a KQL query string using the provided table names, time filters,
+    query clauses, fields, and sorting logic.
+
+    4. Sends a POST request to the Microsoft 365 Defender Advanced Hunting API (attempting
+    Graph API first, then falling back to the legacy API) to execute the query.
+
+    5. Parses the API response and adds the retrieved data to the SOAR case as a data
+    table and JSON result.
+
+
+    ### Additional Notes
+
+    If "Custom" is selected for the time frame, the start time must be provided.
+  ai_short_description: >-
+    Executes an advanced hunting query in Microsoft 365 Defender to retrieve data
+    from specified tables using KQL.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Microsoft 365 Defender Advanced Hunting
+      API to fetch query results. It does not mutate external data, update internal
+      entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not use or iterate over `siemplify.target_entities`. It operates
+      independently of specific entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a hunting query to retrieve historical logs or telemetry
+      data, which matches the 'Search Events' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Table Names | String | Yes | Specify what tables should\
+    \ be queried. |\n| Query | String | No | Specify the query that needs to be executed.\
+    \ Use this parameter to provide \\|where clauses. Note: you don\u2019t need to\
+    \ provide time filter, limiting and sorting. |\n| Time Frame | Dropdown | No |\
+    \ Specify a time frame for the results. If \"Custom\" is selected, you also need\
+    \ to provide \"Start Time\". |\n| Start Time | String | No | Specify the start\
+    \ time for the results. This parameter is mandatory, if \"Custom\" is selected\
+    \ for the \"Time Frame\" parameter. Format: ISO 8601 |\n| End Time | String |\
+    \ No | Specify the end time for the results. Format: ISO 8601. If nothing is provided\
+    \ and \"Custom\" is selected for the \"Time Frame\" parameter then this parameter\
+    \ will use current time. |\n| Fields To Return | String | No | Specify what fields\
+    \ to return. |\n| Sort Field | String | No | Specify what parameter should be\
+    \ used for sorting. |\n| Sort Order | Dropdown | No | Specify the order of sorting.\
+    \ |\n| Max Results To Return | Integer | No | Specify how many results to return.\
+    \ Default: 50. |"
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity and
+    authentication configuration between Google SecOps and the Microsoft 365 Defender
+    environment. It ensures that the provided credentials are valid and that the SOAR
+    platform can successfully communicate with the Microsoft Graph API.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the connection details and credentials
+    from the integration-level configuration.
+
+    2. **Manager Initialization:** It initializes the `Microsoft365DefenderManager`,
+    which triggers the generation of OAuth2 access tokens for the Microsoft Graph
+    API.
+
+    3. **Connectivity Test:** The action calls the `test_connectivity` method, which
+    performs a lightweight GET request to the Microsoft Graph API's incidents endpoint
+    (`/v1.0/security/incidents`) with a result limit of 1.
+
+    4. **Validation:** If the API returns a successful response, the action completes
+    with a success status. If an error occurs (e.g., authentication failure or network
+    timeout), it catches the exception and reports a failure.
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the integration or
+    for troubleshooting connection issues.
+
+    - It does not process any entities or modify any data within Microsoft 365 Defender.
+  ai_short_description: >-
+    Verifies connectivity and authentication configuration between Google SecOps and
+    Microsoft 365 Defender by performing a lightweight API request.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a lightweight GET request to test connectivity. It does
+      not fetch contextual data for alerts/entities, nor does it mutate any external
+      or internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It is a simple connectivity
+      test that operates independently of case or alert entities, so all entity flags
+      are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic ping to test API connectivity. It does not match
+      any of the specific outcome categories such as enrichment, containment, or ticket
+      management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Update Incident:
+  ai_description: >-
+    ### General Description
+
+    Updates the details of a specific incident in Microsoft 365 Defender. This action
+    allows security analysts to programmatically modify an incident's status, classification,
+    determination, and assignee directly from Google SecOps.
+
+
+    ### Flow Description
+
+    1. Extracts the integration configuration and action parameters (Incident ID,
+    Status, Classification, Determination, Assign To).
+
+    2. Validates that at least one of the optional update parameters is provided.
+
+    3. Maps the provided dropdown values for Classification and Determination to the
+    corresponding Microsoft 365 Defender API values.
+
+    4. Initializes the `Microsoft365DefenderManager` and sends a `PATCH` request to
+    the Microsoft Graph API (`/v1.0/security/incidents/{incident_id}`) with the update
+    payload.
+
+    5. Returns a success message if the incident is updated successfully, or an error
+    message if the request fails.
+
+
+    ### Additional Notes
+
+    - At least one of the optional parameters (`Status`, `Classification`, `Determination`,
+    or `Assign To`) must be provided for the action to execute successfully.
+
+    - The `Determination` parameter can only be set if the `Classification` is set
+    to `True Positive`.
+  ai_short_description: >-
+    Updates the status, classification, determination, or assignee of a specific incident
+    in Microsoft 365 Defender.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a PATCH request to the Microsoft Graph API to update the status, classification,
+      determination, or assignee of an incident in Microsoft 365 Defender.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action sends a PATCH request to the Microsoft Graph API to update an incident
+      in Microsoft 365 Defender, which mutates external data. It does not fetch data,
+      mutate internal data, update entities, create insights, modify alert data, or
+      create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It uses the provided 'Incident ID'
+      parameter to update a specific incident in Microsoft 365 Defender.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates an incident in Microsoft 365 Defender. This does not match
+      'Update Alert' (which is strictly for internal SecOps alerts) or 'Update Ticket'
+      (which is for ITSM systems like Jira/ServiceNow). Therefore, it does not fall
+      into any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident ID | Integer | Yes | Specify the id of the incident that needs to be
+    updated. |
+
+    | Status | Dropdown | No | Specify what status to set for the incident. |
+
+    | Classification | Dropdown | No | Specify what classification to set for the
+    incident. |
+
+    | Determination | Dropdown | No | Specify what determination to set for the incident.
+    Note: determination can only be set, when classification is true positive. |
+
+    | Assign To | String | No | Specify to whom to assign this incident. |

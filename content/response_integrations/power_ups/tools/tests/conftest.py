@@ -43,7 +43,10 @@ def pytest_configure(config: Any) -> None:
 
 
 @pytest.fixture(autouse=True)
-def configure_execution_scope(request: pytest.FixtureRequest) -> None:
+def configure_execution_scope(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Automatically patch SiemplifyAction.execution_scope.
 
     Scope is based on the test's execution_scope marker.
@@ -65,6 +68,17 @@ def configure_execution_scope(request: pytest.FixtureRequest) -> None:
         elif scope_name == "Alert":
             scope_value = 1
 
+    orig_init = SiemplifyAction.__init__
+
+    def patched_init(self: Any, *args: Any, **kwargs: Any) -> None:
+        orig_init(self, *args, **kwargs)
+        from soar_sdk.SiemplifyAction import ExecutionScope as SoarExecutionScope
+
+        self.execution_scope = (
+            SoarExecutionScope.Case if scope_value == 2 else SoarExecutionScope.Alert
+        )
+
+    monkeypatch.setattr(SiemplifyAction, "__init__", patched_init)
     setattr(SiemplifyAction, "execution_scope", scope_value)
 
 
