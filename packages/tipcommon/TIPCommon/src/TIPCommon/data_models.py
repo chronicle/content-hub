@@ -33,6 +33,8 @@ from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar
 
 from SiemplifyConnectorsDataModel import ConnectorContext
 
+from .consts import DISABLED_1P_ACCOUNT_STATE
+
 if TYPE_CHECKING:
     import email
 
@@ -1724,7 +1726,10 @@ class UserDetails:
             permission_groups=user_details_json.get("permissionGroups", []),
             soc_role=user_details_json.get("socRole", None),
             soc_roles=user_details_json.get("socRoles", []),
-            is_disabled=user_details_json.get("isDisabled", False),
+            is_disabled=user_details_json.get(
+                "isDisabled",
+                user_details_json.get("accountState") == DISABLED_1P_ACCOUNT_STATE,
+            ),
             login_identifier=user_details_json.get("loginIdentifier"),
             first_name=user_details_json.get("firstName"),
             last_name=user_details_json.get("lastName"),
