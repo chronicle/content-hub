@@ -7,7 +7,7 @@ import urllib.parse
 from typing import Any
 
 import requests
-from TIPCommon.types import SingleJson
+from TIPCommon.types import ChronicleSOAR, SingleJson
 
 from .censys_exceptions import (
     CensysException,
@@ -54,49 +54,93 @@ from .constants import (
     VALIDATION_ERROR_STATUS_CODES,
     WAIT_TIME_FOR_RETRY,
 )
+from .oauth import build_oauth_manager
+from .params import IntegrationParams
 from .utils import HandleExceptions
+
+
+def _validate_credentials(params: IntegrationParams, siemplify: ChronicleSOAR | None) -> None:
+    """Stop before any request when the credentials for the selected method are missing.
+
+    Args:
+        params: Integration configuration.
+        siemplify: SOAR object; OAuth needs it because the access token is cached in its context.
+
+    Raises:
+        ValidationException: If the API Key (OAuth off) or the Client ID and Client Secret
+            (OAuth on) are empty, or OAuth is on without a SOAR object.
+    """
+    if params.use_oauth:
+        if not params.client_id or not params.client_secret:
+            raise ValidationException(
+                "Client ID and Client Secret are required when OAuth authentication is enabled."
+            )
+        if siemplify is None:
+            raise ValidationException(
+                "Chronicle SOAR instance is required when OAuth authentication is enabled."
+            )
+    elif not params.api_key:
+        raise ValidationException("API Key is required when OAuth authentication is disabled.")
+
+
+def _build_user_agent(siemplify: ChronicleSOAR | None) -> str:
+    """Build the User-Agent header value.
+
+    Args:
+        siemplify: SOAR object used to read the platform version, if available.
+
+    Returns:
+        str: The User-Agent string.
+    """
+    google_secops_version = siemplify.get_system_version() if siemplify else "Unknown"
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    return (
+        f"CensysGoogleSecopsSOAR/{INTEGRATION_VERSION} "
+        f"(GoogleSecopsSOAR/{google_secops_version}; "
+        f"Python/{python_version}; "
+        f"ts={int(time.time())})"
+    )
 
 
 class APIManager:
     def __init__(
         self,
-        api_key: str,
-        organization_id: str,
-        verify_ssl: bool = False,
-        siemplify: Any | None = None,
+        params: IntegrationParams,
+        siemplify: ChronicleSOAR | None = None,
     ) -> None:
-        """Initialize the APIManager with API key authentication.
+        """Initialize the APIManager with either API Key or OAuth authentication.
 
         Args:
-            api_key: Censys API Key
-            organization_id: Censys Organization ID
-            verify_ssl: Whether to verify SSL certificates
+            params: Integration configuration (authentication settings, organization ID
+                and SSL verification).
             siemplify: Chronicle SOAR SDK instance for logging
         """
+        _validate_credentials(params, siemplify)
+
         self.siemplify = siemplify
         self.api_root = API_ROOT
-        self.api_key = api_key
-        self.organization_id = organization_id
-        self.verify_ssl = verify_ssl
-
-        # Build User-Agent header
-        google_secops_version = (
-            siemplify.get_system_version() if siemplify else "Unknown"
-        )
-        python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
-        epoch_time = int(time.time())
-        user_agent = (
-            f"CensysGoogleSecopsSOAR/{INTEGRATION_VERSION} "
-            f"(GoogleSecopsSOAR/{google_secops_version}; "
-            f"Python/{python_version}; "
-            f"ts={epoch_time})"
-        )
+        self.organization_id = params.organization_id
+        self.verify_ssl = params.verify_ssl
+        self.use_oauth = params.use_oauth
+        user_agent = _build_user_agent(siemplify)
 
         self.session = requests.Session()
+        self.session.verify = self.verify_ssl
+
+        self.oauth_manager = None
+        bearer_token = params.api_key
+        if self.use_oauth:
+            self.oauth_manager = build_oauth_manager(
+                params,
+                siemplify,
+                getattr(siemplify, "LOGGER", None),
+            )
+            bearer_token = self.oauth_manager.get_access_token()
+
         self.session.headers.update(
             {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": f"Bearer {bearer_token}",
                 "User-Agent": user_agent,
             }
         )
@@ -167,9 +211,11 @@ class APIManager:
                 )
             raise
         except UnauthorizedErrorException:
-            raise UnauthorizedErrorException(
-                "Unauthorized, please verify your API Key and Organization ID."
-            )
+            if retry_count > 0 and self._refresh_oauth_token():
+                return self._make_rest_call(
+                    api_identifier, method, url, params, body, data, 0
+                )
+            raise self._unauthorized_error()
 
         try:
             return response.json()
@@ -178,6 +224,35 @@ class APIManager:
                 f"Exception occurred while parsing response JSON for {api_identifier} and URL {url}"
             )
             return {}
+
+    def _refresh_oauth_token(self) -> bool:
+        """Replace the cached OAuth token after Censys rejected a request with 401.
+
+        The cached token may have been revoked before it expired, so a new one is requested
+        and used for a single retry.
+
+        Returns:
+            bool: True if a new token is now in use, False when OAuth is not enabled.
+        """
+        if self.oauth_manager is None:
+            return False
+
+        self.siemplify.LOGGER.info(
+            "[OAuth] Request was rejected with 401. Refreshing the access token and retrying once."
+        )
+        self.oauth_manager.force_refresh()
+        self.session.headers["Authorization"] = f"Bearer {self.oauth_manager.get_access_token()}"
+        return True
+
+    def _unauthorized_error(self) -> UnauthorizedErrorException:
+        """Build the 401 error that names the credentials of the selected method."""
+        if self.use_oauth:
+            return UnauthorizedErrorException(
+                "Unauthorized, please verify your Client ID, Client Secret, and Organization ID."
+            )
+        return UnauthorizedErrorException(
+            "Unauthorized, please verify your API Key and Organization ID."
+        )
 
     def _raise_for_http_status(
         self,

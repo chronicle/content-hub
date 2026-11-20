@@ -622,7 +622,10 @@ class TestEnrichHost:
 
     @set_metadata(
         integration_config={
+            "Use OAuth Authentication": "false",
             "API Key": "test_api_key_12345",
+            "Client ID": "test_client_id",
+            "Client Secret": "test_client_secret",
             "Organization Id": "test_org_id_67890",
             "Verify SSL": "false",
             "Enable Get Host Enrichment API": "false",
@@ -651,7 +654,10 @@ class TestEnrichHost:
 
     @set_metadata(
         integration_config={
+            "Use OAuth Authentication": "false",
             "API Key": "test_api_key_12345",
+            "Client ID": "test_client_id",
+            "Client Secret": "test_client_secret",
             "Organization Id": "test_org_id_67890",
             "Verify SSL": "false",
         },

@@ -46,7 +46,7 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameters
-    api_key, organization_id, verify_ssl = get_integration_params(siemplify)
+    params = get_integration_params(siemplify)
 
     # Action Parameters
     scan_id = siemplify.extract_action_param(
@@ -66,12 +66,7 @@ def main():
         scan_id = scan_id.strip()
 
         # Initialize API Manager
-        censys_manager = APIManager(
-            api_key,
-            organization_id,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
+        censys_manager = APIManager(params, siemplify=siemplify)
 
         siemplify.LOGGER.info(f"Retrieving scan status for Scan ID: {scan_id}")
         response = censys_manager.get_rescan_status(scan_id)

@@ -359,6 +359,7 @@ def mock_requests_session(
     class MockSession:
         def __init__(self):
             self.headers = {}
+            self.verify = False
 
         def update(self, *args, **kwargs):
             pass

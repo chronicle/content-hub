@@ -85,7 +85,7 @@ def main():
     siemplify.script_name = CREATE_RELATED_INFRA_JOB_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
-    api_key, organization_id, verify_ssl = get_integration_params(siemplify)
+    params = get_integration_params(siemplify)
 
     target_type = siemplify.extract_action_param(
         param_name="Target Type", input_type=str, is_mandatory=True
@@ -102,12 +102,7 @@ def main():
     try:
         validate_create_job_params(target_type, target_value)
 
-        censys_manager = APIManager(
-            api_key,
-            organization_id,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
+        censys_manager = APIManager(params, siemplify=siemplify)
 
         siemplify.LOGGER.info(f"Creating CensEye job for {target_type}: {target_value}")
 

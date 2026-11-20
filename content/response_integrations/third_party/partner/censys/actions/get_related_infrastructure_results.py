@@ -39,7 +39,7 @@ def main():
     siemplify.script_name = GET_RELATED_INFRA_RESULTS_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
-    api_key, organization_id, verify_ssl = get_integration_params(siemplify)
+    params = get_integration_params(siemplify)
 
     job_id = siemplify.extract_action_param(
         param_name="Job ID", input_type=str, is_mandatory=True
@@ -56,12 +56,7 @@ def main():
 
         job_id = job_id.strip()
 
-        censys_manager = APIManager(
-            api_key,
-            organization_id,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
+        censys_manager = APIManager(params, siemplify=siemplify)
 
         siemplify.LOGGER.info(f"Retrieving results for CensEye job: {job_id}")
         response = censys_manager.get_censeye_job_results(job_id)
