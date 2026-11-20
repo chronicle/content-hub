@@ -16,16 +16,31 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
-from TIPCommon.types import SingleJson
-
-from microsoft_defender_atp.core.datamodels import Alert
-from microsoft_defender_atp.tests.core.product import MicrosoftDefenderATP
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, RouteFunction
+
+from microsoft_defender_atp.tests.core.product import MicrosoftDefenderATP
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from TIPCommon.types import SingleJson
+
+    from microsoft_defender_atp.core.datamodels import Alert
+
+MOCK_SAS_URL_PREFIX: str = "https://mock.blob.core.windows.net/liveresponse-results"
+
+
+def _active_request_exists_response() -> MockResponse:
+    """Build MDE's 400 response for a duplicate isolate/unisolate request."""
+    return MockResponse(
+        content={"error": {"code": "ActiveRequestAlreadyExists", "message": "Action is already in progress"}},
+        status_code=400,
+    )
 
 
 class MicrosoftDefenderATPSession(
@@ -45,6 +60,7 @@ class MicrosoftDefenderATPSession(
             self.run_antivirus_scan,
             self.stop_and_quarantine_file,
             self.run_live_response,
+            self.get_machine_by_id,
             self.get_machine_actions,
             self.get_file_related_alerts,
             self.get_file_related_machines,
@@ -57,6 +73,8 @@ class MicrosoftDefenderATPSession(
             self.submit_indicator,
             self.delete_indicator,
             self.update_alert,
+            self.get_live_response_download_link,
+            self.download_live_response_result,
             self.get_live_response_status,
             self.get_user_related_alerts,
             self.siemplify_internal_post,
@@ -151,6 +169,8 @@ class MicrosoftDefenderATPSession(
                 status_code=404,
             )
         machine_id: str = match.group("machine_id")
+        if self._product.has_active_request(machine_id, "Isolate"):
+            return _active_request_exists_response()
         task_data = self._product.create_task("Isolate", machine_id)
         return MockResponse(content=task_data, status_code=201)
 
@@ -166,6 +186,8 @@ class MicrosoftDefenderATPSession(
                 status_code=404,
             )
         machine_id: str = match.group("machine_id")
+        if self._product.has_active_request(machine_id, "Unisolate"):
+            return _active_request_exists_response()
         task_data = self._product.create_task("Unisolate", machine_id)
         return MockResponse(content=task_data, status_code=201)
 
@@ -268,9 +290,35 @@ class MicrosoftDefenderATPSession(
 
         return MockResponse(content={"value": machines}, status_code=200)
 
+    @router.get(r".*/api/machines/(?P<machine_id>[\w.-]+)")
+    def get_machine_by_id(self, request: MockRequest) -> MockResponse:
+        """Handle GET /api/machines/{id}; like MDE, a computerDnsName also matches."""
+        machine = self._product.lookup_machine(request.url.path.rsplit("/", 1)[-1])
+        if not machine:
+            return MockResponse(
+                content={"error": {"code": "ResourceNotFound", "message": "Not found"}},
+                status_code=404,
+            )
+        return MockResponse(content=machine, status_code=200)
+
     # -------------------------------------------------------------------------
     # Machine actions (tasks)
     # -------------------------------------------------------------------------
+
+    @router.get(r".*/api/machineactions/(?P<action_id>[\w-]+)/GetLiveResponseResultDownloadLink\(index=0\)")
+    def get_live_response_download_link(self, request: MockRequest) -> MockResponse:
+        """Handle GET .../GetLiveResponseResultDownloadLink(index=0) requests."""
+        action_id: str = request.url.path.split("/")[-2]
+        if not self._product.get_live_response_action(action_id):
+            return MockResponse(content={"error": {"message": "Action not found"}}, status_code=404)
+        return MockResponse(content={"value": f"{MOCK_SAS_URL_PREFIX}/{action_id}.gz?sv=mock"}, status_code=200)
+
+    @router.get(r".*/liveresponse-results/(?P<action_id>[\w-]+)\.gz")
+    def download_live_response_result(self, _request: MockRequest) -> MockResponse:
+        """Handle the SAS blob download of a live-response result."""
+        response = MockResponse(status_code=200)
+        response._content = self._product.get_live_response_file_bytes()
+        return response
 
     @router.get(r".*/api/machineactions/(?P<action_id>[\w-]+)")
     def get_live_response_status(self, request: MockRequest) -> MockResponse:
@@ -289,7 +337,7 @@ class MicrosoftDefenderATPSession(
             return MockResponse(
                 content={"error": {"message": "Action not found"}}, status_code=404
             )
-        action["status"] = "Pending"
+        self._product.apply_live_response_outcome(action)
         return MockResponse(content=action, status_code=200)
 
     @router.get(r".*/api/machineactions$")
@@ -305,6 +353,11 @@ class MicrosoftDefenderATPSession(
                 task_id = id_match.group(1)
             else:
                 machine_id_match = re.search(r"machineId eq '([\w-]+)'", filter_str)
+                if machine_id_match and re.search(r"type eq '(?:Un)?isolate'", filter_str):
+                    if self._product.is_containment_tasks_error():
+                        return MockResponse(content={"error": {"message": "Internal error"}}, status_code=500)
+                    tasks = self._product.get_containment_tasks(machine_id_match.group(1))
+                    return MockResponse(content={"value": tasks}, status_code=200)
                 if machine_id_match:
                     mid = machine_id_match.group(1)
                     tasks = [

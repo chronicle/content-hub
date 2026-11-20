@@ -25,6 +25,10 @@ class DefenderNotFoundException(DefenderException):
     """
 
 
+class DefenderActiveRequestExistsException(DefenderException):
+    """Raised when the machine already has an active request of the same type."""
+
+
 class MicrosoftDefenderATPError(Exception):
     """
     General Exception for MicrosoftDefenderATP Manager
