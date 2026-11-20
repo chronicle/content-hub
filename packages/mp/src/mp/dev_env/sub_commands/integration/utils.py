@@ -549,7 +549,7 @@ def _normalize_connector_def(item_def: SingleJson, identifier: str) -> None:
             cp.setdefault("IsMandatory", cp.get("Mandatory", False))
             cp.setdefault("IsAdvanced", cp.get("IsAdvanced", False))
             cp.setdefault("DefaultValue", cp.get("DefaultValue"))
-            cp["Mode"] = _normalize_connector_param_mode(cp.get("Mode", 0), default=ParamMode.REGULAR.value)
+            cp["Mode"] = _normalize_connector_param_mode(cp.get("Mode"), default=ParamMode.REGULAR.value)
             cp["Type"] = _normalize_script_param_type(
                 cp.get("Type", 2),
                 default=ScriptParamType.STRING.value,

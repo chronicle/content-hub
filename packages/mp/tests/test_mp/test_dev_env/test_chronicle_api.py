@@ -669,8 +669,14 @@ def test_normalize_connector_def_string_param_modes() -> None:
                 "Type": "String",
                 "Mode": "Script",
             },
+            {
+                "DisplayName": "Username",
+                "Description": "ServiceNow username.",
+                "Type": "String",
+            },
         ],
     }
     integration_utils._normalize_connector_def(raw_def, "ServiceNow")  # ruff:ignore[private-member-access]
     assert raw_def["Parameters"][0]["Mode"] == 0
     assert raw_def["Parameters"][1]["Mode"] == 2
+    assert raw_def["Parameters"][2]["Mode"] == 0
