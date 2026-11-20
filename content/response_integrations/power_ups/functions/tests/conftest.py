@@ -14,4 +14,6 @@
 
 from __future__ import annotations
 
+import soar_sdk  # noqa: F401
+
 pytest_plugins = ("integration_testing.conftest",)
