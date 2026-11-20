@@ -28,6 +28,7 @@ UPDATE_WORKBENCH_ALERT_SCRIPT_NAME = (
 )
 SUBMIT_FILE_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Submit File"
 SUBMIT_URL_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Submit URL"
+ACQUIRE_FILE_SCRIPT_NAME = f"{INTEGRATION_NAME} - Acquire File"
 EXECUTE_EMAIL_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Execute Email"
 
 ENDPOINTS = {
@@ -37,6 +38,8 @@ ENDPOINTS = {
     "search_endpoint": "/v3.0/eiqs/endpoints",
     "isolate_endpoint": "/v3.0/response/endpoints/isolate",
     "unisolate_endpoint": "/v3.0/response/endpoints/restore",
+    "collect_file": "/v3.0/response/endpoints/collectFile",
+    "endpoint_details": "/v3.0/endpointSecurity/endpoints/{agent_guid}",
     "get_task": "/v3.0/response/tasks/{task_id}",
     "get_scripts": "/v3.0/response/customScripts",
     "run_script": "/v3.0/response/endpoints/runScript",
@@ -49,9 +52,11 @@ ENDPOINTS = {
 }
 
 ENRICHMENT_PREFIX = "TrendVisionOne"
+ENDPOINT_NOT_FOUND_MESSAGE = f"Endpoint was not found in {INTEGRATION_DISPLAY_NAME}."
 SUCCESS_STATUS = "succeeded"
 FAILED_STATUS = "failed"
 REJECTED_STATUS = "rejected"
+CANCELED_STATUS = "canceled"
 RUNNING_STATUS = "running"
 RATE_LIMIT_EXCEEDED = "Rate limit exceeded"
 GLOBAL_TIMEOUT_THRESHOLD_IN_MIN = 1
@@ -70,3 +75,15 @@ DEVICE_PRODUCT = "Trend Vision One"
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 POSSIBLE_SEVERITIES = ["low", "medium", "high", "critical"]
 SEVERITY_MAPPING = {"INFO": -1, "LOW": 40, "MEDIUM": 60, "HIGH": 80, "CRITICAL": 100}
+
+# Acquire File
+ACQUIRE_FILE_ACTION_NAME = "Acquire File"
+ACQUIRE_FILE_TASK_DESCRIPTION = "Collect file from Google SecOps"
+ACQUIRE_FILE_PENDING_STATUSES = ("queued", "running", "pendingApproval")
+ACQUIRE_FILE_MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
+COLLECT_FILE_TARGET_NOT_FOUND_MESSAGE = "Target not found"
+COLLECT_FILE_NOT_SUPPORTED_CODE = "NotSupported"
+COLLECT_FILE_DUPLICATE_TASK_CODE = "TaskError"
+ACQUIRE_FILE_DEADLINE_MARGIN_MS = 30_000
+DOWNLOAD_CHUNK_SIZE_BYTES = 1024 * 1024
+REQUEST_TIMEOUT_SECONDS = 60
