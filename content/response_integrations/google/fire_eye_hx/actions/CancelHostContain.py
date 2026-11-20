@@ -25,6 +25,7 @@ from soar_sdk.SiemplifyUtils import convert_unixtime_to_datetime, output_handler
 from TIPCommon import extract_action_param, extract_configuration_param
 
 from ..core.FireEyeHXManager import FireEyeHXManager, FireEyeHXNotFoundError
+from ..core.UtilsManager import ErrorType, OperationSummaryScope, classify_exception, log_operation_result_summary
 
 INTEGRATION_NAME = "FireEyeHX"
 SCRIPT_NAME = "Cancel Host Contain"
@@ -64,6 +65,7 @@ def _uncontain_by_agent_id(hx_manager, agent_id_param):
             "result": "failure",
             "status": "failed",
             "reason": str(e),
+            "error_type": classify_exception(e)[0],
         }
 
     json_result = {
@@ -123,6 +125,7 @@ def _uncontain_by_entities(siemplify, hx_manager):
                     "result": "failure",
                     "status": "failed",
                     "reason": "Host not found",
+                    "error_type": ErrorType.ENDPOINT_NOT_FOUND,
                 }
                 continue
 
@@ -149,6 +152,7 @@ def _uncontain_by_entities(siemplify, hx_manager):
                 "result": "failure",
                 "status": "failed",
                 "reason": str(e),
+                "error_type": classify_exception(e)[0],
             }
             siemplify.LOGGER.exception(f"An error occurred on entity {entity.identifier}: {e}")
 
@@ -238,6 +242,8 @@ def main() -> None:
     output_message = ""
     result_value = "false"
     json_result = {}
+    hx_manager: FireEyeHXManager | None = None
+    error: Exception | None = None
 
     try:
         hx_manager = FireEyeHXManager(
@@ -256,6 +262,7 @@ def main() -> None:
             siemplify.result.add_result_json(json_result)
 
     except Exception as e:
+        error = e
         siemplify.LOGGER.exception(f"Failed to execute action! Error is {e}")
         status = EXECUTION_STATE_FAILED
         result_value = "false"
@@ -263,7 +270,8 @@ def main() -> None:
 
     finally:
         try:
-            hx_manager.logout()
+            if hx_manager is not None:
+                hx_manager.logout()
         except Exception as e:
             siemplify.LOGGER.exception(f"Logging out failed. Error: {e}")
 
@@ -271,6 +279,15 @@ def main() -> None:
     siemplify.LOGGER.info(f"Status: {status}:")
     siemplify.LOGGER.info(f"Result Value: {result_value}")
     siemplify.LOGGER.info(f"Output Message: {output_message}")
+    log_operation_result_summary(
+        siemplify,
+        status,
+        OperationSummaryScope(
+            json_result.get("operation_results", {}),
+            agent_id_param,
+            error,
+        ),
+    )
     siemplify.end(output_message, result_value, status)
 
 
