@@ -28,6 +28,11 @@ DEFAULT_MAX_ALERTS = 100
 # Alarm severity → SOAR risk score (midpoint of each band)
 # CRITICAL: 80-100 → 90, HIGH: 60-79 → 70, MEDIUM: 40-59 → 50, LOW: 20-39 → 30, INFO: 0-19 → 10
 RISK_SCORE_MAP = {"CRITICAL": 90, "HIGH": 70, "MEDIUM": 50, "LOW": 30, "INFO": 10}
+# Alarm risk level -> SOAR alert priority. SOAR only understands these values
+# (Informative=-1, Low=40, Medium=60, High=80, Critical=100); anything else is
+# bucketed, which showed HIGH alarms (70) as Medium cases.
+SOAR_PRIORITY_MAP = {"CRITICAL": 100, "HIGH": 80, "MEDIUM": 60, "LOW": 40, "INFO": -1}
+DEFAULT_SOAR_PRIORITY = SOAR_PRIORITY_MAP["MEDIUM"]
 
 
 # --- Indicator extraction patterns ---
@@ -52,6 +57,49 @@ def _split_csv(val: str | list[str] | None) -> list[str]:
     else:
         items = re.split(r"[,;\s]+", str(val))
     return [str(i).strip() for i in items if i is not None and str(i).strip()]
+
+
+def _parse_int_csv(val: str | None, param_name: str) -> list[int] | None:
+    """Parse a comma-separated list of integer IDs; None when empty.
+
+    Raises:
+        ValueError: If any item is not an integer, so a typo does not silently
+            widen the filter to every alarm type.
+    """
+    items = [s.strip() for s in (val or "").split(",") if s.strip()]
+    if not items:
+        return None
+    try:
+        return [int(s) for s in items]
+    except ValueError:
+        raise ValueError(
+            f"{param_name} must be a comma-separated list of numeric alarm type IDs, got: {val!r}"
+        ) from None
+
+
+def _is_excluded(
+    alarm: dict[str, Any],
+    excluded_main_types: set[str],
+    excluded_sub_types: set[str],
+    excluded_type_ids: set[str],
+) -> bool:
+    """Return True when the alarm matches an exclusion filter (case-insensitive names).
+
+    The API applies these filters too, but it HTML-escapes the excluded type names,
+    so names containing "&" (for example "Deep&Dark Web Monitoring") are not
+    excluded server-side. Checking again here keeps the filters reliable.
+    """
+    atd = alarm.get("alarm_type_details") or {}
+    if not isinstance(atd, dict):
+        atd = {}
+    main_type = _safe_str(atd.get("alarm_main_type")).lower()
+    sub_type = _safe_str(atd.get("alarm_sub_type")).lower()
+    type_id = _safe_str(alarm.get("alarm_type_id") or atd.get("alarm_type_id"))
+    return (
+        (bool(main_type) and main_type in excluded_main_types)
+        or (bool(sub_type) and sub_type in excluded_sub_types)
+        or (bool(type_id) and type_id in excluded_type_ids)
+    )
 
 
 def _is_public_ip(ip: str) -> bool:
@@ -239,7 +287,7 @@ def build_alert(
     alert_info.device_vendor = VENDOR
     alert_info.device_product = PRODUCT
     alert_info.rule_generator = atd.get("alarm_sub_type", "SOCRadar Alarm")
-    alert_info.priority = int(RISK_SCORE_MAP.get(severity, 50))
+    alert_info.priority = SOAR_PRIORITY_MAP.get(severity, DEFAULT_SOAR_PRIORITY)
     # severity (string) is consumed by Chronicle UI for the Severity badge in Alert Details
     alert_info.severity = severity
     alert_info.start_time = _parse_date(alarm.get("date"))
@@ -329,6 +377,7 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
         "alarm_generic_title": _safe_str(atd.get("alarm_generic_title")),
         "alarm_main_type": _safe_str(atd.get("alarm_main_type")),
         "alarm_sub_type": _safe_str(atd.get("alarm_sub_type")),
+        "alarm_type_id": _safe_str(alarm.get("alarm_type_id") or atd.get("alarm_type_id")),
         "alarm_default_risk_level": _safe_str(atd.get("alarm_default_risk_level")),
         "alarm_default_mitigation_plan": mitigation,
         "alarm_detection_and_analysis": detection,
@@ -351,7 +400,7 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
         "EventType": str(atd.get("alarm_sub_type", "SOCRadar Alarm")),
         "CategoryOutcome": _safe_str(atd.get("alarm_main_type")),
         "Severity": severity,
-        "Priority": str(RISK_SCORE_MAP.get(severity, 50)),
+        "Priority": str(SOAR_PRIORITY_MAP.get(severity, DEFAULT_SOAR_PRIORITY)),
         "RuleGenerator": str(atd.get("alarm_sub_type", "SOCRadar Alarm")),
         # Timestamps as millisecond unix — SOAR requires this format
         "StartTime": str(event_time_ms),
@@ -435,6 +484,12 @@ def main(is_test_run: bool = False) -> None:
         sub_types_str = siemplify.extract_connector_param("Sub Type Filter", default_value="")
         tags_str = siemplify.extract_connector_param("Tags Filter", default_value="")
         assignees_str = siemplify.extract_connector_param("Assignees Filter", default_value="")
+        type_ids_str = siemplify.extract_connector_param("Alarm Type ID Filter", default_value="")
+        excluded_main_types_str = siemplify.extract_connector_param("Excluded Main Type Filter", default_value="")
+        excluded_sub_types_str = siemplify.extract_connector_param("Excluded Sub Type Filter", default_value="")
+        excluded_type_ids_str = siemplify.extract_connector_param(
+            "Excluded Alarm Type ID Filter", default_value=""
+        )
 
         severities = [s.strip() for s in (severities_str or "").split(",") if s.strip()] or None
         status = status_str.strip() if status_str and status_str.strip() else None
@@ -442,6 +497,10 @@ def main(is_test_run: bool = False) -> None:
         sub_types = [s.strip() for s in (sub_types_str or "").split(",") if s.strip()] or None
         tags = [s.strip() for s in (tags_str or "").split(",") if s.strip()] or None
         assignees = [s.strip() for s in (assignees_str or "").split(",") if s.strip()] or None
+        type_ids = _parse_int_csv(type_ids_str, "Alarm Type ID Filter")
+        excluded_main_types = [s.strip() for s in (excluded_main_types_str or "").split(",") if s.strip()] or None
+        excluded_sub_types = [s.strip() for s in (excluded_sub_types_str or "").split(",") if s.strip()] or None
+        excluded_type_ids = _parse_int_csv(excluded_type_ids_str, "Excluded Alarm Type ID Filter")
 
         env_field = siemplify.extract_connector_param("Environment Field Name", default_value="")
         env_regex = siemplify.extract_connector_param("Environment Regex Pattern", default_value=".*")
@@ -466,6 +525,10 @@ def main(is_test_run: bool = False) -> None:
             severities=severities, status=status,
             alarm_main_types=main_types, alarm_sub_types=sub_types,
             tags=tags, assignees=assignees,
+            alarm_type_ids=type_ids,
+            excluded_alarm_main_types=excluded_main_types,
+            excluded_alarm_sub_types=excluded_sub_types,
+            excluded_alarm_type_ids=excluded_type_ids,
         )
 
         siemplify.LOGGER.info(f"Fetched {len(alarms)} alarms (total: {total})")
@@ -476,6 +539,10 @@ def main(is_test_run: bool = False) -> None:
         processed_set = {x for x in existing_ids.split(",") if x} if existing_ids else set()
 
         last_processed_ts = last_run
+        excluded_main_set = {s.lower() for s in excluded_main_types or []}
+        excluded_sub_set = {s.lower() for s in excluded_sub_types or []}
+        excluded_id_set = {str(i) for i in excluded_type_ids or []}
+        skipped_excluded = 0
         for alarm in alarms[:max_alerts]:
             if not isinstance(alarm, dict):
                 siemplify.LOGGER.warning(f"Skipping non-dict alarm entry: {type(alarm).__name__}")
@@ -487,6 +554,9 @@ def main(is_test_run: bool = False) -> None:
             alarm_ts = _parse_date_safe(alarm.get("date"))
             if alarm_ts and alarm_ts > last_processed_ts:
                 last_processed_ts = alarm_ts
+            if _is_excluded(alarm, excluded_main_set, excluded_sub_set, excluded_id_set):
+                skipped_excluded += 1
+                continue
             if alarm_id in processed_set:
                 continue
             try:
@@ -529,6 +599,8 @@ def main(is_test_run: bool = False) -> None:
                 siemplify.save_timestamp(
                     new_timestamp=int(time.time() * 1000)
                 )
+        if skipped_excluded:
+            siemplify.LOGGER.info(f"Skipped {skipped_excluded} alarms matching the exclusion filters")
         siemplify.LOGGER.info(f"Returning {len(alerts)} alerts")
 
     except SOCRadarManagerError as e:
