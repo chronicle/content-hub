@@ -32,7 +32,6 @@ import pathlib
 import requests
 
 from .BulkAcquisitionMixin import BulkAcquisitionMixin
-from .exceptions import FireEyeHXManagerError, FireEyeHXNotFoundError
 from .FireEyeHXParser import FireEyeHXParser
 from .UtilsManager import get_earliest_event_at_datetime
 
@@ -48,6 +47,14 @@ SEARCH_LIMIT_HAS_BEEN_REACHED_STATUS_CODE = 409
 
 
 # ============================= CLASSES ===================================== #
+class FireEyeHXManagerError(Exception):
+    """General Exception for FireEye HX manager."""
+
+
+class FireEyeHXNotFoundError(Exception):
+    """Not Found Exception for FireEye HX manager."""
+
+
 class FireEyeHXManager(BulkAcquisitionMixin):
     """FireEye HX Manager."""
 
@@ -931,10 +938,10 @@ class FireEyeHXManager(BulkAcquisitionMixin):
                 msg = f"{error_msg}: {error_messages}"
                 raise FireEyeHXManagerError(msg)
 
-            except FireEyeHXManagerError:
+            except (FireEyeHXManagerError, FireEyeHXNotFoundError):
                 raise
 
             except Exception:
                 # Unable to parse JSON - return content of response
                 msg = f"{error_msg}: {error} {response.content}"
-                raise FireEyeHXManagerError(msg) from error
+                raise FireEyeHXManagerError(msg)

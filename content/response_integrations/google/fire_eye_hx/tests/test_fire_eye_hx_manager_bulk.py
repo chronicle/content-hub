@@ -182,9 +182,6 @@ class TestFireEyeHXManagerBulk(unittest.TestCase):
 
         self.assertEqual(result, {})
 
-    def test_not_found_error_is_subclass_of_manager_error(self) -> None:
-        self.assertTrue(issubclass(FireEyeHXNotFoundError, FireEyeHXManagerError))
-
     def test_get_bulk_acquisition_not_found_json_raises_not_found_error(self) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 404
@@ -195,7 +192,7 @@ class TestFireEyeHXManagerBulk(unittest.TestCase):
         with self.assertRaises(FireEyeHXNotFoundError):
             self.manager.get_bulk_acquisition(9999)
 
-    def test_get_bulk_acquisition_not_found_non_json_raises_not_found_error(self) -> None:
+    def test_get_bulk_acquisition_not_found_non_json_raises_manager_error(self) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 404
         mock_response.content = b"Not Found"
@@ -203,7 +200,7 @@ class TestFireEyeHXManagerBulk(unittest.TestCase):
         mock_response.json.side_effect = ValueError("No JSON")
         self.mock_session.get.return_value = mock_response
 
-        with self.assertRaises(FireEyeHXNotFoundError):
+        with self.assertRaises(FireEyeHXManagerError):
             self.manager.get_bulk_acquisition(9999)
 
     def test_get_bulk_acquisition_server_error_raises_manager_error(self) -> None:
