@@ -69,13 +69,6 @@ def main() -> None:
     csv_table_results: list[dict] = []
 
     try:
-        dt_manager = DomainToolsManager(
-            username=username,
-            api_key=api_key,
-            verify_ssl=verify_ssl,
-            siemplify_logger=siemplify.LOGGER,
-        )
-
         domain_param = extract_action_param(siemplify, param_name="Domain", print_value=True)
         if domain_param:
             now_ts = int(datetime.now().timestamp())
@@ -104,6 +97,14 @@ def main() -> None:
             output_message = "No entities were extracted to be enrich."
             result_value = False
             siemplify.end(output_message, result_value, status)
+            return
+
+        dt_manager = DomainToolsManager(
+            username=username,
+            api_key=api_key,
+            verify_ssl=verify_ssl,
+            siemplify_logger=siemplify.LOGGER,
+        )
 
         domains_to_enrich = convert_list_to_comma_string(list(extracted_domains.keys()))
 
@@ -122,7 +123,7 @@ def main() -> None:
 
             # get the corresponding domain entity
             for domain_model in domain_iris_models:
-                entity = extracted_domains[domain_model.name]
+                entity = extracted_domains[domain_model.domain]
                 siemplify.LOGGER.info(f"Processing entity: {entity.identifier}")
                 try:
                     domain_dict = domain_model.to_dict()
@@ -159,7 +160,7 @@ def main() -> None:
             if failed_entities:
                 output_message += (
                     f"Action wasn't able to enrich the following entities using information from "
-                    f"{INTEGRATION_NAME}: {', '.join(failed_entities)}\n"
+                    f"{INTEGRATION_NAME}: {', '.join(str(e.identifier) for e in failed_entities)}\n"
                 )
 
             # create a summary table for all entities enriched
