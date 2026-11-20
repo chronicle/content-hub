@@ -356,9 +356,13 @@ class SyncIntegrationCredentialJob(Job):
             integration_identifier=ANY_INTEGRATION_FILTER_VALUE,
             environment=self.params.environment_name,
         )
-        instances_list = response.get("instances", []) or response.get(
-            "integrationInstances",
-            [],
+        instances_list = (
+            response
+            if isinstance(response, list)
+            else (
+                response.get("instances", [])
+                or response.get("integrationInstances", [])
+            )
         )
 
         self.instance_name_to_identifier = self._build_instance_name_lookup_from_json(
