@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import Iterable
+from typing import TYPE_CHECKING
 
 from integration_testing import router
 from integration_testing.request import MockRequest
@@ -24,6 +24,11 @@ from integration_testing.requests.session import MockSession, Response, RouteFun
 
 from .product import Tools
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from TIPCommon.types import SingleJson
+
 
 class ToolsSession(MockSession[MockRequest, MockResponse, Tools]):
     def get_routed_functions(self) -> Iterable[RouteFunction[Response]]:
@@ -31,6 +36,8 @@ class ToolsSession(MockSession[MockRequest, MockResponse, Tools]):
             self.get_workflows,
             self.rename_case,
             self.get_case_metadata,
+            self.get_1p_case_alerts,
+            self.get_1p_case_details,
             self.get_alerts_full_details,
             self.update_entities,
             self.get_alert_full_details,
@@ -39,12 +46,34 @@ class ToolsSession(MockSession[MockRequest, MockResponse, Tools]):
             self.import_custom_case,
         ]
 
+    def _get_case_metadata_or_raise(self, case_id: str) -> SingleJson:
+        if self._product.case_details_error is not None:
+            raise self._product.case_details_error
+        return dict(self._product.get_case_metadata(case_id))
+
     @router.get(r".*/dynamic-cases/GetCaseDetails/(?P<case_id>[^/]+)")
     @router.get(r".*/sdk/CaseMetadata/(?P<case_id>[^/]+)")
     def get_case_metadata(self, request: MockRequest) -> MockResponse:
         """Mock case overview details REST endpoint."""
         case_id = request.url.path.split("/")[-1]
-        return MockResponse(content=self._product.get_case_metadata(case_id))
+        return MockResponse(content=self._get_case_metadata_or_raise(case_id))
+
+    @router.get(r".*/(?<!dynamic-)cases/(?P<case_id>[^/:]+)/caseAlerts$")
+    def get_1p_case_alerts(self, request: MockRequest) -> MockResponse:
+        """Mock 1P case alerts REST endpoint."""
+        case_id = request.url.path.split("/")[-2]
+        return MockResponse(content={"caseAlerts": self._product.get_alerts_full_details(case_id)})
+
+    @router.get(r".*/(?<!dynamic-)cases/(?P<case_id>[^/:]+)$")
+    def get_1p_case_details(self, request: MockRequest) -> MockResponse:
+        """Mock 1P case details REST endpoint requiring explicit expand=sla."""
+        case_id = request.url.path.split("/")[-1]
+        metadata = self._get_case_metadata_or_raise(case_id)
+        params = request.kwargs.get("params") or {}
+        expand_fields = {field.strip() for field in str(params.get("expand", "")).split(",") if field.strip()}
+        if "sla" not in expand_fields:
+            metadata.pop("sla", None)
+        return MockResponse(content=metadata)
 
     @router.get(
         r".*/sdk/AlertsFullDetails/(?P<case_id>[^/]+)/(?P<populate_original_file>[^/]+)"

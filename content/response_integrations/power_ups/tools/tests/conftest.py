@@ -93,6 +93,7 @@ def reset_tools_state(tools: Tools) -> None:
     tools.case_metadata = {}
     tools.alerts_full_details = []
     tools.imported_custom_cases = []
+    tools.case_details_error = None
 
 
 class MockEntity:

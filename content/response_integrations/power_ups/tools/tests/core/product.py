@@ -28,6 +28,7 @@ class Tools:
     case_metadata: SingleJson = dataclasses.field(default_factory=dict)
     alerts_full_details: list[SingleJson] = dataclasses.field(default_factory=list)
     imported_custom_cases: list[SingleJson] = dataclasses.field(default_factory=list)
+    case_details_error: Exception | None = None
 
     def get_case_metadata(self, case_id: str) -> SingleJson:
         """Retrieve simulated case metadata header context."""
