@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from TIPCommon.extraction import extract_connector_param
+from TIPCommon.types import SingleJson
 
 from .CheckpointManager import CheckpointManager
 from .Constants import ENDPOINT_PING
@@ -215,7 +216,7 @@ class SpyCloudManager:
                 try:
                     self.severities.append(int(cleaned))
                 except ValueError:
-                    self.siemplify.LOGGER.warning(
+                    self.siemplify.LOGGER.warn(
                         f"Invalid severity value '{cleaned}' ignored. Please ensure only integers are configured."
                     )
 
@@ -356,11 +357,11 @@ class SpyCloudManager:
             since = self._format_iso_z(now - timedelta(hours=24))
             return since, until
 
-    def _is_sensitive_key(self, key: Any) -> bool:
+    def _is_sensitive_key(self, key: object) -> bool:
         key_lower = str(key).lower()
         return any(fragment in key_lower for fragment in SENSITIVE_KEY_FRAGMENTS)
 
-    def _safe_record_preview(self, record: Any) -> dict[str, Any]:
+    def _safe_record_preview(self, record: object) -> SingleJson:
         if not isinstance(record, dict):
             return {"type": type(record).__name__}
 
@@ -430,7 +431,7 @@ class SpyCloudManager:
             f"window={since} -> {until}, severities={self.severities}"
         )
 
-        reached_until = None
+        reached_until: str | None = None
 
         for index, (chunk_since, chunk_until) in enumerate(watchlist_chunks, start=1):
             if index > WATCHLIST_MAX_CHUNKS_PER_CYCLE:
@@ -745,7 +746,7 @@ class SpyCloudManager:
         self.siemplify.LOGGER.info(f"Compass total returned {len(response)} record(s)")
         return response
 
-    def _load_breach_catalog_cache(self) -> dict[str, Any]:
+    def _load_breach_catalog_cache(self) -> SingleJson:
         raw = self._get_context_property(BREACH_CATALOG_CACHE_KEY)
         if not raw:
             return {}
@@ -753,17 +754,17 @@ class SpyCloudManager:
             data = json.loads(raw)
             return data if isinstance(data, dict) else {}
         except Exception:
-            self.siemplify.LOGGER.warning("Breach catalog cache was unreadable; starting a fresh cache.")
+            self.siemplify.LOGGER.warn("Breach catalog cache was unreadable; starting a fresh cache.")
             return {}
 
-    def _save_breach_catalog_cache(self, cache: dict[str, Any]) -> None:
+    def _save_breach_catalog_cache(self, cache: SingleJson) -> None:
         try:
             self._set_context_property(BREACH_CATALOG_CACHE_KEY, json.dumps(cache, default=str))
         except Exception as e:
             self.siemplify.LOGGER.error(f"Failed to persist breach catalog cache: {e}")
 
     @staticmethod
-    def _minimal_catalog_entry(entry: Any) -> dict[str, Any]:
+    def _minimal_catalog_entry(entry: Any) -> SingleJson:
         if not isinstance(entry, dict):
             return {}
         return {key: entry.get(key) for key in BREACH_CATALOG_CACHE_FIELDS if entry.get(key) not in (None, "", [], {})}
@@ -783,7 +784,7 @@ class SpyCloudManager:
                 seen.append(key)
         return seen
 
-    def get_breach_catalog_index(self, records: list[Any] | None) -> dict[str, Any]:
+    def get_breach_catalog_index(self, records: list[Any] | None) -> SingleJson:
         """Build a source_id -> catalog-metadata index for enriching this cycle's records.
 
         Follows integration guide 9.1.2 Option A (cache the breach catalog locally

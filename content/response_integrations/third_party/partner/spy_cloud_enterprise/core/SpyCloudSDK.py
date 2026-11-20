@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from email.utils import parsedate_to_datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from urllib.parse import urljoin
 
 import requests
@@ -118,7 +118,7 @@ class APIClient:
         except Exception:
             pass
 
-    def _get_retry_after_seconds(self, response: requests.Response) -> Optional[float]:
+    def _get_retry_after_seconds(self, response: requests.Response) -> float | None:
         """Parse the Retry-After header if present.
 
         Supports either seconds or an HTTP date.
@@ -147,7 +147,7 @@ class APIClient:
     def _calculate_sleep_seconds(
         self,
         attempt_number: int,
-        response: Optional[requests.Response] = None,
+        response: requests.Response | None = None,
     ) -> float:
         """Determine how long to wait before a retry."""
         if response is not None and response.status_code == 429:
@@ -166,10 +166,10 @@ class APIClient:
         self,
         method: str,
         endpoint: str,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        **kwargs,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        **kwargs: Any,
     ) -> requests.Response:
         url = self._build_url(endpoint)
 
@@ -179,8 +179,8 @@ class APIClient:
 
         request_timeout = kwargs.pop("timeout", self.timeout)
 
-        last_exception: Optional[Exception] = None
-        last_response: Optional[requests.Response] = None
+        last_exception: Exception | None = None
+        last_response: requests.Response | None = None
 
         for attempt in range(1, self.max_retries + 2):
             try:
@@ -231,42 +231,50 @@ class APIClient:
         raise SpyCloudException(f"Failed to call SpyCloud API after retries: {last_exception}")
 
     def get(
-        self, endpoint: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, **kwargs
+        self,
+        endpoint: str,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        **kwargs: Any,
     ) -> requests.Response:
         return self._make_request("GET", endpoint, params=params, headers=headers, **kwargs)
 
     def post(
         self,
         endpoint: str,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        **kwargs,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        **kwargs: Any,
     ) -> requests.Response:
         return self._make_request("POST", endpoint, data=data, params=params, headers=headers, **kwargs)
 
     def put(
         self,
         endpoint: str,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        **kwargs,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        **kwargs: Any,
     ) -> requests.Response:
         return self._make_request("PUT", endpoint, data=data, params=params, headers=headers, **kwargs)
 
     def delete(
-        self, endpoint: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, **kwargs
+        self,
+        endpoint: str,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        **kwargs: Any,
     ) -> requests.Response:
         return self._make_request("DELETE", endpoint, params=params, headers=headers, **kwargs)
 
     def patch(
         self,
         endpoint: str,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        **kwargs,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        **kwargs: Any,
     ) -> requests.Response:
         return self._make_request("PATCH", endpoint, data=data, params=params, headers=headers, **kwargs)
 
@@ -343,12 +351,12 @@ class BaseClient:
 
     def _build_date_params(
         self,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
-        since_modification: Optional[str] = None,
-        until_modification: Optional[str] = None,
-        additional_params: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        since: str | None = None,
+        until: str | None = None,
+        since_modification: str | None = None,
+        until_modification: str | None = None,
+        additional_params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Build a parameters dictionary with optional publish-time and modification-time filters.
 
         since / until:
@@ -358,7 +366,7 @@ class BaseClient:
             Daily modified-record window used to catch records updated after initial publish,
             such as newly cracked passwords or modified records.
         """
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
 
         if since:
             params["since"] = since
@@ -378,11 +386,11 @@ class BaseClient:
     def _paginate_page(
         self,
         url: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         err_msg: str = "Unable to get results",
-        start_cursor: Optional[str] = None,
-        max_records: Optional[int] = None,
-    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        start_cursor: str | None = None,
+        max_records: int | None = None,
+    ) -> tuple[list[dict[str, Any]], str | None]:
         """Fetch a bounded slice of a query using resumable cursor pagination.
 
         The SpyCloud API returns at most ~1,000 records per request and hands
@@ -396,7 +404,7 @@ class BaseClient:
             resume from on the next call.
         """
         request_params = dict(params or {})
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
 
         if start_cursor:
             request_params["cursor"] = start_cursor
@@ -419,8 +427,11 @@ class BaseClient:
                 return results, cursor
 
     def _paginate_results(
-        self, url: str, params: Optional[Dict[str, Any]] = None, err_msg: str = "Unable to get results"
-    ) -> List[Dict[str, Any]]:
+        self,
+        url: str,
+        params: dict[str, Any] | None = None,
+        err_msg: str = "Unable to get results",
+    ) -> list[dict[str, Any]]:
         """Paginate the results of a request, draining every page.
 
         :param url (str): The url to send request to
@@ -441,11 +452,11 @@ class BreachCatalogClient(BaseClient):
         self._handler.validate_response(response, "Unable to connect to SpyCloud breach catalog")
         return True
 
-    def catalog(self, since: Optional[str] = None, until: Optional[str] = None) -> List[Dict[str, Any]]:
+    def catalog(self, since: str | None = None, until: str | None = None) -> list[dict[str, Any]]:
         params = self._build_date_params(since=since, until=until)
         return self._paginate_results(ENDPOINT_BREACH_CATALOG, params)
 
-    def catalog_by_id(self, source_id: Any) -> Optional[Dict[str, Any]]:
+    def catalog_by_id(self, source_id: Any) -> dict[str, Any] | None:
         """Fetch a single breach catalog entry by its source_id.
 
         Used for incremental, source_id-scoped enrichment (integration guide
@@ -469,13 +480,13 @@ class BreachDataClient(BaseClient):
 
     def watchlist(
         self,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
-        since_modification: Optional[str] = None,
-        until_modification: Optional[str] = None,
-        severities: Optional[List[int]] = None,
-    ) -> List[Dict[str, Any]]:
-        additional_params: Dict[str, Any] = {}
+        since: str | None = None,
+        until: str | None = None,
+        since_modification: str | None = None,
+        until_modification: str | None = None,
+        severities: list[int] | None = None,
+    ) -> list[dict[str, Any]]:
+        additional_params: dict[str, Any] = {}
 
         if severities:
             additional_params["severity"] = ",".join(str(x) for x in severities)
@@ -491,21 +502,21 @@ class BreachDataClient(BaseClient):
 
     def watchlist_page(
         self,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
-        since_modification: Optional[str] = None,
-        until_modification: Optional[str] = None,
-        severities: Optional[List[int]] = None,
-        start_cursor: Optional[str] = None,
-        max_records: Optional[int] = None,
-    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        since: str | None = None,
+        until: str | None = None,
+        since_modification: str | None = None,
+        until_modification: str | None = None,
+        severities: list[int] | None = None,
+        start_cursor: str | None = None,
+        max_records: int | None = None,
+    ) -> tuple[list[dict[str, Any]], str | None]:
         """Drain a bounded, resumable slice of the Watchlist query.
 
         Resumable variant of :meth:`watchlist` for high-volume, once-daily
         modification pulls. Returns ``(records, next_cursor)`` so a caller can
         drain a bounded slice per invocation and resume from ``next_cursor``.
         """
-        additional_params: Dict[str, Any] = {}
+        additional_params: dict[str, Any] = {}
 
         if severities:
             additional_params["severity"] = ",".join(str(x) for x in severities)
@@ -529,7 +540,7 @@ class CompassClient(BaseClient):
     """Endpoints related to SpyCloud Compass."""
 
     @staticmethod
-    def _date_only(value: Optional[str]) -> Optional[str]:
+    def _date_only(value: str | None) -> str | None:
         """Normalize Compass date filters to YYYY-MM-DD."""
         if value in (None, ""):
             return value
@@ -539,7 +550,7 @@ class CompassClient(BaseClient):
             return text[:10]
         return text
 
-    def data(self, since: Optional[str] = None, until: Optional[str] = None) -> List[Dict[str, Any]]:
+    def data(self, since: str | None = None, until: str | None = None) -> list[dict[str, Any]]:
         params = self._build_date_params(
             since=self._date_only(since),
             until=self._date_only(until),

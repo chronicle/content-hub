@@ -9,6 +9,7 @@ from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_connector_param
+from TIPCommon.types import SingleJson
 
 from ..core.Parser import build_alert_from_udm_event
 from ..core.spycloud_udm_converter import SpyCloudUdmConverter
@@ -179,112 +180,18 @@ def _log_udm_samples(
         logger.info(f"UDM safe sample #{index}: {preview}")
 
 
-def _collect_alerts(
+def _build_alerts_from_udm_events(
     siemplify: SiemplifyConnectorExecution,
-    is_test_run: bool,
-) -> tuple[SpyCloudManager, list[Any], str | None]:
-    """Run one collection cycle and return ``(manager, alerts, checkpoint_until)``.
+    udm_events: list[SingleJson],
+    environment_common: Any,
+    device_product_field: str | None,
+) -> list[Any]:
+    """Package each UDM event as a SOAR alert, logging a sample of the events.
 
-    Deliberately does no stdout writing: `main` owns the single `return_package`
-    call for the whole execution.
+    An event that fails to convert is logged with a truncated preview and skipped,
+    so one malformed record cannot drop the rest of the cycle.
     """
     alerts = []
-
-    if is_test_run:
-        siemplify.LOGGER.info("***** IDE test run *****")
-
-    manager = SpyCloudManager(siemplify)
-
-    device_product_field = extract_connector_param(
-        siemplify,
-        param_name="DeviceProductField",
-        is_mandatory=False,
-        print_value=True,
-    )
-    environment_field_name = extract_connector_param(
-        siemplify,
-        param_name="Environment Field Name",
-        default_value="",
-        input_type=str,
-        print_value=True,
-    )
-    environment_regex_pattern = extract_connector_param(
-        siemplify,
-        param_name="Environment Regex Pattern",
-        input_type=str,
-        print_value=True,
-    )
-    environment_common = GetEnvironmentCommonFactory.create_environment_manager(
-        siemplify,
-        environment_field_name,
-        environment_regex_pattern,
-    )
-
-    # When enabled, plaintext passwords and other sensitive breach fields are
-    # persisted onto the case events instead of being stripped. This retains
-    # secrets permanently in SecOps case storage; it defaults to off and should
-    # only be turned on with explicit sign-off.
-    include_secrets = extract_connector_param(
-        siemplify,
-        param_name="Include Plaintext Secrets",
-        default_value=False,
-        input_type=bool,
-        print_value=True,
-    )
-    if include_secrets:
-        siemplify.LOGGER.warn(
-            "Include Plaintext Secrets is ENABLED: plaintext passwords and other "
-            "sensitive breach fields will be persisted onto case events."
-        )
-
-    if is_test_run:
-        manager.main(is_test_run=True)
-        return manager, [], None
-
-    raw_records, checkpoint_until = manager.main(is_test_run=False)
-    raw_records = raw_records or []
-
-    siemplify.LOGGER.info(f"Fetched {len(raw_records)} raw SpyCloud records")
-    siemplify.LOGGER.info(
-        "Raw SpyCloud record source counts: "
-        f"{_format_source_counts(_count_sources(raw_records, _get_raw_record_sources))}"
-    )
-
-    if not raw_records:
-        siemplify.LOGGER.info("No SpyCloud records returned for the requested time window")
-        # Nothing to deliver, but an empty mature window plus any drained-empty
-        # modification window / Compass daily gate is valid progress.
-        return manager, [], checkpoint_until
-
-    # Breach catalog enrichment (integration guide 9.1.2 Option A): a cached,
-    # source_id-scoped index. This does NOT download the full global catalog
-    # every cycle; it lazily caches only the sources we actually see.
-    breach_catalog_by_id = {}
-    try:
-        breach_catalog_by_id = manager.get_breach_catalog_index(raw_records) or {}
-    except Exception as e:
-        siemplify.LOGGER.error(f"Breach catalog enrichment failed. Continuing without enrichment. Error: {e}")
-        breach_catalog_by_id = {}
-
-    converter = SpyCloudUdmConverter(include_secrets=include_secrets)
-
-    udm_events = converter.convert_records(
-        records=raw_records,
-        breach_catalog_by_id=breach_catalog_by_id,
-        merge_endpoint_by_log_id=True,
-    )
-
-    siemplify.LOGGER.info(f"Converted {len(udm_events)} UDM events")
-    siemplify.LOGGER.info(
-        "UDM event source counts after conversion/merge: "
-        f"{_format_source_counts(_count_sources(udm_events, _get_udm_event_sources))}"
-    )
-    _log_udm_samples(siemplify.LOGGER, udm_events, is_test_run=is_test_run)
-
-    if not udm_events:
-        siemplify.LOGGER.info("No UDM events were produced from the fetched SpyCloud records")
-        return manager, [], checkpoint_until
-
     for index, udm_event in enumerate(udm_events, start=1):
         try:
             security_result = udm_event.get("security_result", {})
@@ -356,6 +263,120 @@ def _collect_alerts(
 
             siemplify.LOGGER.error(f"Failed to process UDM event #{index} into alert: {e}. UDM preview: {preview}")
 
+    return alerts
+
+
+def _collect_alerts(
+    siemplify: SiemplifyConnectorExecution,
+    is_test_run: bool,
+) -> tuple[SpyCloudManager, list[Any], str | None]:
+    """Run one collection cycle and return ``(manager, alerts, checkpoint_until)``.
+
+    Deliberately does no stdout writing: `main` owns the single `return_package`
+    call for the whole execution.
+    """
+    if is_test_run:
+        siemplify.LOGGER.info("***** IDE test run *****")
+
+    manager = SpyCloudManager(siemplify)
+
+    device_product_field = extract_connector_param(
+        siemplify,
+        param_name="DeviceProductField",
+        is_mandatory=False,
+        print_value=True,
+    )
+    environment_field_name = extract_connector_param(
+        siemplify,
+        param_name="Environment Field Name",
+        default_value="",
+        input_type=str,
+        print_value=True,
+    )
+    environment_regex_pattern = extract_connector_param(
+        siemplify,
+        param_name="Environment Regex Pattern",
+        input_type=str,
+        print_value=True,
+    )
+    environment_common = GetEnvironmentCommonFactory.create_environment_manager(
+        siemplify,
+        environment_field_name,
+        environment_regex_pattern,
+    )
+
+    # When enabled, plaintext passwords and other sensitive breach fields are
+    # persisted onto the case events instead of being stripped. This retains
+    # secrets permanently in SecOps case storage; it defaults to off and should
+    # only be turned on with explicit sign-off.
+    include_secrets = extract_connector_param(
+        siemplify,
+        param_name="Include Plaintext Secrets",
+        default_value=False,
+        input_type=bool,
+        print_value=True,
+    )
+    if include_secrets:
+        siemplify.LOGGER.warn(
+            "Include Plaintext Secrets is ENABLED: plaintext passwords and other "
+            "sensitive breach fields will be persisted onto case events."
+        )
+
+    if is_test_run:
+        manager.main(is_test_run=True)
+        return manager, [], None
+
+    raw_records, checkpoint_until = manager.main(is_test_run=False)
+    raw_records = raw_records or []
+
+    siemplify.LOGGER.info(f"Fetched {len(raw_records)} raw SpyCloud records")
+    siemplify.LOGGER.info(
+        "Raw SpyCloud record source counts: "
+        f"{_format_source_counts(_count_sources(raw_records, _get_raw_record_sources))}"
+    )
+
+    if not raw_records:
+        siemplify.LOGGER.info("No SpyCloud records returned for the requested time window")
+        # Nothing to deliver, but an empty mature window plus any drained-empty
+        # modification window / Compass daily gate is valid progress.
+        return manager, [], checkpoint_until
+
+    # Breach catalog enrichment (integration guide 9.1.2 Option A): a cached,
+    # source_id-scoped index. This does NOT download the full global catalog
+    # every cycle; it lazily caches only the sources we actually see.
+    breach_catalog_by_id: SingleJson = {}
+    try:
+        breach_catalog_by_id = manager.get_breach_catalog_index(raw_records) or {}
+    except Exception as e:
+        siemplify.LOGGER.error(f"Breach catalog enrichment failed. Continuing without enrichment. Error: {e}")
+        breach_catalog_by_id = {}
+
+    converter = SpyCloudUdmConverter(include_secrets=include_secrets)
+
+    udm_events = converter.convert_records(
+        records=raw_records,
+        breach_catalog_by_id=breach_catalog_by_id,
+        merge_endpoint_by_log_id=True,
+    )
+
+    siemplify.LOGGER.info(f"Converted {len(udm_events)} UDM events")
+    siemplify.LOGGER.info(
+        "UDM event source counts after conversion/merge: "
+        f"{_format_source_counts(_count_sources(udm_events, _get_udm_event_sources))}"
+    )
+    _log_udm_samples(siemplify.LOGGER, udm_events, is_test_run=is_test_run)
+
+    if not udm_events:
+        siemplify.LOGGER.info("No UDM events were produced from the fetched SpyCloud records")
+        return manager, [], checkpoint_until
+
+    alerts = _build_alerts_from_udm_events(
+        siemplify,
+        udm_events,
+        environment_common,
+        device_product_field,
+    )
+
     siemplify.LOGGER.info(f"Created {len(alerts)} alerts")
     siemplify.LOGGER.info(
         "Alert source counts after parser packaging: "
@@ -388,9 +409,9 @@ def main(is_test_run: bool) -> None:
     siemplify = SiemplifyConnectorExecution()
     siemplify.script_name = CONNECTOR_NAME
 
-    manager = None
+    manager: SpyCloudManager | None = None
     alerts: list[Any] = []
-    checkpoint_until = None
+    checkpoint_until: str | None = None
     collection_succeeded = False
 
     try:

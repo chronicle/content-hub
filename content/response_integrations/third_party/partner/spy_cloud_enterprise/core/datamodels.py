@@ -22,6 +22,8 @@ import string
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
+from TIPCommon.types import SingleJson
+
 from .spycloud_udm_converter import SpyCloudUdmConverter
 
 # Reuse the converter's single source of truth for secret field names, then add a
@@ -423,7 +425,7 @@ EVENT_PUBLISH_DATE_FIELDS = (
 )
 
 
-def parse_timestamp(value: Any) -> datetime | None:
+def parse_timestamp(value: object) -> datetime | None:
     """Parse a timestamp from any of the shapes SpyCloud and the IdPs emit.
 
     Handles ISO-8601 with or without fractional seconds, a trailing ``Z`` or a
@@ -470,7 +472,7 @@ def parse_timestamp(value: Any) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
-def event_publish_date(props: dict[str, Any] | None) -> str:
+def event_publish_date(props: SingleJson | None) -> str:
     """Return the raw publish date carried by one flattened SpyCloud event.
 
     Args:
@@ -780,7 +782,7 @@ def password_matches_policy(
     return True
 
 
-def collect_plaintext_passwords(props: dict[str, Any] | None) -> list[str]:
+def collect_plaintext_passwords(props: SingleJson | None) -> list[str]:
     """Collect the non-empty plaintext password values from one SpyCloud event.
 
     Args:

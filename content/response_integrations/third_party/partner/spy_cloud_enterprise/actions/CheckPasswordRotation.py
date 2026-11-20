@@ -34,6 +34,7 @@ only timestamps, counts, and the decision.
 
 from __future__ import annotations
 
+import dataclasses
 import re
 from datetime import datetime, time, timezone
 from typing import Any
@@ -76,7 +77,7 @@ def _event_has_password(props: dict[str, Any]) -> bool:
     )
 
 
-def _parse_publish_date(raw_date: Any) -> datetime | None:
+def _parse_publish_date(raw_date: str | None) -> datetime | None:
     """Parse an exposure publish date, reading a bare calendar date as end of day.
 
     ``parse_timestamp`` puts a bare date at midnight UTC, which would let a password
@@ -160,22 +161,27 @@ def _evaluate_rotation_status(
     )
 
 
-def _build_output_message(
-    rotated: bool,
-    reason: str,
-    last_reset: datetime | None,
-    latest_publish: datetime | None,
-    considered: int,
-) -> str:
+@dataclasses.dataclass(slots=True, frozen=True)
+class _RotationSummary:
+    """The outcome of comparing the last password change against the exposures."""
+
+    rotated: bool
+    reason: str
+    last_reset: datetime | None
+    latest_publish: datetime | None
+    considered: int
+
+
+def _build_output_message(summary: _RotationSummary) -> str:
     """Render the human-readable summary shown on the playbook step."""
-    if rotated and last_reset is not None and latest_publish is not None:
+    if summary.rotated and summary.last_reset is not None and summary.latest_publish is not None:
         return (
-            f"No reset required: {reason}. Last password change "
-            f"{last_reset.isoformat()} is newer than the latest exposure "
-            f"published {latest_publish.isoformat()} "
-            f"({considered} exposure(s) considered)."
+            f"No reset required: {summary.reason}. Last password change "
+            f"{summary.last_reset.isoformat()} is newer than the latest exposure "
+            f"published {summary.latest_publish.isoformat()} "
+            f"({summary.considered} exposure(s) considered)."
         )
-    return f"Reset required: {reason} ({considered} exposure(s) considered)."
+    return f"Reset required: {summary.reason} ({summary.considered} exposure(s) considered)."
 
 
 @output_handler
@@ -243,7 +249,15 @@ def main() -> None:
             "reason": reason,
         })
 
-        output_message = _build_output_message(rotated, reason, last_reset, latest_publish, considered)
+        output_message = _build_output_message(
+            _RotationSummary(
+                rotated=rotated,
+                reason=reason,
+                last_reset=last_reset,
+                latest_publish=latest_publish,
+                considered=considered,
+            )
+        )
 
     except Exception as error:
         siemplify.LOGGER.error(f'Error executing action "{SCRIPT_NAME}". Reason: {error}')

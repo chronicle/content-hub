@@ -34,6 +34,7 @@ independent of the password outcome.
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import datetime, timezone
 from typing import Any
 
@@ -55,10 +56,17 @@ DEFAULT_MIN_LENGTH = 8
 DEFAULT_REQUIRE_SYMBOL = True
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
+class _PasswordPolicy:
+    """The password policy an exposed password must match to still warrant a reset."""
+
+    minimum_length: int
+    require_symbol: bool
+
+
 def _filter_case_passwords(
     alerts: list[Any],
-    minimum_length: int,
-    require_symbol: bool,
+    policy: _PasswordPolicy,
 ) -> tuple[dict[str, Any], int, int, list[str]]:
     """Apply the password policy to every exposed password on the case.
 
@@ -92,7 +100,7 @@ def _filter_case_passwords(
             bucket = per_email.setdefault(email, {"email": email, "kept": [], "dropped": []})
             for password in passwords:
                 total_passwords += 1
-                matches = datamodels.password_matches_policy(password, minimum_length, require_symbol)
+                matches = datamodels.password_matches_policy(password, policy.minimum_length, policy.require_symbol)
                 entry = {
                     "masked": datamodels.mask_password(password),
                     "length": len(password),
@@ -110,11 +118,10 @@ def _filter_case_passwords(
 def _build_output_message(
     total_passwords: int,
     remaining: int,
-    dropped: int,
-    minimum_length: int,
-    require_symbol: bool,
+    policy: _PasswordPolicy,
 ) -> str:
     """Render the human-readable summary shown on the playbook step."""
+    dropped = total_passwords - remaining
     if total_passwords == 0:
         return (
             "No plaintext passwords were present on the case events. "
@@ -124,13 +131,13 @@ def _build_output_message(
     if remaining > 0:
         return (
             f"{remaining} of {total_passwords} exposed password(s) match the "
-            f"configured policy (minimum length {minimum_length}, "
-            f"require symbol {require_symbol}); {dropped} dropped."
+            f"configured policy (minimum length {policy.minimum_length}, "
+            f"require symbol {policy.require_symbol}); {dropped} dropped."
         )
     return (
         f"All {total_passwords} exposed password(s) were dropped by the "
-        f"configured policy (minimum length {minimum_length}, "
-        f"require symbol {require_symbol}); no reset required."
+        f"configured policy (minimum length {policy.minimum_length}, "
+        f"require symbol {policy.require_symbol}); no reset required."
     )
 
 
@@ -164,13 +171,15 @@ def main() -> None:
             print_value=True,
         )
 
+        policy = _PasswordPolicy(minimum_length=minimum_length, require_symbol=require_symbol)
         siemplify.LOGGER.info(f"Password policy: minimum length {minimum_length}, require symbol {require_symbol}")
 
         alerts = siemplify.case.alerts or []
         siemplify.LOGGER.info(f"Scanning {len(alerts)} alert(s) in the case")
 
         per_email, total_passwords, remaining, all_exposed_emails = _filter_case_passwords(
-            alerts, minimum_length, require_symbol
+            alerts,
+            policy,
         )
 
         dropped = total_passwords - remaining
@@ -196,7 +205,7 @@ def main() -> None:
             "results_by_email": list(per_email.values()),
         })
 
-        output_message = _build_output_message(total_passwords, remaining, dropped, minimum_length, require_symbol)
+        output_message = _build_output_message(total_passwords, remaining, policy)
 
     except Exception as error:
         siemplify.LOGGER.error(f'Error executing action "{SCRIPT_NAME}". Reason: {error}')
