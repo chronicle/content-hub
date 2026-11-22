@@ -1,57 +1,59 @@
 # `mp pack`
 
-The `pack` command packages integrations into a SOAR-supported ZIP file, ready to be imported into the Google SecOps platform.
+Package an integration into a SOAR-supported `.zip` archive (`<identifier><YYYYMMDD>.zip`) ready to import into a Google SecOps environment.
 
 ## Usage
 
 ```bash
-mp pack [COMMAND] [ARGS]...
+mp pack integration <INTEGRATION> [OPTIONS]
 ```
 
-## Commands
+## Subcommands
 
 ### `mp pack integration`
 
-Pack an integration into a SOAR-supported ZIP file.
+Builds the integration in a temporary directory, sets `IsCustom = true` on `Integration-*.def`, optionally checks out a historical integration version via a temporary Git worktree or renames identifiers for beta testing, optionally prompts to select components, and writes `<identifier><YYYYMMDD>.zip`.
 
-**Arguments**:
-- `INTEGRATION`: The name of the integration to pack. [required]
+**Arguments:**
 
-**Options**:
-- `--src PATH`: Source directory containing the integration. If not specified, the command will search for the integration in the default 'content' directory.
-- `-v, --version FLOAT`: Old version to fetch from the repo (via Git) and create the ZIP.
-- `-b, --beta TEXT`: Name of the custom beta integration (renames identifier and display name).
-- `-d, --dst PATH`: Destination directory to save the ZIP file. Defaults to the configured `out` directory.
-- `--interactive / --non-interactive`: Enable or disable interactive component selection. [default: interactive]
+- `INTEGRATION`: *(Required)* Integration directory name or identifier to package.
+
+**Options:**
+
+| Option | Shorthand | Description | Type | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `--src` | | Custom source directory containing the integration. Searches configured `content/` by default. | `Path` | `None` |
+| `--version` | `-v` | Historical integration version string (for example, `5.0`) located in Git history and checked out via a temporary Git worktree when it differs from the current `pyproject.toml` version. | `str` | `None` |
+| `--beta` | `-b` | Custom beta integration identifier and display name to apply to the package. | `str` | `None` |
+| `--dst` | `-d` | Destination directory to save the `.zip` file. Defaults to `<marketplace_path>/out/pack`. | `Path` | `None` |
+| `--interactive / --non-interactive` | | Enable or disable interactive component selection checkboxes (auto-skipped when non-TTY). | `bool` | `True` |
+
+> [!NOTE]
+> On `mp pack integration`, `-v` is shorthand for `--version` (not `--verbose`), and it accepts an integration version number (such as `5.0`), not a raw Git commit SHA or tag. Pass `--non-interactive` in scripts, CI, or automated shells to include all components without interactive prompts.
 
 ## Examples
 
-### Standard Packaging
-Packages the current version of the integration.
+### Standard non-interactive packaging
 ```bash
 mp pack integration CyberX --non-interactive
 ```
 
-### Packaging from a Custom Source
-Packages the integration from a specified source directory.
+### Package from a custom source directory
 ```bash
 mp pack integration CyberX --src /path/to/my/integrations --non-interactive
 ```
 
-### Custom Beta Identifier
-Creates a ZIP with a custom identifier (e.g., `CyberXBeta`) to avoid conflicts.
+### Package with a custom beta identifier
 ```bash
 mp pack integration CyberX --beta CyberXBeta --non-interactive
 ```
 
-### Packaging an Old Version
-Safely checks out an older version via Git worktree and packages it.
+### Package an older integration version via Git worktree
 ```bash
 mp pack integration CyberX --version 5.0 --non-interactive
 ```
 
-### Interactive Selection
-Select which Actions, Connectors, Jobs, or Widgets to include (requires TTY).
+### Interactive component selection (requires TTY)
 ```bash
 mp pack integration CyberX
 ```

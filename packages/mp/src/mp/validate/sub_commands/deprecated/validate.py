@@ -73,7 +73,7 @@ class ValidateParams:
             raise typer.BadParameter(msg)
 
         if sum(map(bool, mutually_exclusive_options)) != 1:
-            msg = "Only one of --repository, --integration or --playbooks shall be used."
+            msg = "Only one of --repository, --integration or --playbook shall be used."
             raise typer.BadParameter(msg)
 
 
@@ -94,7 +94,7 @@ def validate(  # ruff:ignore[too-many-arguments]
         typer.Option(
             "--integration",
             "-i",
-            help="Run validations on a specified integrations.",
+            help="Run validations on specified integrations.",
             default_factory=list,
         ),
     ],
@@ -103,7 +103,7 @@ def validate(  # ruff:ignore[too-many-arguments]
         typer.Option(
             "--playbook",
             "-p",
-            help="Build a specified playbook",
+            help="Run validations on specified playbooks.",
             default_factory=list,
         ),
     ],

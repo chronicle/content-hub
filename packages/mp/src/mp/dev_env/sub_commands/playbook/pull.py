@@ -44,7 +44,7 @@ def pull_playbook(
     dst: Annotated[
         Path | None,
         typer.Option(
-            help="Destination folder. the 'download' directory in content-hub repo.",
+            help="Destination folder. Defaults to the 'downloads' directory in the content-hub repo.",
         ),
     ] = None,
     *,

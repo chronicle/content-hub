@@ -17,4 +17,4 @@ from __future__ import annotations
 
 import typer
 
-pull_app = typer.Typer(name="pull", help="Pull content to the SecOps environment.")
+pull_app = typer.Typer(name="pull", help="Pull content from the SecOps environment.")

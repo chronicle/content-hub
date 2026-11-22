@@ -1,76 +1,81 @@
-# mp: Your Google SecOps Marketplace Integration Powerhouse
+# mp: Google SecOps Marketplace CLI
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
-[![Python Version](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/downloads/)
 ![Maintenance](https://img.shields.io/maintenance/yes/2026)
 
-**`mp`**, short for **`marketplace`
-**, is the official command-line interface (CLI) for developing, maintaining, and deploying Google SecOps marketplace integrations. It streamlines the entire lifecycle from coding to deployment.
+**`mp`**, short for **`marketplace`**, is the official command-line interface (CLI) for developing, validating, testing, packaging, and deploying Google SecOps Content Hub integrations, playbooks, views, custom fields, and alert grouping rules.
 
 ## Quick Start
 
 ### 1. Install as a persistent tool (Recommended)
 
-Install `mp` once and use it everywhere:
+Install `mp` once and use it everywhere (requires Python `>=3.11,<3.12` and `uv`):
 
 ```bash
 # Install from the main branch
-uv tool install mp --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp
+uv tool install --python 3.11 mp --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp
 
-# Use the tool directly:
+# Point mp at your local content-hub checkout
+mp config --root-path /path/to/content-hub
+
+# Inspect available commands
 mp --help
 ```
 
-### 2. One-time usage
+### 2. Run from a local `content-hub` checkout
 
-Run directly without installing:
+Run directly against the workspace version without global installation:
 
 ```bash
-uvx --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp mp --help
+uv run --project packages/mp mp --help
 ```
 
-For more detailed instructions, see the [Installation Guide](docs/installation.md).
+### 3. One-time usage without a checkout
 
-## Workflow
+```bash
+uvx --python 3.11 --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp mp --help
+```
 
-The `mp` tool sits at the center of your integration development workflow:
+For full setup details, see the [Installation Guide](docs/installation.md).
 
 > [!NOTE]
-> **Windows Users**: Please use `wmp` instead of
-`mp` for all commands to avoid conflicts with system aliases.
+> **Windows Users**: Use `wmp` instead of `mp` for all commands to avoid conflicts with default PowerShell system aliases.
 
-## Key Features
+## Key Capabilities
 
-- **Build & Package**: transforming source code into deployable artifacts and SOAR-supported ZIP files (`pack`).
-- **Quality Assurance**: Automated linting (`check`), formatting (`format`), and testing (`test`).
-- **Development Loop**: Rapidly push changes to your development environment (`dev-env`).
+- **Build and Package**: Compile non-built YAML and Python source into deployable SOAR artifacts (`build`), deconstruct built packages back to source (`build ... --deconstruct`), or generate SOAR-importable ZIP archives (`pack`).
+- **Quality Assurance**: Format Python code (`format`), run `ruff` linting and `ty` static type checks (`check`), validate repository schemas and release hygiene (`validate`), and execute per-integration `pytest` suites (`test`).
+- **Environment Sync**: Authenticate (`login`), pull (`pull`), and push (`push`) integrations, playbooks, Case/Alert views, custom fields, and alert grouping rules against a SecOps tenant.
 
 ## Command Reference
 
-| Command    | Description                                             | Documentation                     |
-|:-----------|:--------------------------------------------------------|:----------------------------------|
-| `build`    | Build integrations or playbooks into deployable format. | [Docs](docs/commands/build.md)    |
-| `check`    | Lint and sanity-check your code.                        | [Docs](docs/commands/check.md)    |
-| `config`   | Configure `mp` settings.                                | [Docs](docs/commands/config.md)   |
-| `describe` | Generate AI descriptions for integration actions.       | [Docs](docs/commands/describe.md) |
-| `format`   | Auto-format Python files.                               | [Docs](docs/commands/format.md)   |
-| `test`     | Run pre-build integration tests.                        | [Docs](docs/commands/test.md)     |
-| `validate` | Validate integration structure and metadata.            | [Docs](docs/commands/validate.md) |
-| `login`    | Log in to a SecOps environment.                         | [Docs](docs/commands/dev_env.md)  |
-| `push`     | Push content to the SecOps environment.                 | [Docs](docs/commands/dev_env.md)  |
-| `pull`     | Pull content from a SecOps environment.                 | [Docs](docs/commands/dev_env.md)  |
-| `pack`     | Package integrations into SOAR-supported ZIP files.     | [Docs](docs/commands/pack.md)     |
+| Command | Description | Documentation |
+| :--- | :--- | :--- |
+| `build` | Build or deconstruct integrations, playbooks, or full repositories. | [Docs](docs/commands/build.md) |
+| `check` | Lint (`ruff`) and optionally type-check (`ty`) Python code. | [Docs](docs/commands/check.md) |
+| `config` | Configure `mp` settings. | [Docs](docs/commands/config.md) |
+| `describe` | Generate AI descriptions for integration actions. | [Docs](docs/commands/describe.md) |
+| `format` | Format Python files using `ruff format`. | [Docs](docs/commands/format.md) |
+| `login` | Authenticate to a Chronicle SecOps or legacy SOAR environment. | [Docs](docs/commands/dev_env.md#login) |
+| `pack` | Package an integration into a SOAR-supported ZIP file. | [Docs](docs/commands/pack.md) |
+| `pull` | Pull integrations, playbooks, views, custom fields, or grouping rules. | [Docs](docs/commands/dev_env.md) |
+| `push` | Build and push content to a SecOps environment. | [Docs](docs/commands/dev_env.md) |
+| `self` | Update the `mp` CLI tool (`mp self update`). | [Docs](docs/commands/self.md) |
+| `test` | Run pre-build integration `pytest` suites. | [Docs](docs/commands/test.md) |
+| `validate` | Validate integration and playbook structure, schemas, and metadata. | [Docs](docs/commands/validate.md) |
+
+*(Note: `mp dev-env` is deprecated; use `mp login`, `mp push`, and `mp pull` directly.)*
 
 ## Documentation
 
-For comprehensive guides on how to contribute:
-
 - [Installation Guide](docs/installation.md)
 - [Usage Guide](docs/usage.md)
+- [Response Integrations Guide](docs/response_integrations.md)
 - [Development Guide](docs/development.md)
-- [Marketplace Integration Guide](docs/marketplace.md)
 - [Contributing Guidelines](docs/contributing.md)
+- [Code of Conduct](docs/code-of-conduct.md)
 
 ## License
 
-This project is licensed under the Apache License 2.0—see the [LICENSE](./LICENSE) file for details.
+This project is licensed under the Apache License 2.0. See the [LICENSE](./LICENSE) file for details.

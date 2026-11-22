@@ -2,100 +2,98 @@
 
 ## Overview
 
-The `mp` tool simplifies developing, testing, and maintaining integrations for the
-Google SecOps Marketplace. This document explains the structure of marketplace
-integrations and how to work with them using the tool.
+The `mp` CLI manages the full lifecycle of response integrations in the Google SecOps Content Hub, from local authoring and testing to SOAR artifact compilation and environment deployment.
 
-## Integration Structure
+## Integration States & Directory Layout
 
-A marketplace integration consists of:
+Response integrations live under `content/response_integrations/` across repository tiers (`google/`, `third_party/community/`, `third_party/partner/`, `power_ups/`, or `custom/`).
 
-1. **Metadata**: YAML files describing the integration, its capabilities, parameters,
-   etc.
-2. **Scripts**: Python code that implements the integration functionality
-3. **Dependencies**: Required Python packages for the integration
+Integrations exist in two representations:
 
-Integrations exist in two states:
+- **Non-built (source)**: Human-editable YAML metadata, Python 3.11 modules using `soar_sdk` and `TIPCommon`, `uv` dependency lockfiles, and `pytest` tests.
+- **Built (`out/`)**: Compiled JSON definitions (`.def`, `.actiondef`, `.connectordef`, `.jobdef`), import-flattened scripts (`ActionsScripts/`, `ConnectorsScripts/`, `JobsScrips/`, `Managers/`), and resolved binary `.whl` files (`Dependencies/`).
 
-- **Non-built**: Source code format used during development
-- **Built**: Packaged format ready for deployment to the marketplace
+### Non-Built Source Structure
 
-## Creating a New Integration
-
-1. Create a directory for your integration in the appropriate repository (commercial or
-   community)
-2. Set up the required structure:
-
-```
-my_integration/
-├── metadata/         # Metadata YAML files
-│   ├── action.yaml   # Action definitions
-│   ├── connector.yaml # Connector definitions
-│   └── job.yaml      # Job definitions
-├── scripts/          # Python implementation
-│   ├── actions/      # Action implementations
-│   ├── connectors/   # Connector implementations
-│   └── jobs/         # Job implementations
-├── tests/            # Test suite
-└── pyproject.toml    # Python project configuration
+```text
+<integration_name>/
+├── __init__.py                 # Empty package marker
+├── .python-version             # Pinned to 3.11
+├── pyproject.toml              # Project metadata, version, and dependencies
+├── uv.lock                     # Locked dependency graph
+├── definition.yaml             # Integration-level metadata and configuration parameters
+├── release_notes.yaml          # Customer-facing version history
+├── core/                       # Shared managers, API clients, auth, constants, dataparsers
+├── actions/                    # <action_name>.py and matching <action_name>.yaml
+├── connectors/                 # <connector_name>.py and matching <connector_name>.yaml
+├── jobs/                       # <job_name>.py and matching <job_name>.yaml
+├── widgets/                    # Optional HTML/widget templates and metadata
+├── resources/                  # logo.svg, image.png, *_JsonResult_example.json, ai/*.yaml
+└── tests/                      # Black-box integration_testing / pytest suite
 ```
 
-## Building Integrations
+## Core Integration Workflow with `mp`
 
-To build your integration for deployment:
+Ensure `mp` points to your `content-hub` checkout first:
 
 ```bash
-mp build --integration my_integration
+mp config --root-path /path/to/content-hub
 ```
 
-This command:
-
-1. Processes all metadata YAML files and converts them to JSON
-2. Restructures scripts for deployment
-3. Creates a deployable package in the output directory
-
-## Deconstructing Built Integrations
-
-To convert a built integration back to its non-built source form:
+### 1. Format & Lint Code
 
 ```bash
-mp build --integration my_integration --deconstruct
+mp format content/response_integrations/third_party/community/my_integration
+mp check content/response_integrations/third_party/community/my_integration --static-type-check --raise-error-on-violations
 ```
 
-This is useful when you have a built integration and want to make changes to it.
+### 2. Validate Structure & Metadata
 
-## Testing Integrations
+Runs all 23 pre-build integration validators (`uv.lock` sync, version bump/consistency, SSL parameters, Ping action, JSON result examples, release notes, fields, structure, and dependencies):
 
-The `mp` tool does not directly provide testing functionality for integrations, but you
-can set up tests in the `tests/` directory of your integration and use standard Python
-testing tools.
+```bash
+mp validate integration my_integration
+```
 
-## Best Practices
+### 3. Run Pre-Build Unit Tests
 
-1. **Metadata First**: Design your integration metadata carefully before implementing
-   scripts
-2. **Type Safety**: Use type hints in all your Python code
-3. **Error Handling**: Implement robust error handling in your scripts
-4. **Documentation**: Document your integration thoroughly
-5. **Testing**: Create comprehensive tests for your integration
-6. **Dependencies**: Keep dependencies minimal and pin versions
+Creates `<integration>/.venv` (if not present), adds `soar_sdk` to `PYTHONPATH`, and executes `pytest`:
 
-## Common Issues
+```bash
+mp test --integration my_integration
+```
 
-### Import Restructuring
+### 4. Build or Deconstruct
 
-The tool automatically restructures imports in your scripts during the build process. Be
-aware that:
+Compile the integration into `out/content/response_integrations/...`:
 
-- Relative imports may be converted to absolute imports
-- Common packages might be handled differently in built vs. non-built modes
+```bash
+mp build integration my_integration
+```
 
-### Duplicate Integrations
+Convert a built integration back into non-built source layout:
 
-The tool checks for duplicate integrations across repositories. Ensure your integration
-name is unique.
+```bash
+mp build integration my_integration --deconstruct --src /path/to/built_dir --dst /path/to/output_dir
+```
 
-### File Structure
+### 5. Package or Push to a SecOps Environment
 
-Maintain the expected file structure for your integration to ensure proper building and
-deconstructing.
+Create a SOAR-importable `.zip` archive in `out/pack/`:
+
+```bash
+mp pack integration my_integration --non-interactive
+```
+
+Or build, auto-bump the dev minor version, and upload directly to a logged-in SecOps tenant:
+
+```bash
+mp login --gcp --api-root "https://us-chronicle.googleapis.com/v1alpha/projects/<PROJECT>/locations/us/instances/<INSTANCE_UUID>"
+mp push integration my_integration
+```
+
+## Key Technical Notes
+
+- **Import Restructuring (`libcst`)**: During `mp build`, imports from `soar_sdk.*` and relative `.core` imports are rewritten into flat top-level imports expected by the SOAR runtime; `--deconstruct` reverses this transformation and ensures `from __future__ import annotations` is present.
+- **Binary Wheel Resolution**: During build, `mp` exports production dependencies via `uv export` and downloads platform-compatible binary wheels (`--only-binary=:all:`). If a dependency only publishes an sdist on PyPI, add its explicit source URL with `uv add "<pkg> @ <url>"`.
+- **Unique Identifiers**: Full repository builds (`mp build repository google third_party`) verify that no duplicate integration identifiers exist across commercial and third-party tiers.

@@ -2,145 +2,104 @@
 
 ## Prerequisites
 
-- Python 3.11 or later (Python 3.11.0+ is officially supported)
-- uv package manager
+- Python `3.11.x` (`requires-python = ">=3.11,<3.12"` in `pyproject.toml`) with `sqlite3` support.
+- [uv](https://docs.astral.sh/uv/) package manager.
+
+> [!TIP]
+> If your system Python 3.11 was built without SQLite headers (`ModuleNotFoundError: No module named '_sqlite3'`), install a `uv`-managed Python 3.11 (`uv python install 3.11`) and pass `--python-preference only-managed` to `uv` commands.
 
 ## Installation Options
 
-Choose your preferred installation method:
+### Option 1: Persistent Tool Installation (Recommended)
 
-### Option 1: Persistent Installation (Recommended)
-
-Install `mp` once and use it everywhere. This method keeps the tool available in your PATH.
+Install `mp` once and keep it on your `PATH`:
 
 ```bash
-# Install from the main branch
-uv tool install mp --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp
+uv tool install --python 3.11 mp --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp
 ```
 
-Then use the tool directly:
+Verify the installation:
 
 ```bash
-# Check version
 mp --version
-
-# View help
 mp --help
 ```
 
-To upgrade `mp`:
+To upgrade `mp` later, run either:
 
 ```bash
 uv tool upgrade mp
+# or
+mp self update
 ```
 
-### Option 2: One-time Usage
+### Option 2: Run Directly from a Local `content-hub` Checkout
 
-Run `mp` directly without installing:
+If you already have `content-hub` cloned locally, you can run `mp` directly from `packages/mp` without installing it globally:
 
 ```bash
-# Run latest from main
-uvx --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp mp --help
+uv run --project packages/mp mp --help
 ```
 
-### Option 3: Manual Installation (Development)
+### Option 3: One-Time Usage Without Cloning
 
-This method is recommended if you are developing the `mp` tool itself or want to use it within a local checkout.
+```bash
+uvx --python 3.11 --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp mp --help
+```
+
+### Option 4: Local Development Environment (`packages/mp`)
+
+Use this setup when developing or testing changes to `mp` itself.
 
 #### 1. Clone the Repository
 
-```shell
-git clone <repository-url>
-cd packages/mp
+```bash
+git clone https://github.com/chronicle/content-hub.git
+cd content-hub/packages/mp
 ```
 
-### 3. Set Up Project with `uv`
+#### 2. Sync the Virtual Environment with `uv`
 
-#### Development Installation
+For development (includes `pytest`, `hypothesis`, `pyrefly`, and type stubs):
 
-For development purposes, create a virtual environment and install dependencies in one
-step:
-
-```shell
+```bash
 uv sync --dev
 ```
 
-This command creates a virtual environment in `.venv` directory and installs all
-dependencies including development ones.
+For runtime dependencies only (excluding the `dev` dependency group):
 
-#### User Installation
-
-For regular usage without development dependencies:
-
-```shell
-uv sync
+```bash
+uv sync --no-dev
 ```
 
-### 4. Activate the Virtual Environment
+#### 3. Activate the Virtual Environment
 
-```shell
+```bash
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
-### 5. Verify Installation
-
-Verify that the installation was successful by running:
+#### 4. Verify Installation
 
 ```bash
 mp --help
 ```
 
-You should see the help menu displaying the available commands.
-
 > [!NOTE]
-> **Windows Users**: if you are running on Windows, please use `wmp` instead of `mp` (e.g., `wmp --help`).
-
-### Alternative: Direct Installation
-
-You can also install the package directly to your base Python interpreter:
-
-```shell
-uv pip install .
-# Or for development installation
-uv pip install -e .
-```
+> **Windows Users**: On Windows, run `wmp` instead of `mp` (for example, `wmp --help`).
 
 ## Configure `mp`
 
-When installing `mp` it automatically assumes the marketplace repo is installed at
-`~/marketplace`.
-To configure a different path run
+On first run, `mp` creates `.mp_config` in your platform user config directory and defaults `marketplace_path` to `~/marketplace`. Point it to your local `content-hub` checkout root before running repository commands (`build`, `validate`, `test`, `pack`, `push`, `pull`, `describe`):
 
-```shell
-mp config --root-path /path/to/marketplace 
+```bash
+mp config --root-path /path/to/content-hub --display-config
 ```
 
-To find more about configurations, run
-
-```shell
-mp config --help
-```
+For all configuration flags (`--processes`, `--gemini-api-key`, `--gemini-concurrency`), see [commands/config.md](commands/config.md).
 
 ## IDE Configuration
 
-To run or debug the application from within an IDE, please make sure to set the project's Python interpreter to the executable located within the virtual environment created by uv. the relative path from packages/mp is:
+To run or debug `mp` from an IDE, set the Python interpreter to the virtual environment inside `packages/mp`:
 
-- Windows: .venv\Scripts\python.exe
-
-- macOS/Linux: .venv/bin/python
-
-This ensures that the IDE can correctly utilize any shared run/debug configurations.
-
-## Dependencies
-
-If you need to update dependencies or re-sync your virtual environment:
-
-```shell
-uv sync
-```
-
-For development, also sync the dev-dependencies
-
-```shell
-uv sync --dev
-```
+- macOS / Linux: `packages/mp/.venv/bin/python`
+- Windows: `packages\mp\.venv\Scripts\python.exe`

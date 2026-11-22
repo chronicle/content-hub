@@ -1,6 +1,6 @@
 # `mp format`
 
-Format Python (`.py`) files using `ruff`.
+Format Python (`.py`) files using `ruff format`.
 
 ## Usage
 
@@ -10,24 +10,27 @@ mp format [OPTIONS] [FILE_PATHS]...
 
 ## Arguments
 
-*   `FILE_PATHS`: One or more paths to files or directories to format.
+- `FILE_PATHS`: One or more paths to Python (`.py`) files, directories, or bare integration directory names (for example, `active_directory`). Non-Python file paths are ignored.
 
 ## Options
 
 | Option | Description | Type | Default |
 | :--- | :--- | :--- | :--- |
-| `--changed-files` | Check all changed files based on a diff with the origin/develop branch instead of providing `FILE_PATHS`. | `bool` | `False` |
-| `--quiet` | `-q` | Log less on runtime. | `bool` | `False` |
-| `--verbose` | `-v` | Log more on runtime. | `bool` | `False` |
+| `--changed-files` | Format files changed in the last commit (`git diff HEAD^ HEAD`) instead of providing `FILE_PATHS`. | `bool` | `False` |
+| `--quiet / --no-quiet` | Log less on runtime (long option only; no `-q` shorthand on `format`). | `bool` | `False` |
+| `--verbose / --no-verbose` | Log more on runtime (long option only; no `-v` shorthand on `format`). | `bool` | `False` |
+
+> [!NOTE]
+> `--changed-files` compares `HEAD^` to `HEAD` (the most recent commit). To format uncommitted working-tree edits, pass explicit file or directory paths in `FILE_PATHS`.
 
 ## Examples
 
-### Format specific files
+### Format specific files or directories
 ```bash
-mp format path/to/file.py path/to/dir
+mp format content/response_integrations/third_party/community/my_integration
 ```
 
-### Format changed files
+### Format files changed in the last commit
 ```bash
 mp format --changed-files
 ```

@@ -95,7 +95,7 @@ def run_pre_build_tests(
         typer.Option(
             "--repository",
             "-r",
-            help="Build all integrations in specified integration repositories",
+            help="Test all integrations in specified integration repositories.",
             default_factory=list,
         ),
     ],
@@ -104,7 +104,7 @@ def run_pre_build_tests(
         typer.Option(
             "--integration",
             "-i",
-            help="Build a specified integration",
+            help="Test a specified integration.",
             default_factory=list,
         ),
     ],
@@ -112,7 +112,7 @@ def run_pre_build_tests(
     raise_error_on_violations: Annotated[
         bool,
         typer.Option(
-            help="Whether to raise error on lint and type check violations",
+            help="Whether to treat runtime warnings as errors.",
         ),
     ] = False,
     quiet: Annotated[

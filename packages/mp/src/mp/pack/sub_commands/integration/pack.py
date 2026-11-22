@@ -74,7 +74,7 @@ def pack_integration(  # ruff:ignore[too-many-arguments]
             dir_okay=True,
             file_okay=False,
             resolve_path=True,
-            help="Destination directory to save the ZIP file. Defaults to 'out' directory.",
+            help="Destination directory to save the ZIP file. Defaults to 'out/pack' directory.",
         ),
     ] = None,
     interactive: Annotated[
