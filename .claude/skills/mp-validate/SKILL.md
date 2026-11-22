@@ -1,0 +1,1 @@
+../../../.agents/skills/mp-validate/SKILL.md

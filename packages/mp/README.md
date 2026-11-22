@@ -67,6 +67,14 @@ For full setup details, see the [Installation Guide](docs/installation.md).
 
 *(Note: `mp dev-env` is deprecated; use `mp login`, `mp push`, and `mp pull` directly.)*
 
+## AI Agent Skills
+
+This repository includes [Agent Skills](https://agentskills.io) for the `mp` package (`mp`) and each core CLI command (`mp-build`, `mp-check`, `mp-config`, `mp-format`, `mp-login`, `mp-pack`, `mp-pull`, `mp-push`, `mp-self`, `mp-test`, `mp-validate`):
+
+- **Google Gemini (`Gemini CLI`, `Antigravity`)**: Auto-discovered from [`.agents/skills/`](../../.agents/skills/).
+- **OpenAI (`Codex CLI`, `Codex`)**: Auto-discovered from [`.agents/skills/`](../../.agents/skills/).
+- **Anthropic (`Claude Code`)**: Auto-discovered from [`.claude/skills/`](../../.claude/skills/) (linked to `.agents/skills/`). On Windows, ensure Git symlinks are enabled (`git config core.symlinks true`) before checkout.
+
 ## Documentation
 
 - [Installation Guide](docs/installation.md)
