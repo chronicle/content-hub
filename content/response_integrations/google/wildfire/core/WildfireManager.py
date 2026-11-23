@@ -61,9 +61,18 @@ def _extract_error_message(response: requests.Response) -> str:
         parsed = xmltodict.parse(response.content)
     except ExpatError:
         return response.text
+    if not isinstance(parsed, dict):
+        return response.text
     wildfire = parsed.get("wildfire")
-    error = wildfire.get("error") if isinstance(wildfire, dict) else None
-    return error.get("error-message", response.text) if isinstance(error, dict) else response.text
+    error = wildfire.get("error") if isinstance(wildfire, dict) else parsed.get("error")
+    message = error.get("error-message") if isinstance(error, dict) else None
+    if isinstance(message, dict):
+        message = message.get("#text")
+    if isinstance(message, str):
+        normalized = " ".join(message.split())
+        if normalized:
+            return normalized
+    return response.text
 
 
 def _extract_oauth_error_message(response: requests.Response) -> str:

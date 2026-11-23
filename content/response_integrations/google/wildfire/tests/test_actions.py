@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import base64
 import sys
+from pathlib import Path
 from typing import Any
 
+import pytest
 import soar_sdk
 
 if soar_sdk.__path__[0] not in sys.path:
@@ -42,11 +44,12 @@ class MockEntity:
         self.is_suspicious = False
 
 
-def test_get_file_action_with_param(mocker: Any) -> None:
+def test_get_file_action_with_param(mocker: Any, tmp_path: Path) -> None:
     mock_siemplify = mocker.Mock()
     mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
     mock_siemplify.parameters = {"File Hash": SAMPLE_SHA256}
     mock_siemplify.target_entities = []
+    mock_siemplify.run_folder = str(tmp_path)
 
     mocker.patch.object(GetFile, "SiemplifyAction", return_value=mock_siemplify)
     mocker.patch.object(GetFile, "extract_action_param", return_value=SAMPLE_SHA256)
@@ -69,18 +72,169 @@ def test_get_file_action_with_param(mocker: Any) -> None:
     mock_siemplify.result.add_attachment.assert_called_once_with(
         f"WildFire sample {SAMPLE_SHA256}", "sample.tar", expected_b64
     )
-    mock_siemplify.result.add_result_json.assert_called_once_with([
+    mock_siemplify.result.add_result_json.assert_called_once()
+    json_results = mock_siemplify.result.add_result_json.call_args.args[0]
+    assert len(json_results) == 1
+    download_path = Path(json_results[0]["download_path"])
+    assert download_path.parent == tmp_path
+    assert download_path.name.startswith(f"{SAMPLE_SHA256}_")
+    assert download_path.suffix == ".tar"
+    assert download_path.read_bytes() == b"sample_bytes"
+    assert json_results == [
         {
             "file_hash": SAMPLE_SHA256,
             "filename": "sample.tar",
+            "download_path": str(download_path),
             "downloaded": True,
         }
-    ])
+    ]
     mock_siemplify.end.assert_called_once_with(
         f"Successfully downloaded file sample for {SAMPLE_SHA256} using Palo Alto Wildfire.",
         True,
         EXECUTION_STATE_COMPLETED,
     )
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected_suffix"),
+    [
+        ("../../etc/passwd;rm", ".dat"),
+        ("sample.exe;rm", ".dat"),
+        ("sample.toolongextension", ".dat"),
+        ("sample.TAR", ".TAR"),
+    ],
+)
+def test_get_file_action_with_param_sanitizes_suffix(
+    mocker: Any,
+    tmp_path: Path,
+    filename: str,
+    expected_suffix: str,
+) -> None:
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
+    mock_siemplify.parameters = {"File Hash": SAMPLE_MD5}
+    mock_siemplify.target_entities = []
+    mock_siemplify.run_folder = str(tmp_path)
+
+    mocker.patch.object(GetFile, "SiemplifyAction", return_value=mock_siemplify)
+    mocker.patch.object(GetFile, "extract_action_param", return_value=SAMPLE_MD5)
+
+    mock_mgr = mocker.Mock()
+    mock_mgr.get_sample.return_value = {
+        "filename": filename,
+        "content": b"payload",
+    }
+    mocker.patch.object(GetFile.WildfireManager, "from_siemplify", return_value=mock_mgr)
+
+    GetFile.main()
+
+    json_results = mock_siemplify.result.add_result_json.call_args.args[0]
+    download_path = Path(json_results[0]["download_path"])
+    assert download_path.parent == tmp_path
+    assert download_path.suffix == expected_suffix
+    assert download_path.read_bytes() == b"payload"
+
+
+def test_get_file_action_with_param_attaches_matching_entity(mocker: Any, tmp_path: Path) -> None:
+    matching_entity = MockEntity(SAMPLE_MD5.upper(), EntityTypes.FILEHASH)
+    other_entity = MockEntity(SAMPLE_MD5_OTHER, EntityTypes.FILEHASH)
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
+    mock_siemplify.parameters = {"File Hash": SAMPLE_MD5}
+    mock_siemplify.target_entities = [matching_entity, other_entity]
+    mock_siemplify.run_folder = str(tmp_path)
+
+    mocker.patch.object(GetFile, "SiemplifyAction", return_value=mock_siemplify)
+    mocker.patch.object(GetFile, "extract_action_param", return_value=SAMPLE_MD5)
+
+    mock_mgr = mocker.Mock()
+    mock_mgr.get_sample.return_value = {"filename": "sample.tar", "content": b"sample_bytes"}
+    mocker.patch.object(GetFile.WildfireManager, "from_siemplify", return_value=mock_mgr)
+
+    GetFile.main()
+
+    expected_b64 = base64.b64encode(b"sample_bytes").decode("utf-8")
+    mock_siemplify.result.add_attachment.assert_called_once_with(
+        f"WildFire sample {SAMPLE_MD5}", "sample.tar", expected_b64
+    )
+    mock_siemplify.result.add_entity_attachment.assert_called_once_with(SAMPLE_MD5.upper(), "sample.tar", expected_b64)
+    json_results = mock_siemplify.result.add_result_json.call_args.args[0]
+    assert Path(json_results[0]["download_path"]).read_bytes() == b"sample_bytes"
+
+
+def test_get_file_action_with_param_save_error(mocker: Any, tmp_path: Path) -> None:
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
+    mock_siemplify.parameters = {"File Hash": SAMPLE_MD5}
+    mock_siemplify.target_entities = []
+    mock_siemplify.run_folder = str(tmp_path)
+
+    mocker.patch.object(GetFile, "SiemplifyAction", return_value=mock_siemplify)
+    mocker.patch.object(GetFile, "extract_action_param", return_value=SAMPLE_MD5)
+    mocker.patch.object(GetFile, "_save_sample_to_disk", side_effect=OSError("No space left on device"))
+
+    mock_mgr = mocker.Mock()
+    mock_mgr.get_sample.return_value = {
+        "filename": f"{SAMPLE_MD5}.tar",
+        "content": b"sample_bytes",
+    }
+    mocker.patch.object(GetFile.WildfireManager, "from_siemplify", return_value=mock_mgr)
+
+    GetFile.main()
+
+    mock_siemplify.result.add_attachment.assert_not_called()
+    mock_siemplify.result.add_result_json.assert_not_called()
+    mock_siemplify.end.assert_called_once_with(
+        f'Error executing action "Get File". Reason: Failed to save sample for hash {SAMPLE_MD5} to disk: '
+        "No space left on device",
+        False,
+        EXECUTION_STATE_FAILED,
+    )
+
+
+def test_get_file_download_dir_fallback(mocker: Any, tmp_path: Path) -> None:
+    fallback_dir = tmp_path / "fallback"
+    fallback_dir.mkdir()
+    mocker.patch.object(GetFile.tempfile, "gettempdir", return_value=str(fallback_dir))
+
+    siemplify_missing = mocker.Mock()
+    siemplify_missing.run_folder = str(tmp_path / "missing")
+    assert GetFile._get_download_dir(siemplify_missing) == fallback_dir
+
+    class UnwritableRunFolder:
+        @property
+        def run_folder(self) -> str:
+            msg = "read-only filesystem"
+            raise PermissionError(msg)
+
+    assert GetFile._get_download_dir(UnwritableRunFolder()) == fallback_dir
+
+    readonly_dir = tmp_path / "readonly"
+    readonly_dir.mkdir()
+    siemplify_readonly = mocker.Mock()
+    siemplify_readonly.run_folder = str(readonly_dir)
+    mocker.patch.object(GetFile.os, "access", return_value=False)
+    assert GetFile._get_download_dir(siemplify_readonly) == fallback_dir
+
+
+def test_save_sample_to_disk_cleans_up_on_write_error(mocker: Any, tmp_path: Path) -> None:
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.run_folder = str(tmp_path)
+
+    partial_file = tmp_path / "partial.tar"
+    partial_file.write_bytes(b"")
+
+    fake_file = mocker.MagicMock()
+    fake_file.__enter__.return_value = fake_file
+    fake_file.__exit__.return_value = False
+    fake_file.name = str(partial_file)
+    fake_file.write.side_effect = OSError("disk full")
+    mocker.patch.object(GetFile.tempfile, "NamedTemporaryFile", return_value=fake_file)
+
+    with pytest.raises(OSError, match="disk full"):
+        GetFile._save_sample_to_disk(mock_siemplify, SAMPLE_MD5, "sample.tar", b"data")
+
+    assert not partial_file.exists()
 
 
 def test_get_file_action_with_param_not_found(mocker: Any) -> None:
@@ -105,12 +259,13 @@ def test_get_file_action_with_param_not_found(mocker: Any) -> None:
     )
 
 
-def test_get_file_action_with_entities(mocker: Any) -> None:
+def test_get_file_action_with_entities(mocker: Any, tmp_path: Path) -> None:
     entity = MockEntity(SAMPLE_MD5, EntityTypes.FILEHASH)
     mock_siemplify = mocker.Mock()
     mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
     mock_siemplify.parameters = {}
     mock_siemplify.target_entities = [entity]
+    mock_siemplify.run_folder = str(tmp_path)
 
     mocker.patch.object(GetFile, "SiemplifyAction", return_value=mock_siemplify)
     mocker.patch.object(GetFile, "extract_action_param", return_value="")
@@ -131,13 +286,20 @@ def test_get_file_action_with_entities(mocker: Any) -> None:
     mock_mgr.get_sample.assert_called_once_with(SAMPLE_MD5)
     expected_b64 = base64.b64encode(b"sample_bytes_entity").decode("utf-8")
     mock_siemplify.result.add_entity_attachment.assert_called_once_with(SAMPLE_MD5, f"{SAMPLE_MD5}.tar", expected_b64)
-    mock_siemplify.result.add_result_json.assert_called_once_with([
+    mock_siemplify.result.add_result_json.assert_called_once()
+    json_results = mock_siemplify.result.add_result_json.call_args.args[0]
+    assert len(json_results) == 1
+    download_path = Path(json_results[0]["download_path"])
+    assert download_path.parent == tmp_path
+    assert download_path.read_bytes() == b"sample_bytes_entity"
+    assert json_results == [
         {
             "file_hash": SAMPLE_MD5,
             "filename": f"{SAMPLE_MD5}.tar",
+            "download_path": str(download_path),
             "downloaded": True,
         }
-    ])
+    ]
     mock_siemplify.end.assert_called_once_with(
         f"Successfully downloaded files for the following entities using Palo Alto Wildfire: {SAMPLE_MD5}.",
         True,
@@ -145,13 +307,88 @@ def test_get_file_action_with_entities(mocker: Any) -> None:
     )
 
 
-def test_get_file_action_with_entities_partial_not_found(mocker: Any) -> None:
+def test_get_file_action_with_entities_save_error(mocker: Any, tmp_path: Path) -> None:
+    entity = MockEntity(SAMPLE_MD5, EntityTypes.FILEHASH)
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
+    mock_siemplify.parameters = {}
+    mock_siemplify.target_entities = [entity]
+    mock_siemplify.run_folder = str(tmp_path)
+
+    mocker.patch.object(GetFile, "SiemplifyAction", return_value=mock_siemplify)
+    mocker.patch.object(GetFile, "extract_action_param", return_value="")
+    mocker.patch.object(GetFile, "_save_sample_to_disk", side_effect=OSError("Permission denied"))
+
+    mock_mgr = mocker.Mock()
+    mock_mgr.get_sample.return_value = {"filename": f"{SAMPLE_MD5}.tar", "content": b"sample_bytes"}
+    mocker.patch.object(GetFile.WildfireManager, "from_siemplify", return_value=mock_mgr)
+
+    GetFile.main()
+
+    mock_siemplify.result.add_entity_attachment.assert_not_called()
+    mock_siemplify.result.add_result_json.assert_not_called()
+    mock_siemplify.end.assert_called_once_with(
+        f'Error executing action "Get File". Reason: {SAMPLE_MD5}: Failed to save sample to disk: Permission denied',
+        False,
+        EXECUTION_STATE_FAILED,
+    )
+
+
+def test_get_file_action_with_entities_partial_save_error(mocker: Any, tmp_path: Path) -> None:
+    e_ok = MockEntity(SAMPLE_MD5, EntityTypes.FILEHASH)
+    e_err = MockEntity(SAMPLE_MD5_OTHER, EntityTypes.FILEHASH)
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
+    mock_siemplify.parameters = {}
+    mock_siemplify.target_entities = [e_ok, e_err]
+    mock_siemplify.run_folder = str(tmp_path)
+
+    mocker.patch.object(GetFile, "SiemplifyAction", return_value=mock_siemplify)
+    mocker.patch.object(GetFile, "extract_action_param", return_value="")
+
+    mock_mgr = mocker.Mock()
+    mock_mgr.get_sample.side_effect = [
+        {"filename": f"{SAMPLE_MD5}.tar", "content": b"ok_bytes"},
+        {"filename": f"{SAMPLE_MD5_OTHER}.tar", "content": b"fail_bytes"},
+    ]
+    mocker.patch.object(GetFile.WildfireManager, "from_siemplify", return_value=mock_mgr)
+
+    real_save = GetFile._save_sample_to_disk
+    calls = 0
+
+    def save_side_effect(siemplify: Any, file_hash: str, filename: str, content: bytes) -> str:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return real_save(siemplify, file_hash, filename, content)
+        msg = "disk full"
+        raise OSError(msg)
+
+    mocker.patch.object(GetFile, "_save_sample_to_disk", side_effect=save_side_effect)
+
+    GetFile.main()
+
+    expected_msg = (
+        f"Successfully downloaded files for the following entities using Palo Alto Wildfire: {SAMPLE_MD5}.\n"
+        f"Action wasn't able to download files for the following entities using "
+        f"Palo Alto Wildfire: {SAMPLE_MD5_OTHER}.\n"
+        f"Errors:\n{SAMPLE_MD5_OTHER}: Failed to save sample to disk: disk full"
+    )
+    mock_siemplify.end.assert_called_once_with(expected_msg, True, EXECUTION_STATE_COMPLETED)
+    json_results = mock_siemplify.result.add_result_json.call_args.args[0]
+    assert len(json_results) == 1
+    assert json_results[0]["file_hash"] == SAMPLE_MD5
+    assert Path(json_results[0]["download_path"]).read_bytes() == b"ok_bytes"
+
+
+def test_get_file_action_with_entities_partial_not_found(mocker: Any, tmp_path: Path) -> None:
     e_ok = MockEntity(SAMPLE_MD5, EntityTypes.FILEHASH)
     e_missing = MockEntity(SAMPLE_MD5_OTHER, EntityTypes.FILEHASH)
     mock_siemplify = mocker.Mock()
     mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
     mock_siemplify.parameters = {}
     mock_siemplify.target_entities = [e_ok, e_missing]
+    mock_siemplify.run_folder = str(tmp_path)
 
     mocker.patch.object(GetFile, "SiemplifyAction", return_value=mock_siemplify)
     mocker.patch.object(GetFile, "extract_action_param", return_value="")
@@ -170,15 +407,20 @@ def test_get_file_action_with_entities_partial_not_found(mocker: Any) -> None:
         f"Action wasn't able to download files for the following entities using Palo Alto Wildfire: {SAMPLE_MD5_OTHER}."
     )
     mock_siemplify.end.assert_called_once_with(expected_msg, True, EXECUTION_STATE_COMPLETED)
+    json_results = mock_siemplify.result.add_result_json.call_args.args[0]
+    assert len(json_results) == 1
+    assert json_results[0]["file_hash"] == SAMPLE_MD5
+    assert Path(json_results[0]["download_path"]).read_bytes() == b"sample_bytes"
 
 
-def test_get_file_action_with_entities_partial_hard_error(mocker: Any) -> None:
+def test_get_file_action_with_entities_partial_hard_error(mocker: Any, tmp_path: Path) -> None:
     e_ok = MockEntity(SAMPLE_MD5, EntityTypes.FILEHASH)
     e_err = MockEntity(SAMPLE_MD5_OTHER, EntityTypes.FILEHASH)
     mock_siemplify = mocker.Mock()
     mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
     mock_siemplify.parameters = {}
     mock_siemplify.target_entities = [e_ok, e_err]
+    mock_siemplify.run_folder = str(tmp_path)
 
     mocker.patch.object(GetFile, "SiemplifyAction", return_value=mock_siemplify)
     mocker.patch.object(GetFile, "extract_action_param", return_value="")
@@ -199,6 +441,10 @@ def test_get_file_action_with_entities_partial_hard_error(mocker: Any) -> None:
         f"Errors:\n{SAMPLE_MD5_OTHER}: Rate limit exceeded"
     )
     mock_siemplify.end.assert_called_once_with(expected_msg, True, EXECUTION_STATE_COMPLETED)
+    json_results = mock_siemplify.result.add_result_json.call_args.args[0]
+    assert len(json_results) == 1
+    assert json_results[0]["file_hash"] == SAMPLE_MD5
+    assert Path(json_results[0]["download_path"]).read_bytes() == b"sample_bytes"
 
 
 def test_get_file_action_with_entities_all_not_found(mocker: Any) -> None:
