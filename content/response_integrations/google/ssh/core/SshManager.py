@@ -24,15 +24,19 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import paramiko
+
 import base64
+import re
+import shlex
+
+import paramiko
 from paramiko import client, Transport
 
 # =====================================
 #             CONSTANTS               #
 # =====================================
 CON_LIST_RUNNING_PROCESS = "ps -aux"  # List all running processes
-CON_LOGOFF_USER = "pkill -KILL -u '{0}'"  # Logoff user
+CON_LOGOFF_USER = "pkill -KILL -u {0}"  # Logoff user (argument is shlex-quoted)
 CON_KILL_PROCESS = "kill -9 {0}"  # Kill process by PID
 CON_PKILL_PROCESS = "pkill {0}"  # Kill processes by name
 CON_KILLALL_PROCESS = "killall -9 {0}"  # Kill all processes by name
@@ -60,6 +64,14 @@ CON_CHECK_BLOCK_IPADDRESS_RULE = (
 CON_SAVE_IPTABLES = "service iptables save"  # Saves IPtables
 CON_LIST_CONNECTIONS = "netstat -tnpa"
 
+# Mirrors iptables' own argument rules (xshared.c assert_valid_chain_name and
+# option parsing): a value may not contain whitespace and may not start with
+# '-' or '!' (which would be parsed as an option / negation). Anything else is
+# accepted and passed through shell-escaped, so no value that iptables itself
+# would accept is rejected here. Shell metacharacters are neutralised by
+# shlex.quote(), not by this pattern.
+IPTABLES_ARGUMENT_PATTERN = re.compile(r"^[^\s!-]\S*$")
+
 
 # =====================================
 #              CLASSES                #
@@ -70,6 +82,95 @@ class SshManagerError(Exception):
     """
 
     pass
+
+
+def sanitize_iptables_argument(value: str | None, name: str) -> str:
+    """Validate and shell-escape a single user-supplied iptables argument.
+
+    Args:
+        value: Raw value from the action parameters.
+        name: Human-readable parameter name used in error messages.
+
+    Returns:
+        A shell-safe argument, or an empty string when the value is empty.
+
+    Raises:
+        SshManagerError: If the value contains whitespace or starts with '-' or '!'.
+    """
+    if not value or not isinstance(value, str):
+        return ""
+    cleaned_value = value.strip()
+    if not cleaned_value:
+        return ""
+    if not IPTABLES_ARGUMENT_PATTERN.fullmatch(cleaned_value):
+        raise SshManagerError(
+            f"Invalid {name} '{cleaned_value}': it cannot contain whitespace "
+            "or start with '-' or '!'."
+        )
+    return shlex.quote(cleaned_value)
+
+
+def sanitize_iptables_chain(chain: str | None) -> str:
+    """Validate and shell-escape an iptables chain name supplied by the user.
+
+    An empty value is returned as-is so that `iptables -S` lists every chain,
+    which is the action's documented default behaviour.
+
+    Args:
+        chain: Raw chain value from the action parameters.
+
+    Returns:
+        A shell-safe argument for the iptables command.
+
+    Raises:
+        SshManagerError: If the value cannot be a valid iptables chain name.
+    """
+    return sanitize_iptables_argument(chain, "iptables chain name")
+
+
+def sanitize_ip_address(ip_address: str | None) -> str:
+    """Validate and shell-escape the address argument for `iptables -s`.
+
+    Deliberately not restricted to literal IPs: iptables accepts hostnames,
+    comma-separated lists and address/mask forms here, so only shell/option
+    injection is prevented.
+
+    Args:
+        ip_address: Raw IP address, network, or host value.
+
+    Returns:
+        A shell-safe argument for the iptables command.
+
+    Raises:
+        SshManagerError: If the value is empty, contains whitespace, or starts
+            with '-' or '!'.
+    """
+    safe_value = sanitize_iptables_argument(ip_address, "IP address")
+    if not safe_value:
+        raise SshManagerError("IP address cannot be empty.")
+    return safe_value
+
+
+def shell_escape_arguments(value: str | None) -> str:
+    """Re-quote each whitespace-separated argument so the remote shell runs it literally.
+
+    Keeps multi-argument values (e.g. "-f nginx", "+5 going down") working
+    exactly as before, while shell metacharacters (';', '|', '$()', ...) are
+    passed as plain text instead of being interpreted.
+
+    Args:
+        value: Raw value from the action parameters.
+
+    Returns:
+        The same arguments, each one shell-escaped.
+
+    Raises:
+        SshManagerError: If the value has unbalanced quotes.
+    """
+    try:
+        return shlex.join(shlex.split(value or ""))
+    except ValueError as err:
+        raise SshManagerError(f"Invalid value '{value}': {err}.") from err
 
 
 class SshManager:
@@ -184,7 +285,7 @@ class SshManager:
         :return: {boolean}
         """
         self._create_ssh_client()
-        logoff_command = CON_LOGOFF_USER.format(username)
+        logoff_command = CON_LOGOFF_USER.format(shlex.quote(username))
         status_code, output, error = self._run_command(logoff_command)
         self.client.close()
         return status_code
@@ -195,11 +296,11 @@ class SshManager:
         :param process: {string} The process name or ID to terminate
         :return: {boolean}
         """
-        self._create_ssh_client()
         if process.isdigit():
             kill_command = CON_KILL_PROCESS.format(process)
         else:
-            kill_command = CON_PKILL_PROCESS.format(process)
+            kill_command = CON_PKILL_PROCESS.format(shell_escape_arguments(process))
+        self._create_ssh_client()
         status_code, output, error = self._run_command(kill_command)
         self.client.close()
         return status_code
@@ -210,8 +311,8 @@ class SshManager:
         :param wait_time: {string} Time to wait before shutdown in minutes
         :return: {boolean}
         """
+        shutdown_command = CON_SHUTDOWN_COMMAND.format(shell_escape_arguments(wait_time))
         self._create_ssh_client()
-        shutdown_command = CON_SHUTDOWN_COMMAND.format(wait_time)
         status_code, output, error = self._run_command(shutdown_command)
         print(status_code)
         self.client.close()
@@ -230,14 +331,24 @@ class SshManager:
         self.client.close()
         return status_code
 
-    def list_iptables_rules(self, chain=""):
+    def list_iptables_rules(
+        self, chain: str | None = ""
+    ) -> tuple[int, list[str], paramiko.ChannelFile]:
+        """List all iptables rules in remote host.
+
+        Args:
+            chain: Iptables chain to list (for example: INPUT, OUTPUT).
+
+        Returns:
+            Exit status code, CSV data table rows, and stderr channel stream.
+
+        Raises:
+            SshManagerError: If the chain name is not a valid iptables chain name.
         """
-        List all iptables rules in remote host
-        :chain: {string} the iptables chain that you wish to see (example: INPUT, OUTPUT, etc.)
-        :return: {list of strings}
-        """
+        # Validate before connecting so bad input never reaches the remote shell.
+        safe_chain = sanitize_iptables_chain(chain)
         self._create_ssh_client()
-        list_rules = CON_LIST_IPTABLES_RULE.format(chain)
+        list_rules = CON_LIST_IPTABLES_RULE.format(safe_chain).strip()
         status_code, output, error = self._run_command(list_rules)
         # Using readlines in order to create a list of the the command that was ran
         iptables_results = output.readlines()
@@ -311,16 +422,23 @@ class SshManager:
         self.client.close()
         return "The specified rule already exists on the remote machine"
 
-    def block_ip_in_iptables(self, ip_address):
+    def block_ip_in_iptables(self, ip_address: str | None) -> tuple[str, int]:
         # CR: Document the desire rule format (put an example for root)
+        """Block IP address in remote host iptables.
+
+        Args:
+            ip_address: IP address, CIDR network, or host to block in iptables.
+
+        Returns:
+            Status message and command exit status code.
+
+        Raises:
+            SshManagerError: If the value is not a valid iptables address argument.
         """
-        Block ip address in remote host iptables
-        :param ip_address: {string} The IP address to block in iptables
-        :return: {boolean}
-        """
+        safe_ip = sanitize_ip_address(ip_address)
         self._create_ssh_client()
-        add_rule = CON_BLOCK_IPADDRESS_RULE.format(ip_address)
-        check_rule = CON_CHECK_BLOCK_IPADDRESS_RULE.format(ip_address)
+        add_rule = CON_BLOCK_IPADDRESS_RULE.format(safe_ip)
+        check_rule = CON_CHECK_BLOCK_IPADDRESS_RULE.format(safe_ip)
         # In order to prevent from having a rule added more then once I check if the rule is there.
         check_status_code, check_output, check_error = self._run_command(check_rule)
         if check_status_code != 0:
@@ -342,15 +460,22 @@ class SshManager:
             check_status_code,
         )
 
-    def allow_ip_in_iptables(self, ip_address):
+    def allow_ip_in_iptables(self, ip_address: str | None) -> tuple[str, int]:
+        """Allow IP address in remote host iptables.
+
+        Args:
+            ip_address: IP address, CIDR network, or host to allow in iptables.
+
+        Returns:
+            Status message and command exit status code.
+
+        Raises:
+            SshManagerError: If the value is not a valid iptables address argument.
         """
-        Allow ip address in remote host iptables
-        :param ip_address: {string} The ip address to allow in iptables
-        :return: {boolean}
-        """
+        safe_ip = sanitize_ip_address(ip_address)
         self._create_ssh_client()
-        add_rule = CON_ALLOW_IPADDRESS_RULE.format(ip_address)
-        check_rule = CON_CHECK_ALLOW_IPADDRESS_RULE.format(ip_address)
+        add_rule = CON_ALLOW_IPADDRESS_RULE.format(safe_ip)
+        check_rule = CON_CHECK_ALLOW_IPADDRESS_RULE.format(safe_ip)
         # In order to prevent from having a rule added more then once I check if the rule is there.
         check_status_code, check_output, check_error = self._run_command(check_rule)
         if check_status_code != 0:
