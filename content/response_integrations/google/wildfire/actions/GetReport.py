@@ -13,79 +13,214 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv, add_prefix_to_dict
-from ..core.WildfireManager import WildfireManager
+
 import base64
+from typing import Any
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import add_prefix_to_dict, dict_to_flat, flat_dict_to_csv, output_handler
+from TIPCommon.extraction import extract_action_param
+
+from ..core.WildfireManager import WildfireManager, WildfireManagerError, WildfireNotFoundError
+
+INTEGRATION_NAME = "Wildfire"
+INTEGRATION_DISPLAY_NAME = "Palo Alto Wildfire"
+ACTION_NAME = "Get Report"
 
 
-@output_handler
-def main():
-    siemplify = SiemplifyAction()
-    conf = siemplify.get_configuration("Wildfire")
-    api_key = conf["Api Key"]
+def _attach_pdf_to_case(
+    siemplify: SiemplifyAction,
+    wildfire_manager: WildfireManager,
+    identifier: str,
+) -> None:
+    try:
+        pdf_report = wildfire_manager.get_pdf_report(identifier)
+        b64_pdf = base64.b64encode(pdf_report["content"]).decode("utf-8")
+        siemplify.result.add_attachment(f"WildFire report {identifier}", pdf_report["filename"], b64_pdf)
+    except WildfireManagerError as pdf_err:
+        siemplify.LOGGER.warn(f"Could not retrieve PDF report for {identifier}: {pdf_err}")
 
-    errors = ""
+
+def _attach_pdf_to_entity(
+    siemplify: SiemplifyAction,
+    wildfire_manager: WildfireManager,
+    identifier: str,
+) -> None:
+    try:
+        pdf_report = wildfire_manager.get_pdf_report(identifier)
+        b64_pdf = base64.b64encode(pdf_report["content"]).decode("utf-8")
+        siemplify.result.add_entity_attachment(identifier, pdf_report["filename"], b64_pdf)
+    except WildfireManagerError as pdf_err:
+        siemplify.LOGGER.warn(f"Could not retrieve PDF report for {identifier}: {pdf_err}")
+
+
+def _enrich_entity(
+    siemplify: SiemplifyAction,
+    wildfire_manager: WildfireManager,
+    entity: Any,
+    report: dict[str, Any],
+) -> None:
+    file_info = dict(report.get("file_info") or {})
+    if file_info.get("malware") == "yes":
+        entity.is_suspicious = True
+        siemplify.add_entity_insight(
+            entity,
+            "File was found malicious by WildFire",
+            triggered_by="WildFire",
+        )
+
+    file_info = add_prefix_to_dict(file_info, "Wildfire")
+    entity.additional_properties.update(file_info)
+
+    if report.get("task_info"):
+        flat_reports = dict_to_flat(report["task_info"])
+        csv_output = flat_dict_to_csv(flat_reports)
+        siemplify.result.add_entity_table(entity.identifier, csv_output)
+
+    _attach_pdf_to_entity(siemplify, wildfire_manager, entity.identifier)
+
+
+def _process_file_hash(
+    siemplify: SiemplifyAction,
+    wildfire_manager: WildfireManager,
+    file_hash: str,
+) -> tuple[str, bool, int]:
+    try:
+        report = wildfire_manager.get_report(file_hash)
+    except WildfireNotFoundError:
+        siemplify.LOGGER.info(f"Report not found for hash {file_hash}")
+        return (
+            f"No report was found for hash {file_hash} in {INTEGRATION_DISPLAY_NAME}.",
+            False,
+            EXECUTION_STATE_COMPLETED,
+        )
+    except Exception as e:
+        siemplify.LOGGER.exception(f"Failed to download report for hash {file_hash}")
+        return f'Error executing action "{ACTION_NAME}". Reason: {e}', False, EXECUTION_STATE_FAILED
+
+    siemplify.result.add_result_json([report])
+
+    if report.get("task_info"):
+        flat_reports = dict_to_flat(report["task_info"])
+        csv_output = flat_dict_to_csv(flat_reports)
+        siemplify.result.add_data_table("WildFire Task Info", csv_output)
+
+    _attach_pdf_to_case(siemplify, wildfire_manager, file_hash)
+
     enriched_entities = []
-
-    # Connect to Wildfire
-    wildfire_manager = WildfireManager(api_key)
-
     for entity in siemplify.target_entities:
-        if entity.entity_type == EntityTypes.FILEHASH:
-            if len(entity.identifier) == 32 or len(entity.identifier) == 64:
-                try:
-                    # Hash is md5 ot sha256
-                    report = wildfire_manager.get_report(entity.identifier)
-
-                    # Enrich entity with file info
-                    file_info = dict(report["file_info"])
-
-                    # If entity is malware - mark entity as suspicious
-                    if file_info["malware"] == "yes":
-                        entity.is_suspicious = True
-                        insight_msg = "File was found malicious by WildFire"
-                        siemplify.add_entity_insight(
-                            entity, insight_msg, triggered_by="WildFire"
-                        )
-
-                    file_info = add_prefix_to_dict(file_info, "Wildfire")
-                    entity.additional_properties.update((dict(file_info)))
-
-                    # Attach Reports as csv
-                    flat_reports = dict_to_flat(report["task_info"])
-                    csv_output = flat_dict_to_csv(flat_reports)
-                    siemplify.result.add_entity_table(entity.identifier, csv_output)
-
-                    # Get PDF report and attach it to results
-                    pdf_report = wildfire_manager.get_pdf_report(entity.identifier)
-
-                    siemplify.result.add_entity_attachment(
-                        entity.identifier,
-                        pdf_report["filename"],
-                        base64.b64encode(pdf_report["content"]).decode("utf-8"),
-                    )
-                    enriched_entities.append(entity)
-
-                except Exception as e:
-                    errors += str(e) + "\n"
+        if entity.entity_type == EntityTypes.FILEHASH and entity.identifier.lower() == file_hash.lower():
+            file_info = dict(report.get("file_info") or {})
+            if file_info.get("malware") == "yes":
+                entity.is_suspicious = True
+                siemplify.add_entity_insight(entity, "File was found malicious by WildFire", triggered_by="WildFire")
+            file_info = add_prefix_to_dict(file_info, "Wildfire")
+            entity.additional_properties.update(file_info)
+            enriched_entities.append(entity)
 
     if enriched_entities:
         siemplify.update_entities(enriched_entities)
-        entities_names = [entity.identifier for entity in enriched_entities]
 
-        output_message = "Report was saved for the following entities:\n" + "\n".join(
-            entities_names
+    return (
+        f"Successfully downloaded report for {file_hash} using {INTEGRATION_DISPLAY_NAME}.",
+        True,
+        EXECUTION_STATE_COMPLETED,
+    )
+
+
+def _format_entity_results(
+    enriched_entities: list[Any],
+    not_found_entities: list[str],
+    failed_entities: list[str],
+    errors: list[str],
+) -> tuple[str, bool, int]:
+    if enriched_entities:
+        entities_str = ", ".join(entity.identifier for entity in enriched_entities)
+        msg = f"Successfully enriched the following entities using {INTEGRATION_DISPLAY_NAME}: {entities_str}."
+        unsuccessful = not_found_entities + failed_entities
+        if unsuccessful:
+            msg += (
+                f"\nAction wasn't able to enrich the following entities using "
+                f"{INTEGRATION_DISPLAY_NAME}: {', '.join(unsuccessful)}."
+            )
+        if errors:
+            msg += "\nErrors:\n" + "\n".join(errors)
+        return msg, True, EXECUTION_STATE_COMPLETED
+
+    if errors:
+        reasons = "; ".join(errors)
+        return f'Error executing action "{ACTION_NAME}". Reason: {reasons}', False, EXECUTION_STATE_FAILED
+
+    msg = "None of the provided entities were enriched."
+    if not_found_entities:
+        msg += (
+            f"\nAction wasn't able to enrich the following entities using "
+            f"{INTEGRATION_DISPLAY_NAME}: {', '.join(not_found_entities)}."
         )
-        output_message += errors
+    return msg, False, EXECUTION_STATE_COMPLETED
 
+
+def _process_entities(
+    siemplify: SiemplifyAction,
+    wildfire_manager: WildfireManager,
+) -> tuple[str, bool, int]:
+    enriched_entities: list[Any] = []
+    not_found_entities: list[str] = []
+    failed_entities: list[str] = []
+    errors: list[str] = []
+    json_results: list[dict[str, Any]] = []
+
+    for entity in siemplify.target_entities:
+        if entity.entity_type == EntityTypes.FILEHASH and len(entity.identifier) in {32, 64}:
+            try:
+                report = wildfire_manager.get_report(entity.identifier)
+                _enrich_entity(siemplify, wildfire_manager, entity, report)
+                enriched_entities.append(entity)
+                json_results.append(report)
+            except WildfireNotFoundError:
+                siemplify.LOGGER.info(f"Report not found for entity {entity.identifier}")
+                not_found_entities.append(entity.identifier)
+            except Exception as e:
+                siemplify.LOGGER.exception(f"Failed to get report for {entity.identifier}")
+                failed_entities.append(entity.identifier)
+                errors.append(f"{entity.identifier}: {e}")
+
+    if json_results:
+        siemplify.result.add_result_json(json_results)
+
+    if enriched_entities:
+        siemplify.update_entities(enriched_entities)
+
+    return _format_entity_results(enriched_entities, not_found_entities, failed_entities, errors)
+
+
+@output_handler
+def main() -> None:
+    siemplify = SiemplifyAction()
+    siemplify.script_name = f"{INTEGRATION_NAME} - {ACTION_NAME}"
+
+    file_hash = extract_action_param(
+        siemplify,
+        param_name="File Hash",
+        is_mandatory=False,
+        print_value=True,
+    )
+
+    try:
+        wildfire_manager = WildfireManager.from_siemplify(siemplify)
+    except Exception as e:
+        siemplify.LOGGER.exception("Failed to initialize Wildfire manager")
+        siemplify.end(f'Error executing action "{ACTION_NAME}". Reason: {e}', False, EXECUTION_STATE_FAILED)
+        return
+
+    if file_hash:
+        msg, is_success, status = _process_file_hash(siemplify, wildfire_manager, file_hash)
     else:
-        output_message = "No reports were downloaded.\n"
-        output_message += errors
+        msg, is_success, status = _process_entities(siemplify, wildfire_manager)
 
-    siemplify.end(output_message, "true")
+    siemplify.end(msg, is_success, status)
 
 
 if __name__ == "__main__":
