@@ -1,24 +1,43 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import base64
 import json
-from typing import Generator
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
-import pytest
 
+import pytest
 import TIPCommon
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
+from soar_sdk.SiemplifyDataModel import EntityTypes
+
 if not hasattr(TIPCommon, "extract_configuration_param"):
     from TIPCommon.extraction import extract_configuration_param
+
     TIPCommon.extract_configuration_param = extract_configuration_param
 
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
-import GetDomainSecurityInfo
+from cisco_umbrella.actions import GetDomainSecurityInfo
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 @pytest.fixture
-def mock_siemplify() -> Generator[Mock, None, None]:
-    with patch("GetDomainSecurityInfo.SiemplifyAction") as mock_class:
+def mock_siemplify() -> Iterator[Mock]:
+    with patch("cisco_umbrella.actions.GetDomainSecurityInfo.SiemplifyAction") as mock_class:
         siemplify = Mock()
         mock_class.return_value = siemplify
         siemplify.target_entities = []
@@ -27,8 +46,8 @@ def mock_siemplify() -> Generator[Mock, None, None]:
 
 
 @pytest.fixture
-def mock_umbrella_manager() -> Generator[Mock, None, None]:
-    with patch("GetDomainSecurityInfo.CiscoUmbrellaIvestigate") as mock_class:
+def mock_umbrella_manager() -> Iterator[Mock]:
+    with patch("cisco_umbrella.actions.GetDomainSecurityInfo.CiscoUmbrellaIvestigate") as mock_class:
         manager = Mock()
         mock_class.return_value = manager
         yield manager
@@ -56,7 +75,7 @@ def test_get_domain_security_info_attachment_is_string(
     )
 
     with patch(
-        "GetDomainSecurityInfo.extract_configuration_param",
+        "cisco_umbrella.actions.GetDomainSecurityInfo.extract_configuration_param",
         return_value="dummy_token",
     ):
         GetDomainSecurityInfo.main()
@@ -106,7 +125,7 @@ def test_get_domain_security_info_not_found_handling(
     )
 
     with patch(
-        "GetDomainSecurityInfo.extract_configuration_param",
+        "cisco_umbrella.actions.GetDomainSecurityInfo.extract_configuration_param",
         return_value="dummy_token",
     ):
         GetDomainSecurityInfo.main()
@@ -116,9 +135,9 @@ def test_get_domain_security_info_not_found_handling(
     )
     mock_siemplify.result.add_entity_attachment.assert_not_called()
     mock_siemplify.end.assert_called_once()
-    output_message, result_value, status = mock_siemplify.end.call_args[0]
-    assert "unknown-domain.com" in output_message
-    assert "not found in Cisco Umbrella" in output_message
+    output_message, _result_value, _status = mock_siemplify.end.call_args[0]
+    expected_message = "\nThe following entities were not found in Cisco Umbrella:\nunknown-domain.com\n"
+    assert output_message == expected_message
 
 
 def test_get_domain_security_info_no_matching_entities(
@@ -134,7 +153,7 @@ def test_get_domain_security_info_no_matching_entities(
     mock_siemplify.target_entities = [internal_entity]
 
     with patch(
-        "GetDomainSecurityInfo.extract_configuration_param",
+        "cisco_umbrella.actions.GetDomainSecurityInfo.extract_configuration_param",
         return_value="dummy_token",
     ):
         GetDomainSecurityInfo.main()
