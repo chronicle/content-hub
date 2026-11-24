@@ -1,0 +1,1370 @@
+Add Comments To Entity:
+  ai_description: >-
+    ### General Description
+
+    Adds comments to specific entities within the Exabeam Advanced Analytics platform.
+    This action allows security analysts to document findings or provide context directly
+    on entity profiles (Users or Assets) in Exabeam from within Google SecOps. It
+    supports IP addresses, Hostnames, and User entities.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves the mandatory 'Comment' parameter.
+
+    2. **Entity Filtering**: Iterates through the target entities in the current context,
+    filtering for supported types: `USER`, `ADDRESS` (IP), and `HOSTNAME`.
+
+    3. **Existence Check**: For each supported entity, the action queries Exabeam
+    Advanced Analytics via a GET request to verify the entity exists in their system.
+
+    4. **Mutation**: If the entity is found, the action performs a POST request to
+    the Exabeam API to attach the provided comment to that specific entity.
+
+    5. **Result Reporting**: Tracks successful and failed comment additions, providing
+    a summary message and detailed JSON results for each processed entity.
+
+
+    ### Additional Notes
+
+    - The action maps SecOps entity types to Exabeam's 'user' or 'asset' categories.
+  ai_short_description: >-
+    Adds a comment to specific user or asset entities in Exabeam Advanced Analytics.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a comment to a user or asset entity profile in Exabeam Advanced Analytics.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to check if the entity exists, and then a POST
+      request to Exabeam Advanced Analytics to add a comment to the entity. This mutates
+      external data. It does not update internal entities, create insights, or modify
+      alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them based
+      on `entity.entity_type in [EntityTypes.USER, EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`.
+      Therefore, it targets Address, Hostname, and User entities and filters strictly
+      by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds a comment to an entity profile in a third-party UBA system (Exabeam).
+      This does not directly align with standard outcome categories like updating
+      an alert, enriching an IOC, or updating an identity's IAM properties. Therefore,
+      no outcome categories are matched.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Comment | String | Yes | Specify the comment that needs to be added to the entity.
+    |
+Add Entity To Watchlist:
+  ai_description: >-
+    ### General Description
+
+    Adds entities to a specified watchlist in Exabeam Advanced Analytics. This action
+    allows security analysts to programmatically tag or monitor specific users or
+    assets by placing them into existing watchlists within the Exabeam platform. It
+    ensures that entities are only added to compatible watchlist categories (e.g.,
+    users to user watchlists and hosts/IPs to asset watchlists).
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action connects to Exabeam Advanced Analytics using
+    the provided API credentials.
+
+    2. **Watchlist Retrieval**: It fetches the list of all available watchlists from
+    Exabeam to find the one matching the provided 'Watchlist Title'.
+
+    3. **Validation**: It verifies the existence of the watchlist and ensures its
+    category is either 'Users' or 'Assets'.
+
+    4. **Entity Filtering**: It iterates through the target entities in the Google
+    SecOps case, filtering them to ensure they match the watchlist category (e.g.,
+    skipping IP entities if the target is a User watchlist).
+
+    5. **External Mutation**: It performs a bulk update request to the Exabeam API
+    to add the suitable entities to the specified watchlist.
+
+    6. **Verification**: The action compares the number of successfully added entities
+    against the requested list and identifies any failures before returning the final
+    status.
+
+
+    ### Additional Notes
+
+    - **Supported Categories**: The action only supports watchlists with the category
+    'Users' or 'Assets'.
+
+    - **Category Constraints**: 'User' entities can only be added to 'Users' category
+    watchlists. 'IP Address' and 'Hostname' entities can only be added to 'Assets'
+    category watchlists.
+
+    - **Unsupported Categories**: Watchlists with categories 'AssetLabels' and 'UserLabels'
+    are explicitly not supported and will cause the action to fail.
+  ai_short_description: >-
+    Adds entities to a specified watchlist in Exabeam Advanced Analytics.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds specified entities to a watchlist in Exabeam Advanced Analytics.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving the list of watchlists and their items
+      to verify the addition. It mutates external data by making a PUT request to
+      add entities to the specified watchlist in Exabeam. It does not mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them based
+      on their `entity_type`. It specifically supports `EntityTypes.USER`, `EntityTypes.ADDRESS`,
+      and `EntityTypes.HOSTNAME`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds entities to a watchlist in Exabeam Advanced Analytics. This
+      does not directly align with any of the predefined outcome categories such as
+      blocking, enriching, or ticketing.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Watchlist Title | String | Yes | Specify the title of the watchlist of which
+    you want to add entities. |
+Create Watchlist:
+  ai_description: >-
+    ### General Description
+
+    Creates a new watchlist in Exabeam Advanced Analytics. This action allows users
+    to define a new collection of entities (Users or Assets) with specific access
+    controls and descriptions within the Exabeam platform.
+
+
+    ### Flow Description
+
+    1. Extracts the action parameters (Title, Category, Access Control, Description).
+
+    2. Initializes the Exabeam Advanced Analytics manager.
+
+    3. Maps the user-friendly parameter values for 'Category' and 'Access Control'
+    into the specific strings required by the Exabeam API.
+
+    4. Sends a POST request to the Exabeam `uba/api/watchlist` endpoint to create
+    the watchlist.
+
+    5. Captures the API response containing the new watchlist's details and adds it
+    to the action's JSON results.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities within the Google SecOps case;
+    it is a management action used to configure the external Exabeam environment.
+  ai_short_description: >-
+    Creates a new watchlist in Exabeam Advanced Analytics.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new watchlist in Exabeam Advanced Analytics.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Exabeam API to create a new watchlist,
+      which mutates external data. It does not fetch contextual data for entities,
+      nor does it mutate internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It performs a management
+      operation to create a watchlist in the external system without referencing specific
+      case entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new watchlist in Exabeam Advanced Analytics. This is a
+      management/configuration action and does not match any of the predefined outcome
+      categories such as enriching IOCs, blocking IPs, or updating alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Title | String | Yes | Specify the title of the watchlist. |
+
+    | Category | String | Yes | Specify the category for the watchlist. |
+
+    | Access Control | String | Yes | Specify the access control for the watchlist.
+    |
+
+    | Description | String | No | Specify description for the watchlist. |
+Delete Watchlist:
+  ai_description: >-
+    ### General Description
+
+    Deletes a specific watchlist in Exabeam Advanced Analytics based on its title.
+    The action first retrieves all available watchlists to identify the unique ID
+    associated with the provided title and then performs the deletion.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Exabeam Advanced Analytics manager
+    using the provided API credentials.
+
+    2. **Watchlist Lookup**: It fetches a list of all existing watchlists from the
+    Exabeam API via a GET request.
+
+    3. **Identification**: The code iterates through the retrieved watchlists to find
+    one that matches the user-provided 'Watchlist Title'.
+
+    4. **Deletion**: If a match is found, it calls the deletion endpoint via a DELETE
+    request using the specific 'watchlist_id'.
+
+    5. **Error Handling**: If the watchlist title is not found in the system, the
+    action raises a 'NotFoundError' and fails the execution.
+
+
+    ### Additional Notes
+
+    Ensure the exact title of the watchlist is provided, as the lookup requires an
+    exact match.
+  ai_short_description: >-
+    Deletes a specific watchlist in Exabeam Advanced Analytics based on its title.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a specific watchlist from the Exabeam Advanced Analytics system.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by calling `list_watchlists` (a GET request) to find
+      the ID of the watchlist. It mutates external data by calling `delete_watchlist`
+      (a DELETE request) to remove the watchlist from Exabeam. It does not mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates solely on the provided 'Watchlist Title' parameter.
+      Therefore, all entity type and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a watchlist in Exabeam Advanced Analytics. This is a custom
+      administrative operation on an external system and does not match any of the
+      predefined expected outcomes such as Enrich IOC, Update Alert, Contain Host,
+      or Add IOC To Blocklist. Therefore, all outcome category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Watchlist Title | String | Yes | Specify the title of the watchlist that needs
+    to be deleted. |
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname, IP, and User entities using behavioral analytics and threat
+    intelligence from Exabeam Advanced Analytics. This action provides deep context
+    into entity risk scores, labels, and historical activity, helping analysts understand
+    the risk profile of entities within their environment.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a session with the Exabeam Advanced Analytics
+    API using the provided integration credentials.
+
+    2. **Global Context Retrieval**: Fetches global lists of notable users and assets
+    via `get_notable_users` and `get_notable_assets` to allow for 'notable' status
+    identification during entity processing.
+
+    3. **Entity Filtering**: Iterates through target entities, processing only supported
+    types: Hostname, IP (Address), and User.
+
+    4. **Detail Retrieval**: Retrieves core entity details including risk scores,
+    first/last seen timestamps, and labels from Exabeam via `get_entity_details`.
+
+    5. **Comment Enrichment**: If enabled, fetches the most recent comments for the
+    entity via `get_entity_comments` and adds them as a data table to the case.
+
+    6. **Timeline Analysis**: If enabled, retrieves sequences and events within the
+    specified time frame via `get_entity_sequences` and `get_entity_events`, applying
+    filters for anomalies and risk score thresholds.
+
+    7. **Internal Mutation**: Updates the entity's additional properties with enrichment
+    data, marks it as enriched, and adds a direct link to the Exabeam report.
+
+    8. **Insight Generation**: Creates a comprehensive case insight for each entity,
+    summarizing the findings for the analyst.
+
+
+    ### Additional Notes
+
+    The action automatically identifies if an entity is "notable" by checking global
+    Exabeam lists. For IP entities, the action attempts to resolve the hostname to
+    align with Exabeam's asset-centric data model. If a parameter like 'Lowest Event
+    Risk Score To Fetch' is negative, it defaults to 0.
+  ai_short_description: >-
+    Enriches Hostname, IP, and User entities by retrieving risk scores, historical
+    activity, and behavioral context from Exabeam Advanced Analytics.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties, creates case insights, and adds data tables
+      and links to the case wall.
+    reasoning: >-
+      The action fetches data from Exabeam Advanced Analytics via GET requests. It
+      does not mutate external data. It mutates internal data by updating entity properties,
+      creating insights, and adding data tables to the case wall.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `if
+      entity.entity_type not in SUPPORTED_ENTITIES: continue`, where SUPPORTED_ENTITIES
+      includes EntityTypes.USER, EntityTypes.ADDRESS, and EntityTypes.HOSTNAME. Therefore,
+      it targets these specific entity types and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches contextual data, risk scores, and historical events for IP,
+      Hostname, and User entities from Exabeam Advanced Analytics. This aligns with
+      both 'Enrich IOC' (for IPs) and 'Enrich Asset' (for Hostnames and Users) expected
+      outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Return Entity Timeline | Boolean | Yes | If enabled, action will return the
+    timeline for the entity. |
+
+    | Event Time Frame | Integer | No | Specify the frame for the events that you
+    want to see in hours. |
+
+    | Only Anomaly Events | Boolean | No | If enabled, action will only return events
+    that are considered to be anomalies. |
+
+    | Lowest Event Risk Score To Fetch | Integer | No | Specify what should be the
+    lowest risk score of the event in order to ingest it. If nothing is specified,
+    action will not do any filtering. |
+
+    | Return Comments | Boolean | No | If enabled, action will return comments related
+    to the entity. |
+
+    | Create Insight | Boolean | No | If enabled, action will create an insight per
+    entity. |
+
+    | Max Events To Return | Integer | No | Specify how many events should be returned.
+    If nothing is specified, action will return all of the events. |
+
+    | Max Comments To Return | Integer | No | Specify how many comments to return.
+    |
+List Watchlist Items:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of items from specified watchlists within Exabeam Advanced Analytics.
+    This action allows users to query multiple watchlists by title and fetch the associated
+    assets or users, providing visibility into tracked entities and their risk scores
+    directly within Google SecOps.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts the API configuration and action parameters (Watchlist
+    Titles, Max Items To Return, Max Days Backwards).
+
+    2. **Validation**: Ensures that 'Max Items To Return' and 'Max Days Backwards'
+    are non-negative, reverting to defaults if necessary.
+
+    3. **Watchlist Discovery**: Connects to Exabeam and makes a GET request to retrieve
+    the full list of available watchlists to match the provided titles with their
+    internal IDs and categories.
+
+    4. **Item Retrieval**: For every matching watchlist, the action queries Exabeam
+    via a GET request for its specific items (Users or Assets) using the defined time
+    range and limit.
+
+    5. **Data Processing**: Converts the raw API response into structured data models
+    and prepares CSV-formatted tables for the SOAR interface.
+
+    6. **Output**: Adds a data table for each watchlist containing items and returns
+    a comprehensive JSON object containing all retrieved data.
+
+
+    ### Additional Notes
+
+    - The action automatically determines whether a watchlist contains 'Users' or
+    'Assets' based on its category in Exabeam.
+
+    - If a requested watchlist title is not found in the Exabeam instance, the action
+    will report it as failed/missing in the output message.
+
+    - Results are presented as individual data tables for each successful watchlist
+    and a combined JSON result.
+  ai_short_description: >-
+    Retrieves a list of items from specified watchlists within Exabeam Advanced Analytics,
+    providing visibility into tracked assets or users and their risk scores.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the Exabeam Advanced Analytics API to fetch
+      watchlists and their items (fetches_data = true). It does not perform any state-changing
+      operations on external systems (can_mutate_external_data = false) and does not
+      update internal SecOps data like entities, alerts, or case comments (can_mutate_internal_data
+      = false).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates entirely on the provided `Watchlist Titles` parameter.
+      Therefore, it does not run on entities and all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves items from a watchlist in Exabeam Advanced Analytics. It
+      does not enrich specific IOCs or assets, update alerts, manage tickets, modify
+      blocklists/allowlists, or perform any of the other specific expected outcomes
+      defined in the categories. Thus, all outcome category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Watchlist Titles | String | Yes | Specify a comma-separated list of watchlist
+    titles for which you want to return items. |
+
+    | Max Items To Return | Integer | No | Specify how many watchlist items should
+    be returned. |
+
+    | Max Days Backwards | Integer | No | Specify how many days backwards to list
+    watchlists. Default: 1 |
+List Watchlists:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of available watchlists from Exabeam Advanced Analytics. This
+    action allows users to discover existing watchlists, including their IDs, titles,
+    and categories (e.g., Users, Assets). The results are presented as both a JSON
+    object for downstream automation and a formatted data table for analyst review.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the optional 'Max Watchlists To Return'
+    parameter.
+
+    2. **Validation**: It ensures the 'Max Watchlists To Return' value is valid; if
+    invalid, it reverts to the default value of 100.
+
+    3. **API Interaction**: It sends a GET request to the Exabeam Advanced Analytics
+    API endpoint `/uba/api/watchlist` to fetch the list of watchlists.
+
+    4. **Data Processing**: The response is parsed into a list of watchlist objects,
+    limited by the specified maximum count.
+
+    5. **Output**: The action populates a JSON result with the raw watchlist data
+    and constructs a data table containing the Watchlist ID, Title, and Category for
+    display in the case wall.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities and is primarily used to gather
+    configuration data (watchlist IDs) required for other Exabeam Advanced Analytics
+    actions.
+  ai_short_description: >-
+    Retrieves a list of available watchlists from Exabeam Advanced Analytics, returning
+    their IDs, titles, and categories.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Exabeam Advanced Analytics API to fetch
+      available watchlists. It does not mutate external data, update internal entities,
+      create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates independently of case entities to fetch global watchlist
+      data from the external system.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of watchlists from Exabeam Advanced Analytics. This
+      does not align with enriching specific IOCs or assets, updating alerts, managing
+      tickets, or any of the other specific outcome categories provided.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Watchlists To Return | Integer | No | Specify how many watchlists should
+    be returned. Defaults to 100. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the Exabeam Advanced Analytics server. It ensures that the provided
+    configuration parameters are correct and that the external service is reachable.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Siemplify context and logs the
+    start of the process.
+
+    2. **Parameter Extraction**: It retrieves the integration-level configuration
+    settings (API Root, API Token, and Verify SSL).
+
+    3. **Manager Setup**: An instance of the `ExabeamAdvancedAnalyticsManager` is
+    created using the extracted credentials.
+
+    4. **Connectivity Test**: The manager executes a `test_connectivity` call, which
+    sends an HTTP GET request to the `uba/api/ping` endpoint of the Exabeam server.
+
+    5. **Result Handling**: If the request is successful (HTTP 200), the action returns
+    a success message and sets the execution state to completed. If an exception occurs,
+    the action logs the error and returns a failure status.
+
+
+    ### Additional Notes
+
+    - This action does not process any entities.
+
+    - It is primarily used during the initial setup or troubleshooting of the Exabeam
+    Advanced Analytics integration.
+  ai_short_description: >-
+    Verifies connectivity between Google SecOps and the Exabeam Advanced Analytics
+    server by sending a test request to the API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to a ping endpoint to verify connectivity. It
+      does not fetch contextual data for entities/alerts, nor does it mutate any external
+      or internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It is a system-level
+      diagnostic action that only tests connectivity to the external API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping). It does not enrich data, mutate
+      alerts, interact with tickets, modify blocklists/allowlists, manage identities,
+      or perform any other operations that match the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Remove Entity From Watchlist:
+  ai_description: >-
+    ### General Description
+
+    Removes specified entities from a watchlist in Exabeam Advanced Analytics. This
+    action supports removing User, IP Address, and Hostname entities from watchlists
+    categorized as 'Users' or 'Assets'. It validates the entity type against the watchlist
+    category to ensure compatibility before performing the removal.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves the API connection details and the target watchlist
+    title from the action parameters.
+
+    2. **Watchlist Discovery**: Queries the Exabeam API (via GET request) to find
+    the watchlist matching the provided title.
+
+    3. **Validation**: Verifies that the watchlist exists and belongs to a supported
+    category ('Users' or 'Assets'). Categories like 'AssetLabels' and 'UserLabels'
+    are explicitly excluded.
+
+    4. **Entity Filtering**: Iterates through the target entities in the SOAR case.
+    It filters for supported types (USER, ADDRESS, HOSTNAME) and ensures they match
+    the watchlist category (e.g., User entities are only processed for 'Users' watchlists).
+
+    5. **Removal Execution**: Sends a PUT request to the Exabeam API to remove the
+    valid entities from the specified watchlist.
+
+    6. **Verification**: Checks the API response to confirm how many entities were
+    removed. If the count doesn't match the input, it performs a secondary check by
+    fetching the current watchlist state (via GET request) to identify which specific
+    entities were successfully removed.
+
+    7. **Reporting**: Provides a summary message indicating which entities were successfully
+    removed and which failed.
+
+
+    ### Additional Notes
+
+    Watchlists with categories 'AssetLabels' and 'UserLabels' are not supported in
+    this action.
+  ai_short_description: >-
+    Removes specified User, IP Address, and Hostname entities from a target watchlist
+    in Exabeam Advanced Analytics.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes specified entities (Users, IP Addresses, or Hostnames) from a watchlist
+      in Exabeam Advanced Analytics.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by querying the Exabeam API to list watchlists and retrieve
+      watchlist items for verification. It mutates external data by sending a PUT
+      request to remove entities from the specified watchlist. It does not mutate
+      internal SecOps data, update entities, or create insights/comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks if
+      `entity.entity_type` is in `[EntityTypes.USER, EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`.
+      It filters out any entities that do not match these types or do not align with
+      the target watchlist's category.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes entities from a custom watchlist in Exabeam Advanced Analytics
+      (a SIEM/UEBA platform). This does not strictly align with blocking/allowing
+      network traffic (Blocklist/Allowlist), updating identity metadata in an IAM
+      system, or enriching data. Therefore, it does not match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Watchlist Title | String | Yes | Specify the title of the watchlist from which
+    you want to remove entities. |

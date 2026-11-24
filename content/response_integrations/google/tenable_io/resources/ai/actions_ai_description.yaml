@@ -1,0 +1,1222 @@
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    The **Enrich Entities** action retrieves comprehensive asset information from
+    Tenable.io to enrich IP Address and Hostname entities within Google SecOps. It
+    leverages Tenable's asset export API to match local entities against Tenable's
+    managed assets using various identifiers such as IPv4/IPv6 addresses, FQDNs, Hostnames,
+    NetBIOS names, and Agent names. The action provides deep visibility into the asset's
+    operating system, network interfaces, tags, and last seen timestamps.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Authenticates with Tenable.io using the provided API keys
+    and configuration.
+
+    2. **Data Retrieval**: Initiates a bulk asset export job in Tenable.io, polls
+    for completion, and downloads all asset data chunks.
+
+    3. **Mapping**: Processes the downloaded assets to create a lookup map indexed
+    by all possible identifiers (IPs, Hostnames, etc.).
+
+    4. **Entity Matching**: Iterates through the target entities in the case, attempting
+    to find a match in the Tenable asset map.
+
+    5. **Enrichment**: For matched entities, it updates additional properties, marks
+    the entity as enriched, and adds a data table to the entity.
+
+    6. **Insight Creation**: If configured, generates a formatted insight for each
+    successfully matched entity.
+
+    7. **Finalization**: Updates the entities in the Google SecOps platform and returns
+    a summary of successful and failed enrichments.
+
+
+    ### Additional Notes
+
+    - The action performs a bulk export of assets from Tenable.io and builds an internal
+    map for efficient matching.
+
+    - It supports 'short name' matching for Hostnames (e.g., matching 'host' if the
+    entity is 'host.domain.com').
+
+    - Enrichment data is added to the entity's additional properties with the prefix
+    `TenableIO`.
+  ai_short_description: >-
+    Enriches IP Address and Hostname entities using asset information from Tenable.io,
+    providing details such as operating system, network interfaces, and tags.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches asset data from Tenable.io using the export API. It does
+      not mutate external data. It updates internal entities with the fetched data
+      and creates insights if configured.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS and HOSTNAME.
+      Therefore, it targets Address and Hostname entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches asset information (OS, MAC address, tags, etc.) for IP and
+      Hostname entities from Tenable.io. This matches the 'Enrich Asset' expected
+      outcome. It does not provide threat intelligence or reputation, so it is not
+      'Enrich IOC'.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Create Insight | Boolean | No | If enabled, action will create an insight containing
+    all of the retrieved information about the entity. |
+Get Vulnerability Details:
+  ai_description: "### General Description\nRetrieves comprehensive vulnerability\
+    \ details from Tenable.io for a specified list of plugin IDs. This action is used\
+    \ to gather deep context about specific vulnerabilities, including their synopsis,\
+    \ solution, severity, and plugin family. The retrieved data is presented as a\
+    \ JSON result, a data table, and optionally as a case insight for better visibility\
+    \ within the investigation.\n\n### Flow Description\n1. **Parameter Extraction:**\
+    \ The action retrieves the user-provided list of Plugin IDs and the 'Create Insight'\
+    \ flag.\n2. **API Interaction:** For each provided Plugin ID, the action sends\
+    \ a GET request to the Tenable.io Workbenches API (`/workbenches/vulnerabilities/{plugin_id}/info`)\
+    \ to fetch vulnerability information.\n3. **Data Processing:** The response for\
+    \ each plugin is parsed into a structured data model, capturing fields like synopsis,\
+    \ solution, and severity.\n4. **Output Generation:** \n    * A JSON result containing\
+    \ the raw details is attached to the action output.\n    * A data table named\
+    \ 'Vulnerability Details' is created for quick reference in the case wall.\n \
+    \   * If 'Create Insight' is enabled, a Case Insight is created, formatted with\
+    \ HTML and color-coded by severity.\n\n### Additional Notes\n* This action does\
+    \ not process entities from the case; it relies entirely on the 'Plugin IDs' input\
+    \ parameter."
+  ai_short_description: >-
+    Retrieves comprehensive vulnerability details from Tenable.io for a specified
+    list of plugin IDs, returning synopsis, solution, and severity data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches vulnerability data from Tenable.io using a GET request (fetches_data=true).
+      It does not mutate external data or internal case data. It does not update entities,
+      but it does create case insights using `siemplify.create_case_insight` (can_create_insight=true).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or process any
+      entities. It relies entirely on the 'Plugin IDs' parameter provided by the user.
+      Therefore, all entity types and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches vulnerability details based on a Tenable plugin ID. It does
+      not enrich standard IOCs or assets, nor does it mutate alerts, tickets, or external
+      systems. Therefore, it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Plugin IDs | String | No | Specify a comma-separated list of plugin IDs for
+    which you want to return details. |
+
+    | Create Insight | Boolean | No | If enabled, action will create an insight containing
+    information about all of the processed plugin ids. |
+List Endpoint Vulnerabilities:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a list of vulnerabilities for specific endpoint entities
+    (IP Addresses and Hostnames) by querying the Tenable.io platform. It maps Google
+    SecOps entities to Tenable assets and fetches associated vulnerability data based
+    on user-defined severity filters and result limits. The retrieved information
+    is presented as entity-specific tables and raw JSON for further analysis.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts configuration parameters (API Root,
+    Keys) and action parameters (Severity, Limit).
+
+    2. **Asset Mapping**: It initiates an asset export from Tenable.io (via a POST
+    request to `assets/v2/export`) to build a local map of all assets, allowing it
+    to correlate SecOps entities with Tenable's internal asset identifiers.
+
+    3. **Entity Processing**: For each provided IP or Hostname entity, the action
+    attempts to find a matching asset in the Tenable map using identifiers like IP,
+    Hostname, FQDN, or NetBIOS name.
+
+    4. **Vulnerability Retrieval**: For every matched asset, the action queries the
+    Tenable.io API (via a GET request to `/workbenches/assets/{asset_id}/vulnerabilities`)
+    to fetch vulnerabilities that meet the 'Lowest Severity To Fetch' criteria.
+
+    5. **Data Enrichment**: The retrieved vulnerabilities (up to the specified limit)
+    are formatted into a table and attached to the entity. The raw data is also added
+    to the action's JSON results.
+
+    6. **Final Reporting**: The action concludes by providing a summary message indicating
+    which entities were successfully enriched, which were not found, and which had
+    no vulnerabilities.
+
+
+    ### Additional Notes
+
+    - The action performs a comprehensive asset export from Tenable.io at the start
+    to ensure accurate mapping between SecOps entities and Tenable asset IDs.
+
+    - If an entity is not found in the Tenable.io asset database, it will be reported
+    as 'not found' in the final output message.
+
+    - The action supports both IP Address and Hostname entity types.
+  ai_short_description: >-
+    Retrieves a list of vulnerabilities for specific endpoint entities (IP Addresses
+    and Hostnames) by querying the Tenable.io platform and attaching the results as
+    entity tables.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Tenable.io (assets and vulnerabilities). It does
+      not mutate external data (the export initiation is purely for data retrieval,
+      not state change). It does not mutate internal data, update entities (no `update_entities`
+      call), or create insights (no `add_entity_insight` call). It only adds entity
+      tables and JSON results.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where SUPPORTED_ENTITY_TYPES includes EntityTypes.ADDRESS
+      and EntityTypes.HOSTNAME. Therefore, it filters by entity_type and targets Address
+      and Hostname entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches vulnerability data for specific endpoint assets (IPs and
+      Hostnames) from Tenable.io. This aligns with the 'Enrich Asset' category, as
+      it returns contextual metadata (vulnerabilities) for a resource. It does not
+      mutate external state, update alerts, or perform containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Lowest Severity To Fetch | String | No | Specify the lowest severity that will
+    be used to fetch vulnerabilities. Options include: Info, Low, Medium, High, Critical.
+    Default is 'Info'. |
+
+    | Max Vulnerabilities To Return | Integer | No | Specify how many vulnerabilities
+    to return per entity. Default: 50. Maximum: 200. |
+List Plugin Families:
+  ai_description: >-
+    ### General Description
+
+    The **List Plugin Families** action retrieves a list of available plugin families
+    from the Tenable.io platform. This utility action allows users to explore the
+    categories of vulnerability checks available in their Tenable environment. It
+    supports filtering results by name and limiting the total number of records returned.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Tenable.io manager using the
+    provided API credentials.
+
+    2. **API Request**: It performs a GET request to the Tenable.io `/plugins/families`
+    endpoint to retrieve all available plugin families.
+
+    3. **Filtering**: If a `Filter Value` is provided, the script filters the retrieved
+    list based on the selected `Filter Logic` (checking for an exact match or if the
+    name contains the substring).
+
+    4. **Limiting**: The resulting list is truncated to match the `Max Plugin Families
+    To Return` parameter.
+
+    5. **Output Generation**: The filtered list is converted into a data table named
+    "Available Plugin Families" and also attached as a JSON result for downstream
+    use in the playbook.
+
+
+    ### Additional Notes
+
+    - This action is a read-only operation and does not interact with or require any
+    entities (IPs, Hostnames, etc.) from the Google SecOps case context.
+
+    - If no results match the filter, the action will return a successful status but
+    indicate that no families were found.
+  ai_short_description: >-
+    Retrieves a list of available plugin families from Tenable.io, with options to
+    filter by name and limit the number of results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to Tenable.io to fetch available plugin families.
+      It does not mutate external data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates entirely independently of case entities to fetch global
+      configuration data from Tenable.io.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration/metadata (plugin families) from Tenable.io.
+      It does not match any of the specific expected outcomes like enriching IOCs,
+      modifying alerts, or mutating external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Logic | String | No | Specify what filter logic should be applied. Options
+    are `Equal` or `Contains`. |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    If `Equal` is selected, action will try to find the exact match among record types
+    and if `Contains` is selected, action will try to find items that contain that
+    substring. If nothing is provided in this parameter, the filter will not be applied.
+    |
+
+    | Max Plugin Families To Return | Integer | No | Specify how many plugin families
+    to return. Default: 50. |
+List Policies:
+  ai_description: >-
+    ### General Description
+
+    The **List Policies** action retrieves a list of available scan policies from
+    the Tenable.io platform. This action is primarily used for information gathering
+    and configuration discovery, allowing users to see which security policies are
+    defined and available for use in automated scanning workflows.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Tenable.io manager using the
+    provided integration configuration credentials.
+
+    2. **Data Retrieval**: It executes a GET request to the Tenable.io API (`/policies`)
+    to fetch the complete list of available scan policies.
+
+    3. **Filtering**: If a `Filter Value` is provided, the action iterates through
+    the retrieved policies and applies the selected `Filter Logic` (Equal or Contains)
+    against the policy names.
+
+    4. **Limiting**: The resulting list is truncated to match the `Max Policies To
+    Return` parameter (capping at 100 if the input exceeds the maximum).
+
+    5. **Output**: The filtered list of policies is presented as a data table named
+    "Available Policies" and also returned as a JSON object for use in subsequent
+    playbook steps.
+
+
+    ### Additional Notes
+
+    - This action does not operate on specific entities and retrieves global configuration
+    data from the Tenable.io instance.
+
+    - If no policies match the provided criteria, the action will complete successfully
+    but indicate that no results were found.
+  ai_short_description: >-
+    Retrieves a list of available scan policies from Tenable.io based on specified
+    filtering criteria.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (policies) from Tenable.io via a GET request. It does
+      not mutate external data, mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or iterate over `siemplify.target_entities`.
+      It fetches global configuration data (policies) from the external system without
+      relying on any entity context.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves global configuration data (scan policies) from Tenable.io.
+      It does not enrich specific IOCs or assets, nor does it mutate alerts, tickets,
+      or external system states. Therefore, it does not match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Logic | String | No | Specify what filter logic should be applied. Options
+    are 'Equal' or 'Contains'. Default is 'Equal'. |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    If 'Equal' is selected, action will try to find the exact match among record types
+    and if 'Contains' is selected, action will try to find items that contain that
+    substring. If nothing is provided in this parameter, the filter will not be applied.
+    |
+
+    | Max Policies To Return | Integer | No | Specify how many policies to return.
+    Default: 50. Max: 100. |
+List Scanners:
+  ai_description: >-
+    ### General Description
+
+    Lists available scanners from the Tenable.io platform. This utility action allows
+    users to retrieve a list of scanners configured in their Tenable.io instance,
+    providing details such as scanner name, type, and current status. It supports
+    optional filtering to narrow down results based on the scanner's name.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Tenable.io manager using the
+    provided API credentials.
+
+    2. **Data Retrieval**: It performs a GET request to the Tenable.io `/scanners`
+    endpoint to fetch all available scanners.
+
+    3. **Filtering**: If a 'Filter Value' is provided, the action iterates through
+    the retrieved scanners and applies the selected 'Filter Logic' (Equal or Contains)
+    against the scanner names.
+
+    4. **Limiting**: The resulting list is truncated to match the 'Max Scanners To
+    Return' parameter.
+
+    5. **Output**: The filtered list of scanners is formatted into a data table named
+    'Available Scanners' and also returned as a JSON result for downstream use.
+
+
+    ### Additional Notes
+
+    - This action does not require or process any Google SecOps entities.
+
+    - If the 'Max Scanners To Return' exceeds 100, the action automatically caps the
+    result set at 100.
+  ai_short_description: >-
+    Lists available scanners from the Tenable.io platform, returning details such
+    as scanner name, type, and status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Tenable.io API to fetch a list of available
+      scanners (fetches_data=true). It does not perform any state-changing operations
+      on external systems (can_mutate_external_data=false) and does not modify internal
+      case data, entities, alerts, or insights (can_mutate_internal_data=false).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or interact with any Google SecOps entities. It
+      operates independently of the case's target entities to retrieve a list of scanners.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of available scanners from Tenable.io. It does not
+      enrich specific IOCs or assets, modify alerts, manage tickets, or perform any
+      containment or remediation actions. Therefore, it does not match any of the
+      predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Logic | String | No | Specify what filter logic should be applied. Options
+    are 'Equal' or 'Contains'. |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    If 'Equal' is selected, the action will try to find the exact match; if 'Contains'
+    is selected, it will try to find items that contain that substring. If nothing
+    is provided, the filter will not be applied. |
+
+    | Max Scanners To Return | Integer | No | Specify how many scanners to return.
+    Default: 50. Max: 100. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the Tenable.io platform. It ensures that the provided credentials (Access
+    Key and Secret Key) and the API Root URL are correct and that the network path
+    is open.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the global configuration parameters
+    (API Root, Keys, and SSL settings) from the integration settings.
+
+    2. **Manager Setup**: It initializes the `TenableIOManager` with the provided
+    credentials and session headers.
+
+    3. **Connectivity Test**: It executes the `test_connectivity` method, which sends
+    a GET request to the `/plugins/families` endpoint of the Tenable.io API to verify
+    the API keys and network access.
+
+    4. **Validation**: The response is validated. If the status code is successful
+    (2xx), the action completes with a success message.
+
+    5. **Error Handling**: If the request fails or an exception occurs, the action
+    reports a failure with the corresponding error details.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup or troubleshooting of the
+    Tenable.io integration to confirm that the environment is correctly configured.
+    It does not process any entities.
+  ai_short_description: >-
+    Verifies connectivity between Google SecOps and the Tenable.io platform by testing
+    the provided API credentials and network access.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Tenable.io API to test connectivity. It
+      does not fetch contextual data for alerts/entities, mutate external data, mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It solely performs
+      a connectivity check to the external API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping). It does not enrich IOCs, update
+      alerts, create tickets, block IOCs, or perform any other operations that match
+      the expected outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Scan Endpoints:
+  ai_description: >-
+    ### General Description
+
+    Initiates a vulnerability scan on specific endpoints (IP Addresses or Hostnames)
+    using Tenable.io. This action is asynchronous, meaning it triggers the scan and
+    then periodically checks for completion before retrieving the final results. It
+    is useful for on-demand security assessments of suspicious hosts identified during
+    an investigation.
+
+
+    ### Flow Description
+
+    1. **Validation**: The action first validates the provided `Policy Name` and `Scanner
+    Name` (if provided) by querying the Tenable.io API to ensure they exist.
+
+    2. **Entity Resolution**: If Hostname entities are present, the action fetches
+    all assets from Tenable.io to map these hostnames to their corresponding IP addresses.
+
+    3. **Scan Creation**: A new scan is created in Tenable.io using the specified
+    policy, target IPs, and optional scanner/email settings.
+
+    4. **Scan Launch**: The action triggers the execution of the created scan.
+
+    5. **Status Monitoring (Async)**: The action enters an asynchronous loop, checking
+    the scan status at intervals. It waits for the status to reach 'completed'.
+
+    6. **Data Retrieval**: Once completed, the action retrieves the scan results,
+    including vulnerability counts and severity levels.
+
+    7. **Output**: The results are attached to the case as a JSON object and a 'Scan
+    Results' data table.
+
+
+    ### Additional Notes
+
+    - This action is **asynchronous**. It will remain in an 'In Progress' state until
+    the scan completes in Tenable.io or the timeout is reached.
+
+    - Hostname entities are resolved to IP addresses by fetching the asset list from
+    Tenable.io. If a hostname cannot be mapped to an IP, it will be skipped.
+  ai_short_description: >-
+    Initiates an asynchronous vulnerability scan on specific endpoints (IP Addresses
+    or Hostnames) using Tenable.io and retrieves the results upon completion.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates and launches a new vulnerability scan in Tenable.io.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving scan results and asset information from
+      Tenable.io. It mutates external data by creating and launching a new scan in
+      the Tenable.io platform. It does not mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets
+      Address and Hostname entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a vulnerability scan on endpoints and retrieves the results.
+      This does not directly align with any of the predefined outcome categories such
+      as Enrich IOC/Asset (which typically fetch existing contextual data rather than
+      initiating an active scan), Contain Host, or Update Alert.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Scan Name | String | Yes | Specify the name of the scan. |
+
+    | Policy Name | String | Yes | Specify the name of the policy that needs to be
+    used for scanning. |
+
+    | Scanner Name | String | No | Specify the name of the scanner that should be
+    used. If nothing is provided, action will use the default scanner from configuration.
+    |
+
+    | Send Report To | String | No | Specify a comma-separated list of email addresses
+    that need to receive the scan report. |

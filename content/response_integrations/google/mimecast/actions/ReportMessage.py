@@ -1,0 +1,75 @@
+from __future__ import annotations
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
+from TIPCommon.extraction import extract_action_param
+
+from mimecast.core.constants import INTEGRATION_NAME, REPORT_MESSAGE_ACTION
+from mimecast.core.MimecastManager import MimecastManager
+from mimecast.core import UtilsManager
+
+
+@output_handler
+def main():
+    siemplify = SiemplifyAction()
+    siemplify.script_name = REPORT_MESSAGE_ACTION
+
+    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
+
+    integration_parameters = UtilsManager.get_integration_parameters(siemplify)
+
+    message_id = extract_action_param(
+        siemplify, param_name="Message ID", print_value=True, is_mandatory=True
+    )
+    comment = extract_action_param(
+        siemplify, param_name="Comment", print_value=True, is_mandatory=False
+    )
+    report_as = extract_action_param(
+        siemplify,
+        param_name="Report As",
+        print_value=True,
+        is_mandatory=False,
+        default_value="Spam",
+    )
+
+    siemplify.LOGGER.info("----------------- Main - Started -----------------")
+
+    result_value = True
+    status = EXECUTION_STATE_COMPLETED
+
+    try:
+        manager = MimecastManager(
+            api_root=integration_parameters.api_root,
+            app_id=integration_parameters.app_id,
+            app_key=integration_parameters.app_key,
+            access_key=integration_parameters.access_key,
+            secret_key=integration_parameters.secret_key,
+            client_id=integration_parameters.client_id,
+            client_secret=integration_parameters.client_secret,
+            verify_ssl=integration_parameters.verify_ssl,
+            siemplify=siemplify,
+        )
+
+        manager.report_message(
+            message_id=message_id, comment=comment, report_as=report_as
+        )
+
+        output_message = f'Successfully reported the following messages in {INTEGRATION_NAME}: "{message_id}".'
+
+    except Exception as e:
+        output_message = f"Error executing action {REPORT_MESSAGE_ACTION}. Reason: {e}"
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
+        status = EXECUTION_STATE_FAILED
+        result_value = False
+
+    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
+    siemplify.LOGGER.info(
+        f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}"
+    )
+    siemplify.end(output_message, result_value, status)
+
+
+if __name__ == "__main__":
+    main()
