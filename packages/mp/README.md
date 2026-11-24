@@ -1,4 +1,4 @@
-# mp: Google SecOps Marketplace CLI
+# mp: Google SecOps Content Hub CLI
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 [![Python Version](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/downloads/)
