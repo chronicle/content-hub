@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyUtils import output_handler
@@ -6,18 +20,18 @@ from TIPCommon.extraction import extract_configuration_param, extract_action_par
 from TIPCommon.validation import ParameterValidator
 from TIPCommon.utils import is_empty_string_or_none
 
-from google_cloud_compute.core.GoogleCloudComputeConstants import (
+from ..core.GoogleCloudComputeConstants import (
     INSTANCE_RESOURCE_NAME,
     INTEGRATION_NAME,
     API_URL,
 )
-from google_cloud_compute.core.GoogleCloudComputeExceptions import (
+from ..core.GoogleCloudComputeExceptions import (
     GoogleCloudComputeInvalidInstanceID,
     GoogleCloudComputeInvalidZone,
     GoogleCloudComputeValidationError,
 )
-from google_cloud_compute.core.GoogleCloudComputeManager import GoogleCloudComputeManager
-from google_cloud_compute.core.GoogleCloudComputeUtils import (
+from ..core.GoogleCloudComputeManager import GoogleCloudComputeManager
+from ..core.GoogleCloudComputeUtils import (
     extract_name_from_address,
     extract_instance_resource_path,
 )

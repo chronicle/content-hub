@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # ============================================================================#
 # title           :GoogleCloudComputeManager.py
 # description     :This Module contain all Google Cloud Compute operations functionality
@@ -30,8 +44,8 @@ from TIPCommon.rest.gcp import (
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 
-from google_cloud_compute.core.GoogleCloudComputeParser import GoogleCloudComputeParser
-from google_cloud_compute.core.GoogleCloudComputeConstants import (
+from .GoogleCloudComputeParser import GoogleCloudComputeParser
+from .GoogleCloudComputeConstants import (
     SCOPES,
     INTEGRATION_NAME,
     DEFAULT_MAX_RESULT,
@@ -42,8 +56,8 @@ from google_cloud_compute.core.GoogleCloudComputeConstants import (
     NOT_FOUND_RESOURCE_ERROR,
     PROJECT_NOT_FOUND_ERROR,
 )
-from google_cloud_compute.core import GoogleCloudComputeDatamodels
-from google_cloud_compute.core.GoogleCloudComputeExceptions import (
+from . import GoogleCloudComputeDatamodels
+from .GoogleCloudComputeExceptions import (
     GoogleCloudAuthenticationError,
     GoogleCloudComputeManagerError,
     GoogleCloudComputeInvalidZone,
@@ -52,7 +66,7 @@ from google_cloud_compute.core.GoogleCloudComputeExceptions import (
     GoogleCloudComputeInvalidInstanceID,
     GoogleCloudComputeValidationError,
 )
-from google_cloud_compute.core.GoogleCloudComputeUtils import parse_string_to_dict
+from .GoogleCloudComputeUtils import parse_string_to_dict
 
 # ============================= CLASSES ===================================== #
 

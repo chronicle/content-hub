@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import itertools
@@ -13,7 +27,7 @@ from TIPCommon.types import SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
 
-from google_cloud_compute.core.GoogleCloudComputeConstants import (
+from ..core.GoogleCloudComputeConstants import (
     UNASSIGN_EXTERNAL_IP_SCRIPT_NAME,
     INSTANCE_RESOURCE_NAME,
     INTEGRATION_NAME,
@@ -21,19 +35,19 @@ from google_cloud_compute.core.GoogleCloudComputeConstants import (
     WILDCARD,
     API_URL,
 )
-from google_cloud_compute.core.GoogleCloudComputeExceptions import (
+from ..core.GoogleCloudComputeExceptions import (
     GoogleCloudComputeOperationError,
     GoogleCloudComputeInvalidInstanceID,
     GoogleCloudComputeInvalidZone,
     GoogleCloudComputeTimeoutError,
     GoogleCloudComputeValidationError,
 )
-from google_cloud_compute.core.GoogleCloudComputeUtils import (
+from ..core.GoogleCloudComputeUtils import (
     extract_instance_resource_path,
     is_async_action_global_timeout_approaching,
 )
 
-from google_cloud_compute.core.GoogleCloudComputeManager import GoogleCloudComputeManager
+from ..core.GoogleCloudComputeManager import GoogleCloudComputeManager
 
 
 class UnassignExternalAddresses(Action):

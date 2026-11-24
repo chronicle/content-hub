@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -9,7 +23,7 @@ from TIPCommon.extraction import extract_action_param, extract_configuration_par
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
 
-from google_cloud_compute.core.GoogleCloudComputeConstants import (
+from .GoogleCloudComputeConstants import (
     API_URL,
     INSTANCE_RESOURCE_NAME,
     INTEGRATION_NAME,
@@ -18,15 +32,15 @@ from google_cloud_compute.core.GoogleCloudComputeConstants import (
     FIREWALL_RESOURCE_NAME_PATTERN,
     OS_CONFIG_URL,
 )
-from google_cloud_compute.core.GoogleCloudComputeDatamodels import OperationResource
-from google_cloud_compute.core.GoogleCloudComputeExceptions import (
+from .GoogleCloudComputeDatamodels import OperationResource
+from .GoogleCloudComputeExceptions import (
     GoogleCloudComputeInvalidZone,
     GoogleCloudComputeInvalidInstanceID,
     GoogleCloudComputeTimeoutError,
     GoogleCloudComputeValidationError,
 )
-from google_cloud_compute.core.GoogleCloudComputeManager import GoogleCloudComputeManager
-from google_cloud_compute.core.GoogleCloudComputeUtils import (
+from .GoogleCloudComputeManager import GoogleCloudComputeManager
+from .GoogleCloudComputeUtils import (
     extract_instance_resource_path,
     is_async_action_global_timeout_approaching,
 )

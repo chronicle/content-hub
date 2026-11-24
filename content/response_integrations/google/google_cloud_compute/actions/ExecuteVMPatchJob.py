@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -6,21 +20,21 @@ from TIPCommon.base.action.data_models import ExecutionState
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
 
-from google_cloud_compute.core.GoogleCloudComputeConstants import (
+from ..core.GoogleCloudComputeConstants import (
     INTEGRATION_NAME,
     EXECUTE_VM_PATCH_JOB_SCRIPT_NAME,
 )
-from google_cloud_compute.core.GoogleCloudComputeDatamodels import (
+from ..core.GoogleCloudComputeDatamodels import (
     RolloutStrategy,
     PatchJob,
 )
-from google_cloud_compute.core.GoogleCloudComputeExceptions import(
+from ..core.GoogleCloudComputeExceptions import(
     GoogleCloudComputeOperationError,
     GoogleCloudComputeTimeoutError,
 )
-from google_cloud_compute.core.GoogleCloudComputeGenerics import BaseGoogleCloudComputeAsyncAction
-from google_cloud_compute.core.GoogleCloudComputeManager import GoogleCloudComputeManager
-from google_cloud_compute.core.GoogleCloudComputeUtils import is_async_action_global_timeout_approaching
+from ..core.GoogleCloudComputeGenerics import BaseGoogleCloudComputeAsyncAction
+from ..core.GoogleCloudComputeManager import GoogleCloudComputeManager
+from ..core.GoogleCloudComputeUtils import is_async_action_global_timeout_approaching
 
 
 class ExecuteVMPatchJob(BaseGoogleCloudComputeAsyncAction):
