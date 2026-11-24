@@ -5,10 +5,10 @@ import json
 import sys
 from typing import TYPE_CHECKING, Any
 
-from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
+from TIPCommon.envcommon import GetEnvironmentCommonFactory
 from TIPCommon.extraction import extract_connector_param
 from TIPCommon.smp_time import is_approaching_timeout
 from TIPCommon.utils import is_overflowed

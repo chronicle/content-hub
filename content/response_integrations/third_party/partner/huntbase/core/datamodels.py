@@ -4,9 +4,9 @@ import dataclasses
 import datetime
 from typing import Any
 
-from . import constants
+from TIPCommon.types import SingleJson
 
-SingleJson = dict[str, Any]
+from . import constants
 
 
 def parse_timestamp(value: Any) -> datetime.datetime | None:  # noqa: ANN401

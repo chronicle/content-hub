@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from TIPCommon.extraction import extract_action_param
+from TIPCommon.transformation import string_to_multi_value
 
 from ..core import constants
 from ..core.base_action import HuntbaseAction
@@ -33,7 +34,7 @@ class AddToWatchlist(HuntbaseAction):
             for entity in self.soar_action.target_entities
             if entity.entity_type in WATCHLIST_ENTITY_TYPES
         ]
-        values += [v.strip() for v in (self.params.additional_values or "").split(",") if v.strip()]
+        values += string_to_multi_value(self.params.additional_values)
         values = list(dict.fromkeys(values))
         if not values:
             msg = "No IP, domain, URL or hash entities in scope and no Additional Values were given."

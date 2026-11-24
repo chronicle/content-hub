@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from TIPCommon.base.action.data_models import Link
 from TIPCommon.extraction import extract_action_param
+from TIPCommon.transformation import string_to_multi_value
 
 from ..core import constants
 from ..core.base_action import HuntbaseAction
@@ -59,9 +60,8 @@ class StartHunt(HuntbaseAction):
 
     def _perform_action(self, _: object) -> None:
         seeds = seed_values_from_entities(self.soar_action.target_entities)
-        for raw in (self.params.additional_values or "").split(","):
-            value = raw.strip()
-            if value and all(seed["value"].lower() != value.lower() for seed in seeds):
+        for value in string_to_multi_value(self.params.additional_values):
+            if all(seed["value"].lower() != value.lower() for seed in seeds):
                 seeds.append({"type": guess_value_type(value), "value": value})
         if not seeds:
             msg = (

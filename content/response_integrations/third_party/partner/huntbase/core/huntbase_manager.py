@@ -219,7 +219,8 @@ class HuntbaseManager:
         for start in range(0, len(unique), constants.INTEL_LOOKUP_BATCH_SIZE):
             batch = unique[start : start + constants.INTEL_LOOKUP_BATCH_SIZE]
             data = self._request("POST", "intel_lookup", json_body={"values": batch, "include_unknown": True})
-            for item in data.get("results") or []:
+            items = data.get("results") if isinstance(data, dict) else None
+            for item in items or []:
                 result = IndicatorResult.from_json(item)
                 if not result.url and result.indicator_id:
                     result.url = self.app_link("indicator", indicator_id=result.indicator_id)

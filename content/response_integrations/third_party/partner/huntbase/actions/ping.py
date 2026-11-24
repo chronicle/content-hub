@@ -17,8 +17,8 @@ ERROR_MESSAGE: str = f"Failed to connect to the {INTEGRATION_NAME} server!"
 class Ping(HuntbaseAction):
     def __init__(self) -> None:
         super().__init__(PING_SCRIPT_NAME)
-        self.output_message: str = SUCCESS_MESSAGE
-        self.error_output_message: str = ERROR_MESSAGE
+        self.output_message = SUCCESS_MESSAGE
+        self.error_output_message = ERROR_MESSAGE
 
     def _perform_action(self, _: object) -> None:
         self.manager.ping()
