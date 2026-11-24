@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # ============================================================================#
 # title           :ExabeamAdvancedAnalyticsManager.py
 # description     :This Module contain all Exabeam Advanced Analytics operations functionality
@@ -13,19 +27,19 @@ from urllib.parse import urljoin
 
 # ============================= IMPORTS ===================================== #
 import requests
-from exabeam_advanced_analytics.core import datamodels
-from exabeam_advanced_analytics.core.ExabeamAdvancedAnalyticsParser import ExabeamAdvancedAnalyticsParser
-from exabeam_advanced_analytics.core.consts import (
+from . import datamodels
+from .ExabeamAdvancedAnalyticsParser import ExabeamAdvancedAnalyticsParser
+from .consts import (
     INTEGRATION_DISPLAY_NAME,
     WATCHLIST_USERS_TYPE,
     DEFAULT_WATCHLIST_LIST_ITEMS_MAX_DAYS_BACKWARDS,
     ENTITY_USER_TYPE,
 )
-from exabeam_advanced_analytics.core.exceptions import (
+from .exceptions import (
     ExabeamAdvancedAnalyticsManagerError,
     ExabeamAdvancedAnalyticsUnsuccessfulOperationError,
 )
-from exabeam_advanced_analytics.core.utils import remove_empty_kwargs
+from .utils import remove_empty_kwargs
 
 
 # ============================= CONSTS ===================================== #

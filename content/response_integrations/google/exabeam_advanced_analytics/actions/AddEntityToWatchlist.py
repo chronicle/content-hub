@@ -1,12 +1,26 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 from TIPCommon import extract_configuration_param, extract_action_param
 
-from exabeam_advanced_analytics.core.ExabeamAdvancedAnalyticsManager import ExabeamAdvancedAnalyticsManager
+from ..core.ExabeamAdvancedAnalyticsManager import ExabeamAdvancedAnalyticsManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler
-from exabeam_advanced_analytics.core.consts import (
+from ..core.consts import (
     INTEGRATION_NAME,
     INTEGRATION_DISPLAY_NAME,
     ADD_ENTITY_TO_WATCHLIST_SCRIPT_NAME,
@@ -14,11 +28,11 @@ from exabeam_advanced_analytics.core.consts import (
     WATCHLIST_ASSETS_TYPE,
     MAX_WATCHLIST_ITEMS,
 )
-from exabeam_advanced_analytics.core.exceptions import (
+from ..core.exceptions import (
     ExabeamAdvancedAnalyticsNotFoundError,
     ExabeamAdvancedAnalyticsValidationError,
 )
-from exabeam_advanced_analytics.core.utils import get_users_watchlist_missing_items, get_assets_watchlist_missing_items
+from ..core.utils import get_users_watchlist_missing_items, get_assets_watchlist_missing_items
 
 SUPPORTED_ENTITIES = [EntityTypes.USER, EntityTypes.ADDRESS, EntityTypes.HOSTNAME]
 
