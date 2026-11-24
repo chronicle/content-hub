@@ -77,7 +77,10 @@ def configure_execution_scope(
             scope_value = GetPcap.ExecutionScope.Alert
 
     monkeypatch.setattr(
-        GetPcap.SiemplifyAction, "execution_scope", scope_value, raising=False
+        GetPcap.SiemplifyAction,
+        "execution_scope",
+        property(lambda _: scope_value, lambda _self, _val: None),
+        raising=False,
     )
     monkeypatch.setattr(
         GetPcap.SiemplifyAction,
@@ -103,7 +106,3 @@ def configure_execution_scope(
         monkeypatch.setattr(
             GetPcap.SiemplifyAction, "current_alert", mock_alert, raising=False
         )
-
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
-    return script_session
