@@ -40,7 +40,7 @@ SAFE_PREFIX_PATTERN = re.compile(r"[^A-Za-z0-9_-]")
 def _get_download_dir(siemplify: SiemplifyAction) -> Path:
     """Return a writable directory for saved sample files."""
     try:
-        candidate = siemplify.run_folder
+        candidate = getattr(siemplify, "run_folder", None)
     except OSError:
         candidate = None
     if isinstance(candidate, str) and candidate:

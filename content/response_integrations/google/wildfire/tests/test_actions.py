@@ -200,6 +200,7 @@ def test_get_file_download_dir_fallback(mocker: Any, tmp_path: Path) -> None:
     siemplify_missing = mocker.Mock()
     siemplify_missing.run_folder = str(tmp_path / "missing")
     assert GetFile._get_download_dir(siemplify_missing) == fallback_dir
+    assert GetFile._get_download_dir(mocker.Mock(spec=[])) == fallback_dir
 
     class UnwritableRunFolder:
         @property
