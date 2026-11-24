@@ -27,7 +27,7 @@ def test_get_ticket(
     mock_get = mocker.Mock()
     mock_get.json.return_value = mock_data
     mocker.patch(
-        "tests.core.session.ZohoDeskSession.get",
+        "zoho_desk.tests.core.session.ZohoDeskSession.get",
         return_value=mock_get,
     )
     ticket = zoho_desk_manager.get_ticket(ticket_id, additional_fields)
@@ -61,7 +61,7 @@ def test_get_ticket_comments(zoho_desk_manager, mocker, ticket_id, limit):
     mock_get = mocker.Mock()
     mock_get.json.return_value = mock_data
     mocker.patch(
-        "tests.core.session.ZohoDeskSession.get",
+        "zoho_desk.tests.core.session.ZohoDeskSession.get",
         return_value=mock_get,
     )
 
@@ -86,7 +86,7 @@ def test_mark_ticket_as_spam(
 ):
     mock_post = mocker.Mock()
     mocker.patch(
-        "tests.core.session.ZohoDeskSession.post",
+        "zoho_desk.tests.core.session.ZohoDeskSession.post",
         return_value=mock_post,
     )
     result = zoho_desk_manager.mark_ticket_as_spam(
@@ -100,7 +100,7 @@ def test_mark_ticket_as_spam(
 def test_mark_ticket_as_read(zoho_desk_manager, mocker, ticket_id):
     mock_post = mocker.Mock()
     mocker.patch(
-        "tests.core.session.ZohoDeskSession.post",
+        "zoho_desk.tests.core.session.ZohoDeskSession.post",
         return_value=mock_post,
     )
     result = zoho_desk_manager.mark_ticket_as_read(ticket_id)
@@ -112,7 +112,7 @@ def test_mark_ticket_as_read(zoho_desk_manager, mocker, ticket_id):
 def test_mark_ticket_as_unread(zoho_desk_manager, mocker, ticket_id):
     mock_post = mocker.Mock()
     mocker.patch(
-        "tests.core.session.ZohoDeskSession.post",
+        "zoho_desk.tests.core.session.ZohoDeskSession.post",
         return_value=mock_post,
     )
     result = zoho_desk_manager.mark_ticket_as_unread(ticket_id)
@@ -129,7 +129,7 @@ def test_add_comment(
 ):
     mock_post = mocker.Mock()
     mocker.patch(
-        "tests.core.session.ZohoDeskSession.post",
+        "zoho_desk.tests.core.session.ZohoDeskSession.post",
         return_value=mock_post,
     )
     result = zoho_desk_manager.add_comment(ticket_id, is_public, content_type, content)
@@ -144,7 +144,7 @@ def test_find_agent(zoho_desk_manager, mocker, agent_data, agent_name):
     mock_get = mocker.Mock()
     mock_get.json.return_value = mock_data
     mocker.patch(
-        "tests.core.session.ZohoDeskSession.get",
+        "zoho_desk.tests.core.session.ZohoDeskSession.get",
         return_value=mock_get,
     )
     try:
@@ -179,7 +179,7 @@ def test_create_ticket(
     mock_request = mocker.Mock()
     mock_request.json.return_value = mock_data
     mocker.patch(
-        "tests.core.session.ZohoDeskSession.post",
+        "zoho_desk.tests.core.session.ZohoDeskSession.post",
         return_value=mock_request,
     )
 
@@ -218,7 +218,7 @@ def test_update_ticket(zoho_desk_manager, mocker):
     mock_request = mocker.Mock()
     mock_request.json.return_value = mock_data
     mocker.patch(
-        "tests.core.session.ZohoDeskSession.patch",
+        "zoho_desk.tests.core.session.ZohoDeskSession.patch",
         return_value=mock_request,
     )
 

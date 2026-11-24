@@ -133,7 +133,3 @@ def agent_data() -> Agent:
     """ZohoDesk Agent"""
     agent = Agent(id="115142000000092001", name="Milen", email="mivanov@siemplify.co")
     yield agent
-
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
-    return script_session

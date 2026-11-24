@@ -5,7 +5,6 @@ from TIPCommon.types import SingleJson
 from zoho_desk.core.datamodels import Ticket
 from zoho_desk.tests.core.zoho_desk import ZohoDesk
 from integration_testing import router
-from integration_testing.common import get_empty_response
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, RouteFunction
@@ -84,8 +83,9 @@ class ZohoDeskSession(MockSession[MockRequest, MockResponse, ZohoDesk]):
 
 
 @router.get("/api/v1/agents")
-def check_connection(_) -> MockResponse:
-    return get_empty_response()
+def check_connection(_: MockRequest) -> MockResponse:
+    """Mock connectivity check endpoint."""
+    return MockResponse()
 
 
 @router.post("/oauth/v2/token")
