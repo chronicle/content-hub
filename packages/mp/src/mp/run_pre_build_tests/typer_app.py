@@ -135,8 +135,8 @@ def run_pre_build_tests(
     """Run the `mp test` command.
 
     Args:
-        repository: the repository to build
-        integration: the integrations to build
+        repository: the repositories to test
+        integration: the integrations to test
         raise_error_on_violations: whether to raise error if any violations are found
         quiet: quiet log options
         verbose: Verbose log options

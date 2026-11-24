@@ -73,7 +73,7 @@ This repository includes [Agent Skills](https://agentskills.io) for the `mp` pac
 
 - **Google Gemini (`Gemini CLI`, `Antigravity`)**: Auto-discovered from [`.agents/skills/`](../../.agents/skills/).
 - **OpenAI (`Codex CLI`, `Codex`)**: Auto-discovered from [`.agents/skills/`](../../.agents/skills/).
-- **Anthropic (`Claude Code`)**: Auto-discovered from [`.claude/skills/`](../../.claude/skills/) (linked to `.agents/skills/`). On Windows, ensure Git symlinks are enabled (`git config core.symlinks true`) before checkout.
+- **Anthropic (`Claude Code`)**: Auto-discovered from [`.claude/skills/`](../../.claude/skills/) (linked to `.agents/skills/`). On Windows, enable Developer Mode (or run an elevated shell) and set `git config core.symlinks true` before checkout so Git creates symlinks instead of plain-text path files.
 
 ## Documentation
 

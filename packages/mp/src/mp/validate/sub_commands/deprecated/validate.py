@@ -54,11 +54,11 @@ class ValidateParams:
 
         Raises:
             typer.BadParameter:
-                If none of the required options (--repository or
-                --integration) are provided.
+                If none of the required options (--repository, --integration,
+                or --playbook) are provided.
             typer.BadParameter:
-                If more than one of the options (--repository,
-                or --integration) is used at the same time.
+                If more than one of the options (--repository, --integration,
+                or --playbook) is used at the same time.
 
         """
         mutually_exclusive_options = [
@@ -69,7 +69,7 @@ class ValidateParams:
         msg: str
 
         if not any(mutually_exclusive_options):
-            msg = "At least one of --repository, or --integration must be used."
+            msg = "At least one of --repository, --integration, or --playbook must be used."
             raise typer.BadParameter(msg)
 
         if sum(map(bool, mutually_exclusive_options)) != 1:
