@@ -665,7 +665,7 @@ def test_normalize_connector_def_string_param_modes() -> None:
             },
             {
                 "DisplayName": "Api Root",
-                "Description": "https://{dev-instance}.service-now.com/api/now/v1/",
+                "Description": "https://service-now.example.com/api/now/v1/",
                 "Type": "String",
                 "Mode": "Script",
             },

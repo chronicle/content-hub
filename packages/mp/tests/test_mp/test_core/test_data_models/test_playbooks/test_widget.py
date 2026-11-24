@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import pytest
 
 from mp.core.data_models.playbooks.widget.metadata import (
@@ -86,11 +88,19 @@ class TestPlaybookWidgetMetadataDataModel:
             **BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE,
             "ConditionsGroup": None,
         }
-        assert PlaybookWidgetMetadata.from_built("", built_with_null_cg) == PLAYBOOK_WIDGET_METADATA_WITH_NONE
+        actual: PlaybookWidgetMetadata = PlaybookWidgetMetadata.from_built(
+            "",
+            built_with_null_cg,
+        )
+        assert actual == PLAYBOOK_WIDGET_METADATA_WITH_NONE
 
     def test_from_non_built_with_null_conditions_group(self) -> None:
         non_built_with_null_cg: NonBuiltPlaybookWidgetMetadata = {
             **NON_BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE,
             "conditions_group": None,
         }
-        assert PlaybookWidgetMetadata.from_non_built("", non_built_with_null_cg) == PLAYBOOK_WIDGET_METADATA_WITH_NONE
+        actual: PlaybookWidgetMetadata = PlaybookWidgetMetadata.from_non_built(
+            "",
+            non_built_with_null_cg,
+        )
+        assert actual == PLAYBOOK_WIDGET_METADATA_WITH_NONE

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Self, TypedDict
+from typing import NotRequired, Self, TypedDict
 
 from mp.core.data_models.abc import Buildable, RepresentableEnum
 
@@ -24,11 +24,13 @@ class MatchType(RepresentableEnum):
     CONTAINS = 1
     STARTS_WITH = 2
     GREATER_THAN = 3
-    LESS_THAN = 3
+    LESS_THAN = 4
     NOT_EQUAL = 5
     NOT_CONTAINS = 6
     IS_EMPTY = 7
     IS_NOT_EMPTY = 8
+    CUSTOM = 9
+    EQUALS_ANY = 10
 
 
 class BuiltCondition(TypedDict):
@@ -36,6 +38,7 @@ class BuiltCondition(TypedDict):
     Value: str | None
     MatchType: int
     CustomOperatorName: str | None
+    Enabled: NotRequired[bool | None]
 
 
 class NonBuiltCondition(TypedDict):
@@ -43,6 +46,7 @@ class NonBuiltCondition(TypedDict):
     value: str | None
     match_type: str
     custom_operator_name: str | None
+    enabled: NotRequired[bool | None]
 
 
 class Condition(Buildable[BuiltCondition, NonBuiltCondition]):
@@ -50,6 +54,7 @@ class Condition(Buildable[BuiltCondition, NonBuiltCondition]):
     value: str | None
     match_type: MatchType
     custom_operator_name: str | None
+    enabled: bool | None = None
 
     @classmethod
     def _from_built(cls, built: BuiltCondition) -> Self:
@@ -58,6 +63,7 @@ class Condition(Buildable[BuiltCondition, NonBuiltCondition]):
             value=built["Value"],
             match_type=MatchType(built["MatchType"]),
             custom_operator_name=built.get("CustomOperatorName"),
+            enabled=built.get("Enabled"),
         )
 
     @classmethod
@@ -67,6 +73,7 @@ class Condition(Buildable[BuiltCondition, NonBuiltCondition]):
             value=non_built["value"],
             match_type=MatchType.from_string(non_built["match_type"]),
             custom_operator_name=non_built.get("custom_operator_name"),
+            enabled=non_built.get("enabled"),
         )
 
     def to_built(self) -> BuiltCondition:
@@ -76,12 +83,15 @@ class Condition(Buildable[BuiltCondition, NonBuiltCondition]):
             The "built" representation of the object.
 
         """
-        return BuiltCondition(
+        built: BuiltCondition = BuiltCondition(
             FieldName=self.field_name,
             Value=self.value,
             MatchType=self.match_type.value,
             CustomOperatorName=self.custom_operator_name,
         )
+        if self.enabled is not None:
+            built["Enabled"] = self.enabled
+        return built
 
     def to_non_built(self) -> NonBuiltCondition:
         """Turn the buildable object into a "non-built" typed dict.
@@ -90,9 +100,12 @@ class Condition(Buildable[BuiltCondition, NonBuiltCondition]):
             The "non-built" representation of the object
 
         """
-        return NonBuiltCondition(
+        non_built: NonBuiltCondition = NonBuiltCondition(
             field_name=self.field_name,
             value=self.value,
             match_type=self.match_type.to_string(),
             custom_operator_name=self.custom_operator_name,
         )
+        if self.enabled is not None:
+            non_built["enabled"] = self.enabled
+        return non_built

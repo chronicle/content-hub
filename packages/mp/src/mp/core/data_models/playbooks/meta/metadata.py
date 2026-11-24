@@ -30,6 +30,8 @@ from .display_info import PlaybookType
 if TYPE_CHECKING:
     from pathlib import Path
 
+UNSPECIFIED_EXECUTION_SCOPE_API_VALUE: str = "execution_scope_unspecified"
+
 
 class PlaybookCreationSource(RepresentableEnum):
     """Represents the source of a playbook's creation."""
@@ -38,6 +40,14 @@ class PlaybookCreationSource(RepresentableEnum):
     USER_OR_API_INITIATED = 1
     AI_GENERATED_FROM_ALERT = 2
     AI_GENERATED_FROM_PROMPT = 3
+
+
+class PlaybookExecutionScope(RepresentableEnum):
+    """Represents the execution scope of a playbook."""
+
+    UNSPECIFIED = 0
+    ALERT = 1
+    CASE = 2
 
 
 class BuiltPlaybookMetadata(TypedDict):
@@ -49,6 +59,7 @@ class BuiltPlaybookMetadata(TypedDict):
     CreationSource: NotRequired[int | str | None]
     DefaultAccessLevel: NotRequired[int | str | None]
     SimulationClone: NotRequired[bool | None]
+    ExecutionScope: NotRequired[int | str | None]
     DebugAlertIdentifier: str | None
     DebugBaseAlertIdentifier: str | None
     IsDebugMode: bool
@@ -76,6 +87,7 @@ class NonBuiltPlaybookMetadata(TypedDict):
     creation_source: NotRequired[str | None]
     default_access_level: NotRequired[str | None]
     simulation_clone: NotRequired[bool | None]
+    execution_scope: NotRequired[str | None]
     debug_alert_identifier: str | None
     debug_base_alert_identifier: str | None
     is_debug_mode: bool
@@ -125,6 +137,7 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
     creation_source: PlaybookCreationSource | None = None
     default_access_level: PlaybookAccessLevel | None = None
     simulation_clone: bool | None = None
+    execution_scope: PlaybookExecutionScope | None = None
     environments: list[str] = pydantic.Field(default_factory=list)
 
     @classmethod
@@ -192,6 +205,7 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
             default_access_level=(PlaybookAccessLevel(int(access_level)) if access_level is not None else None),
             creation_source=(PlaybookCreationSource(int(creation_source)) if creation_source is not None else None),
             simulation_clone=built.get("SimulationClone"),
+            execution_scope=_parse_execution_scope(built.get("ExecutionScope")),
             permissions=[AccessPermission.from_built(p) for p in built["Permissions"]],
             environments=built.get("Environments", []),
         )
@@ -225,6 +239,7 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
                 PlaybookCreationSource.from_string(creation_source) if creation_source is not None else None
             ),
             simulation_clone=non_built.get("simulation_clone"),
+            execution_scope=_parse_execution_scope(non_built.get("execution_scope")),
             permissions=[AccessPermission.from_non_built(p) for p in non_built["permissions"]],
             environments=non_built.get("environments", []),
         )
@@ -236,7 +251,7 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
             A BuiltPlaybookMetadata dictionary.
 
         """
-        return BuiltPlaybookMetadata(
+        built: BuiltPlaybookMetadata = BuiltPlaybookMetadata(
             Identifier=self.identifier,
             IsEnable=self.is_enable,
             Version=self.version,
@@ -262,6 +277,9 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
             Permissions=[p.to_built() for p in self.permissions],
             Environments=self.environments,
         )
+        if self.execution_scope is not None:
+            built["ExecutionScope"] = self.execution_scope.value
+        return built
 
     def to_non_built(self) -> NonBuiltPlaybookMetadata:
         """Convert the PlaybookMetadata to its "non-built" representation.
@@ -298,4 +316,22 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
             permissions=[p.to_non_built() for p in self.permissions],
             environments=self.environments,
         )
+        if self.execution_scope is not None:
+            non_built["execution_scope"] = self.execution_scope.to_string()
         return non_built
+
+
+def _parse_execution_scope(raw_scope: int | str | None) -> PlaybookExecutionScope | None:
+    if raw_scope is None:
+        return None
+    if isinstance(raw_scope, str):
+        stripped: str = raw_scope.strip()
+        if stripped.isdigit():
+            return PlaybookExecutionScope(int(stripped))
+        if stripped.casefold() == UNSPECIFIED_EXECUTION_SCOPE_API_VALUE:
+            return PlaybookExecutionScope.UNSPECIFIED
+        return PlaybookExecutionScope.from_string(stripped)
+    if isinstance(raw_scope, int) and not isinstance(raw_scope, bool):
+        return PlaybookExecutionScope(raw_scope)
+    msg: str = f"Invalid ExecutionScope value: {raw_scope!r}"
+    raise ValueError(msg)

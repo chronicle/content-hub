@@ -20,12 +20,24 @@ from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 import mp.core.constants
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum, SingularComponentMetadata
-from mp.core.data_models.common.condition.condition_group import Condition, LogicalOperator
+from mp.core.data_models.common.condition.condition_group import (
+    BuiltConditionGroup,
+    Condition,
+    ConditionGroup,
+    LogicalOperator,
+    NonBuiltConditionGroup,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.data_models.common.condition.condition import BuiltCondition, NonBuiltCondition
+
+UNSPECIFIED_EXECUTION_MODE_API_VALUES: frozenset[str] = frozenset({
+    "workflow_trigger_execution_mode_unspecified",
+    "trigger_execution_mode_unspecified",
+    "execution_mode_unspecified",
+})
 
 
 class BuiltTrigger(TypedDict):
@@ -37,6 +49,10 @@ class BuiltTrigger(TypedDict):
     LogicalOperator: int
     Conditions: list[BuiltCondition]
     Environments: list[str]
+    ExecutionMode: NotRequired[int | str | None]
+    ReactionLogicalOperator: NotRequired[int | str | None]
+    ReactionConditions: NotRequired[list[BuiltConditionGroup] | None]
+    MaxReactionDepth: NotRequired[int | None]
 
 
 class NonBuiltTrigger(TypedDict):
@@ -48,6 +64,10 @@ class NonBuiltTrigger(TypedDict):
     logical_operator: str
     environments: list[str]
     playbook_name: NotRequired[str | None]
+    execution_mode: NotRequired[str | None]
+    reaction_logical_operator: NotRequired[str | None]
+    reaction_conditions: NotRequired[list[NonBuiltConditionGroup] | None]
+    max_reaction_depth: NotRequired[int | None]
 
 
 class TriggerType(RepresentableEnum):
@@ -65,6 +85,23 @@ class TriggerType(RepresentableEnum):
     ALERT_TRIGGER_VALUE = 9
     CASE_DATA = 10
     GET_INPUTS = 11
+    CASE_ASSIGNEE_CHANGED = 12
+    ENTITY_ADDED = 13
+    ALERT_PRIORITY_CHANGED = 14
+    ALERT_CUSTOM_FIELD_CHANGED = 15
+    CASE_CUSTOM_FIELD_CHANGED = 16
+    CASE_STAGE_CHANGED = 17
+    CASE_PRIORITY_CHANGED = 18
+    CASE_TAG_ADDED = 19
+    CASE_COMMENT_ADDED = 20
+
+
+class TriggerExecutionMode(RepresentableEnum):
+    """Represents the execution mode when a previous trigger run is active."""
+
+    UNSPECIFIED = 0
+    RESTART = 1
+    QUEUED = 2
 
 
 class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
@@ -78,6 +115,10 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
     logical_operator: LogicalOperator
     environments: list[str]
     playbook_name: str | None = None
+    execution_mode: TriggerExecutionMode | None = None
+    reaction_logical_operator: LogicalOperator | None = None
+    reaction_conditions: list[ConditionGroup] | None = None
+    max_reaction_depth: int | None = None
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
@@ -118,6 +159,7 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltTrigger) -> Self:  # ruff:ignore[unused-class-method-argument]
+        raw_reaction_conds: list[BuiltConditionGroup] | None = built.get("ReactionConditions")
         return cls(
             playbook_id=built["DefinitionIdentifier"],
             conditions=[Condition.from_built(c) for c in built["Conditions"]],
@@ -127,10 +169,33 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
             identifier=built["Identifier"],
             is_enabled=built["IsEnabled"],
             type_=TriggerType(built["Type"]),
+            execution_mode=_parse_execution_mode(built.get("ExecutionMode")),
+            reaction_logical_operator=_parse_reaction_logical_operator(
+                built.get("ReactionLogicalOperator"),
+            ),
+            reaction_conditions=(
+                [
+                    ConditionGroup.from_built(condition_group)
+                    for condition_group in raw_reaction_conds
+                    if condition_group is not None
+                ]
+                if raw_reaction_conds is not None
+                else None
+            ),
+            max_reaction_depth=built.get("MaxReactionDepth"),
         )
 
     @classmethod
     def _from_non_built(cls, file_name: str, non_built: NonBuiltTrigger) -> Self:  # ruff:ignore[unused-class-method-argument]
+        raw_exec_mode: str | None = non_built.get("execution_mode")
+        raw_reaction_op: str | None = non_built.get("reaction_logical_operator")
+        raw_reaction_conds: list[NonBuiltConditionGroup] | None = non_built.get("reaction_conditions")
+        exec_mode: TriggerExecutionMode | None = (
+            TriggerExecutionMode.from_string(raw_exec_mode) if raw_exec_mode is not None else None
+        )
+        reaction_op: LogicalOperator | None = (
+            LogicalOperator.from_string(raw_reaction_op) if raw_reaction_op is not None else None
+        )
         return cls(
             identifier=non_built["identifier"],
             is_enabled=non_built["is_enabled"],
@@ -144,6 +209,18 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
             playbook_id=non_built["playbook_id"],
             playbook_name=non_built["playbook_name"],
             type_=TriggerType.from_string(non_built["type_"]),
+            execution_mode=exec_mode,
+            reaction_logical_operator=reaction_op,
+            reaction_conditions=(
+                [
+                    ConditionGroup.from_non_built(condition_group)
+                    for condition_group in raw_reaction_conds
+                    if condition_group is not None
+                ]
+                if raw_reaction_conds is not None
+                else None
+            ),
+            max_reaction_depth=non_built.get("max_reaction_depth"),
         )
 
     def to_built(self) -> BuiltTrigger:
@@ -153,7 +230,7 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
             A BuiltTrigger dictionary.
 
         """
-        return BuiltTrigger(
+        built: BuiltTrigger = BuiltTrigger(
             Identifier=self.identifier,
             IsEnabled=self.is_enabled,
             DefinitionIdentifier=self.playbook_id,
@@ -163,6 +240,19 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
             Conditions=[Condition.to_built(c) for c in self.conditions if c is not None],
             Environments=self.environments,
         )
+        if self.execution_mode is not None:
+            built["ExecutionMode"] = self.execution_mode.value
+        if self.reaction_logical_operator is not None:
+            built["ReactionLogicalOperator"] = self.reaction_logical_operator.value
+        if self.reaction_conditions is not None:
+            built["ReactionConditions"] = [
+                condition_group.to_built()
+                for condition_group in self.reaction_conditions
+                if condition_group is not None
+            ]
+        if self.max_reaction_depth is not None:
+            built["MaxReactionDepth"] = self.max_reaction_depth
+        return built
 
     def to_non_built(self) -> NonBuiltTrigger:
         """Convert the Trigger to its "non-built" representation.
@@ -181,4 +271,46 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
             environments=self.environments,
             playbook_name=self.playbook_name,
         )
+        if self.execution_mode is not None:
+            non_built["execution_mode"] = self.execution_mode.to_string()
+        if self.reaction_logical_operator is not None:
+            non_built["reaction_logical_operator"] = self.reaction_logical_operator.to_string()
+        if self.reaction_conditions is not None:
+            non_built["reaction_conditions"] = [
+                condition_group.to_non_built()
+                for condition_group in self.reaction_conditions
+                if condition_group is not None
+            ]
+        if self.max_reaction_depth is not None:
+            non_built["max_reaction_depth"] = self.max_reaction_depth
         return non_built
+
+
+def _parse_execution_mode(raw_mode: int | str | None) -> TriggerExecutionMode | None:
+    if raw_mode is None:
+        return None
+    if isinstance(raw_mode, str):
+        stripped: str = raw_mode.strip()
+        if stripped.isdigit():
+            return TriggerExecutionMode(int(stripped))
+        if stripped.casefold() in UNSPECIFIED_EXECUTION_MODE_API_VALUES:
+            return TriggerExecutionMode.UNSPECIFIED
+        return TriggerExecutionMode.from_string(stripped)
+    if isinstance(raw_mode, int) and not isinstance(raw_mode, bool):
+        return TriggerExecutionMode(raw_mode)
+    msg: str = f"Invalid ExecutionMode value: {raw_mode!r}"
+    raise ValueError(msg)
+
+
+def _parse_reaction_logical_operator(raw_operator: int | str | None) -> LogicalOperator | None:
+    if raw_operator is None:
+        return None
+    if isinstance(raw_operator, str):
+        stripped: str = raw_operator.strip()
+        if stripped.isdigit():
+            return LogicalOperator(int(stripped))
+        return LogicalOperator.from_string(stripped)
+    if isinstance(raw_operator, int) and not isinstance(raw_operator, bool):
+        return LogicalOperator(raw_operator)
+    msg: str = f"Invalid ReactionLogicalOperator value: {raw_operator!r}"
+    raise ValueError(msg)
