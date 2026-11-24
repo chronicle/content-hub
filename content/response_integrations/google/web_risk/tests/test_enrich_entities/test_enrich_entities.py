@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote
 
 from soar_sdk.SiemplifyDataModel import DomainEntityInfo
 from TIPCommon.base.action import ExecutionState
@@ -166,14 +166,10 @@ class TestEnrichment:
         action_.run()
 
         assert len(script_session.request_history) >= 5
-        assert (
-                quote("https://domain.com") in
-                script_session.request_history[-3].request.url.query
-        )
-        assert (
-            quote("https://testsafebrowsing.appspot.com/s/malware.html") in
-            script_session.request_history[-2].request.url.query
-        )
+        assert parse_qs(script_session.request_history[-3].request.url.query)["uri"] == ["https://domain.com"]
+        assert parse_qs(script_session.request_history[-2].request.url.query)["uri"] == [
+            "https://testsafebrowsing.appspot.com/s/malware.html",
+        ]
         assert action_output.results.output_message == (
             SUCCESS_MESSAGE.format(
                 "https://testsafebrowsing.appspot.com/s/malware.html"
