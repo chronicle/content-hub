@@ -31,6 +31,7 @@ from ..core.constants import (
     EXECUTION_FINISHED,
     ALL_FIELDS_WILDCARD,
     ASC_SORT_ORDER,
+    SINGLE_STATEMENT_COUNT,
 )
 
 TABLE_NAME = "Results"
@@ -48,7 +49,11 @@ def start_query(siemplify, manager, database, schema, limit, original_query):
     :return: {tuple} output messages, result value, status
     """
     query_id = manager.submit_query(
-        query=original_query, database=database, schema=schema, limit=limit
+        query=original_query,
+        database=database,
+        schema=schema,
+        limit=limit,
+        statement_count=SINGLE_STATEMENT_COUNT,
     )
     # get query progress right after query started
     return check_query_progress_and_get_results(

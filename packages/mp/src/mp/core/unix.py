@@ -199,6 +199,8 @@ def download_wheels_from_requirements(
                 "manylinux1_x86_64",
                 "--platform",
                 "manylinux_2_17_x86_64",
+                "--platform",
+                "manylinux_2_28_x86_64",
             ])
         run_pip_command(command, cwd=project_path)
     except sp.CalledProcessError as e:
