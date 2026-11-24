@@ -31,16 +31,27 @@ DEF_PATH: pathlib.Path = (
 DEFAULT_PARAMETERS: SingleJson = {
     "DeviceProductField": "alert_type",
     "EventClassId": "event_type",
+    "Environment Field Name": "",
+    "Environment Regex Pattern": ".*",
+    "Project ID": "",
+    "Quota Project ID": "",
+    "Service Account JSON File Content": "",
     "Workload Identity Email": "gcloud-pubsub@test-project.iam.gserviceaccount.com",
     "User Service Account JSON Secret": None,
     "Max Messages To Fetch": 100,
     "Subscription ID": "test-sub",
+    "Unique ID Field": "",
     "Timestamp Field": "message_publishTime",
     "Timestamp Format": "%Y-%m-%dT%H:%M:%S.%fZ",
+    "Case Name Template": "",
     "Alert Name Template": "Alert from [message_json_notificationConfigName]",
     "Rule Generator Template": "Rule [message_json_finding_category]",
     "Severity Mapping JSON": "{\"Default\": 60}",
-    "Verify SSL": True
+    "Verify SSL": True,
+    "Disable Overflow": True,
+    "Proxy Server Address": "",
+    "Proxy Username": "",
+    "Proxy Password": "",
 }
 TEST_CONNECTOR_IDENTIFIER = "test_connector_identifier"
 

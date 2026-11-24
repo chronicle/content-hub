@@ -18,14 +18,16 @@ for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
         pass
 sys.stdout = original_stdout
 
+import google.auth
 import google.auth.transport.requests
+import google.oauth2.credentials
+from integration_testing.common import use_live_api
 import pytest
 import requests
 
-import pub_sub.core.PubSubAuthManager
-from pub_sub.tests.core.session import ApiSession
+from pub_sub.core import PubSubAuthManager
 from pub_sub.tests.core.product import Product
-from integration_testing.common import use_live_api
+from pub_sub.tests.core.session import ApiSession
 
 
 @pytest.fixture
@@ -49,18 +51,33 @@ def gcloud_pubsub_script_session(
     if not use_live_api():
         monkeypatch.setattr(requests, "Session", lambda: session)
         monkeypatch.setattr(
-            google.auth.transport.requests.AuthorizedSession,
-            "__new__",
-            __get_client_session
+            google.auth,
+            "default",
+            lambda *_, **__: (
+                google.oauth2.credentials.Credentials(
+                    token=None,
+                    refresh_token="mock-refresh-token",
+                    token_uri="https://oauth2.googleapis.com/token",
+                    client_id="mock-client-id",
+                    client_secret="mock-client-secret",
+                ),
+                "test-project",
+            ),
         )
         monkeypatch.setattr(
-            pub_sub.Managers.PubSubAuthManager,
+            PubSubAuthManager,
+            "get_workload_sa_email",
+            lambda default_sa="": default_sa or "default@domain.com",
+        )
+        monkeypatch.setattr(
+            google.auth.transport.requests.AuthorizedSession,
+            "__new__",
+            __get_client_session,
+        )
+        monkeypatch.setattr(
+            PubSubAuthManager,
             "AuthorizedSession",
-            __get_client_session
+            __get_client_session,
         )
 
     yield session
-
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
-    return script_session
