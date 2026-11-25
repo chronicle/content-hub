@@ -1,10 +1,31 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
-pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
+
+import dataclasses
 import importlib
+import json
+import pathlib
+import pkgutil
+import sys
+from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
+
+import pytest
 import soar_sdk
+
 sdk_dir = soar_sdk.__path__[0]
 if sdk_dir not in sys.path:
     sys.path.insert(0, sdk_dir)
@@ -12,32 +33,25 @@ original_stdout = sys.stdout
 for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
     try:
         flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
+        sys.modules[f"soar_sdk.{name}"] = flat_mod
         setattr(soar_sdk, name, flat_mod)
     except Exception:
         pass
 sys.stdout = original_stdout
 
-import dataclasses
-import json
-import pathlib
-import sys
-from typing import Any, Generator
-from unittest.mock import MagicMock
+from tenable_io.tests.core.product import TenableIOProduct  # noqa: E402
+from tenable_io.tests.core.response import MockResponse  # noqa: E402
+from tenable_io.tests.core.session import TenableIOSession  # noqa: E402
 
-import pytest
-
-from tenable_io.tests.core.session import TenableIOSession
-from tenable_io.tests.core.product import TenableIOProduct
-from tenable_io.tests.core.response import MockResponse
-
-
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from typing import Any
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
-CONFIG: dict = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+CONFIG: dict[str, Any] = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 
 MOCK_DATA_PATH: pathlib.Path = pathlib.Path(__file__).parent / "mock_data.json"
-MOCK_DATA: dict = json.loads(MOCK_DATA_PATH.read_text(encoding="utf-8"))
+MOCK_DATA: dict[str, Any] = json.loads(MOCK_DATA_PATH.read_text(encoding="utf-8"))
 
 
 @dataclasses.dataclass(unsafe_hash=True)
@@ -77,7 +91,7 @@ class LegacyActionOutput:
 
 
 @pytest.fixture(name="action_output")
-def action_output_fixture() -> Generator[LegacyActionOutput, Any, None]:
+def action_output_fixture() -> Iterator[LegacyActionOutput]:
     """Fixture providing an instance of LegacyActionOutput."""
     yield LegacyActionOutput()
 
@@ -103,13 +117,13 @@ class LegacyJsonResults:
 
 
 @pytest.fixture(name="json_results")
-def json_results_fixture() -> Generator[LegacyJsonResults, Any, None]:
+def json_results_fixture() -> Iterator[LegacyJsonResults]:
     """Fixture providing an instance of LegacyJsonResults."""
     yield LegacyJsonResults()
 
 
 @pytest.fixture(name="tenable_io_product")
-def tenable_io_product_fixture() -> Generator[TenableIOProduct, Any, None]:
+def tenable_io_product_fixture() -> Iterator[TenableIOProduct]:
     """Provides an instance of the mock TenableIO product."""
     product = TenableIOProduct()
     for asset in MOCK_DATA.get("assets", []):
@@ -134,8 +148,8 @@ def mock_siemplify(
     monkeypatch: pytest.MonkeyPatch,
     action_output: LegacyActionOutput,
     json_results: LegacyJsonResults,
-    action_params: dict[str, Any]
-) -> Generator[MagicMock, Any, None]:
+    action_params: dict[str, Any],
+) -> Iterator[MagicMock]:
     """
     (autouse=True)
     Fully mocks the SiemplifyAction object for legacy scripts.
@@ -231,17 +245,24 @@ def mock_siemplify(
 @pytest.fixture(autouse=True)
 def script_session(
     monkeypatch: pytest.MonkeyPatch,
-    tenable_io_product: TenableIOProduct
-) -> Generator[TenableIOSession, Any, None]:
+    tenable_io_product: TenableIOProduct,
+) -> Iterator[TenableIOSession]:
+    """Patch the requests.Session used by TenableIOManager."""
     session = TenableIOSession(tenable_io_product, MOCK_DATA)
-    """
-    (autouse=True)
-    Patches the requests.Session used by TenableIOManager.
-    """
+
+    def mock_request(
+        _self: object,
+        method: str,
+        url: str,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> MockResponse:
+        if method == "GET":
+            return session.get(url, **kwargs)
+        if method == "POST":
+            payload = kwargs.get("json")
+            return session.post(url, payload, **kwargs)
+        return MockResponse({"error": f"Method {method} not supported in mock"}, 404)
 
     monkeypatch.setattr("requests.Session.request", mock_request)
     yield session
 
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
-    return script_session

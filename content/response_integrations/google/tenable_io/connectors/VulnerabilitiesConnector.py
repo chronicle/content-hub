@@ -1,8 +1,22 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from TIPCommon import extract_connector_param
-from tenable_io.core.constants import (
+from ..core.constants import (
     CONNECTOR_NAME,
     DEFAULT_SEVERITY,
     HOST_GROUPING,
@@ -15,7 +29,7 @@ from tenable_io.core.constants import (
     SEVERITIES,
     FINISHED_STATUS,
 )
-from tenable_io.core.UtilsManager import (
+from ..core.UtilsManager import (
     read_ids,
     write_ids,
     is_approaching_timeout,
@@ -29,8 +43,8 @@ from tenable_io.core.UtilsManager import (
     UNIX_FORMAT,
     write_pending_export,
 )
-from tenable_io.core.TenableIOManager import TenableIOManager
-from tenable_io.core.TenableIOExceptions import ExportNotFinishedException
+from ..core.TenableIOManager import TenableIOManager
+from ..core.TenableIOExceptions import ExportNotFinishedException
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 import sys
 

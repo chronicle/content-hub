@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -9,21 +23,21 @@ from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
 from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
 
-from tenable_io.core.TenableIOManager import TenableIOManager
+from ..core.TenableIOManager import TenableIOManager
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_FAILED,
     EXECUTION_STATE_INPROGRESS,
 )
-from tenable_io.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     SCAN_ENDPOINTS_SCRIPT_NAME,
     DEFAULT_TIMEOUT,
     BAD_SCAN_STATUSES,
     COMPLETED_SCAN,
 )
-from tenable_io.core.TenableIOExceptions import WrongScanException
-from tenable_io.core.UtilsManager import (
+from ..core.TenableIOExceptions import WrongScanException
+from ..core.UtilsManager import (
     get_entity_original_identifier,
     is_approaching_timeout,
     is_async_action_global_timeout_approaching,
