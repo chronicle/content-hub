@@ -1,9 +1,30 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
-import sys
-import os
-import pkgutil
+
 import importlib
+import pkgutil
+import sys
+from typing import TYPE_CHECKING
+
+import pytest
+import requests
 import soar_sdk
+
+pytest_plugins = ("integration_testing.conftest",)
+
 sdk_dir = soar_sdk.__path__[0]
 if sdk_dir not in sys.path:
     sys.path.insert(0, sdk_dir)
@@ -11,24 +32,18 @@ original_stdout = sys.stdout
 for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
     try:
         flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
+        sys.modules[f"soar_sdk.{name}"] = flat_mod
         setattr(soar_sdk, name, flat_mod)
     except Exception:
         pass
 sys.stdout = original_stdout
 
-# ---------------------------------------------------------------------------
-# TIPCommon 1.x compatibility shim
-# ---------------------------------------------------------------------------
-# The integration action scripts (Integrations/MitreAttck/ActionsScripts/*.py)
-# were written against TIPCommon 1.x and use flat imports such as:
-#   from TIPCommon import extract_configuration_param
-# TIPCommon 2.x only exposes submodules at the top level. This block re-exports
-# the needed symbols at the TIPCommon package level so the legacy imports work.
-import TIPCommon
+import TIPCommon  # noqa: E402
+
 try:
     import TIPCommon.extraction
     import TIPCommon.transformation
+
     for _name in (
         "extract_configuration_param",
         "extract_action_param",
@@ -47,19 +62,17 @@ try:
         if not hasattr(TIPCommon, _name):
             setattr(TIPCommon, _name, getattr(TIPCommon.transformation, _name))
 except ImportError:
-    pass  # TIPCommon 1.x — flat imports already work
-# ---------------------------------------------------------------------------
+    pass
 
-import requests
-import pytest
+from integration_testing.common import use_live_api  # noqa: E402
 
-from mitre_attck.core.MitreAttckManager import MitreAttckManager
-from mitre_attck.tests.common import ENTERPRISE_ATTACK
-from mitre_attck.tests.core.product import MitreAttckProduct
-from mitre_attck.tests.core.session import MitreAttckSession
-from integration_testing.common import use_live_api
+from mitre_attck.core.MitreAttckManager import MitreAttckManager  # noqa: E402
+from mitre_attck.tests.common import ENTERPRISE_ATTACK  # noqa: E402
+from mitre_attck.tests.core.product import MitreAttckProduct  # noqa: E402
+from mitre_attck.tests.core.session import MitreAttckSession  # noqa: E402
 
-pytest_plugins = ("Tests.mocks.ci_fixtures",)
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 @pytest.fixture
@@ -74,10 +87,9 @@ def mitre_product() -> MitreAttckProduct:
 def script_session(
     monkeypatch: pytest.MonkeyPatch,
     mitre_product: MitreAttckProduct,
-) -> MitreAttckSession:
-    session = MitreAttckSession(mitre_product)
+) -> Iterator[MitreAttckSession]:
     """Intercept all requests.Session calls and route them to the product mock."""
-
+    session = MitreAttckSession(mitre_product)
     if not use_live_api():
         monkeypatch.setattr(requests, "Session", lambda: session)
     yield session
@@ -87,7 +99,7 @@ def script_session(
 def mock_connectivity_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     """Force MitreAttckManager.test_connectivity to raise an exception."""
 
-    def _raise(*_args, **_kwargs) -> None:
+    def _raise(*_args: object, **_kwargs: object) -> None:
         raise RuntimeError("Simulated connectivity failure")
 
     monkeypatch.setattr(MitreAttckManager, "test_connectivity", _raise)
@@ -96,8 +108,4 @@ def mock_connectivity_failure(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def _script_session(script_session: MitreAttckSession) -> MitreAttckSession:
     """Alias for script_session — used in tests that reference the session for assertions."""
-    return script_session
-
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
     return script_session

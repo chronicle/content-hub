@@ -1,21 +1,35 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
+
 import json
-from integration_testing.common import get_def_file_content
-
 import pathlib
+from typing import TYPE_CHECKING
 
-from typing import Any
-from integration_testing.common import get_def_file_content
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
+TESTS_DIR: pathlib.Path = pathlib.Path(__file__).parent
+CONFIG_PATH: pathlib.Path = TESTS_DIR / "config.json"
+CONFIG: SingleJson = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 
-CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
-CONFIG: dict[str, Any] = get_def_file_content(CONFIG_PATH)
-
-MOCK_DATA_PATH: pathlib.Path = pathlib.Path(__file__).parent / "mock_data.json"
-MOCK_DATA: dict[str, Any] = get_def_file_content(MOCK_DATA_PATH)
+MOCK_DATA_PATH: pathlib.Path = TESTS_DIR / "mock_data.json"
+MOCK_DATA: SingleJson = json.loads(MOCK_DATA_PATH.read_text(encoding="utf-8"))
 
 # Convenience aliases into the mock STIX bundle
-ENTERPRISE_ATTACK: dict[str, Any] = MOCK_DATA["enterprise_attack"]
+ENTERPRISE_ATTACK: SingleJson = MOCK_DATA["enterprise_attack"]
 
 # Known IDs / names used across tests
 ATTACK_PATTERN_ID: str = "attack-pattern--001"
