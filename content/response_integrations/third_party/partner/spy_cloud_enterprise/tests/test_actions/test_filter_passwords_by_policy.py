@@ -231,7 +231,26 @@ class TestFilterPasswordsByPolicy:
         assert payload["emails_with_remaining_passwords"] == ["victim@example.com"]
         assert payload["all_exposed_emails"] == ["victim@example.com"]
         assert payload["remaining"] == 2
-        assert end_calls[0]["result_value"] == 2
+        # Only the password tied to an email can drive a reset.
+        assert end_calls[0]["result_value"] == 1
+        assert "carry no email address" in end_calls[0]["message"]
+
+    def test_only_emailless_passwords_yield_zero_result(self) -> None:
+        """Matching passwords with no identity must not send the playbook to a reset.
+
+        A result above zero with an empty reset list would hand the reset step an
+        empty target, which some identity provider actions read as "every user in
+        scope".
+        """
+        alerts = [_Alert("SpyCloud", [_event(spycloud_email="", spycloud_password_plaintext="Sup3r$ecret")])]
+        siemplify, end_calls = _make_siemplify(alerts)
+
+        _run(siemplify)
+
+        payload = _json(siemplify)
+        assert payload["emails_with_remaining_passwords"] == []
+        assert payload["remaining"] == 1
+        assert end_calls[0]["result_value"] == 0
 
     def test_minimum_length_below_one_fails(self) -> None:
         """A minimum length of 0 or less would let every password through."""

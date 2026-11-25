@@ -22,8 +22,10 @@ already rotated after the newest exposure, so the playbook can gate the reset on
 Unknown means reset. A missing or unparseable IdP timestamp, a case with no
 datable password exposure, or a matching exposure with no usable publish date
 alongside dated ones, returns 1 - the safe direction is to remediate an exposure we
-cannot prove is stale. A bare ``YYYY-MM-DD`` publish date is read as the end of
-that day, since the record may have been published any time on it.
+cannot prove is stale. A publish date with no time of day - a bare ``YYYY-MM-DD``
+or a timestamp sitting exactly on midnight UTC, which is how SpyCloud records carry
+it - is read as the end of that day, since the record may have been published any
+time on it.
 
 Data source: this action does NOT call the SpyCloud API. It reads the exposures
 already attached to the case, exactly like Filter Passwords By Policy.
@@ -78,13 +80,15 @@ def _event_has_password(props: dict[str, Any]) -> bool:
 
 
 def _parse_publish_date(raw_date: str | None) -> datetime | None:
-    """Parse an exposure publish date, reading a bare calendar date as end of day.
+    """Parse an exposure publish date, reading a day-granular value as end of day.
 
-    ``parse_timestamp`` puts a bare date at midnight UTC, which would let a password
-    change later that same day look newer than a record published after it.
+    SpyCloud publish dates carry no real time of day: they arrive either as a bare
+    ``YYYY-MM-DD`` or as that date at midnight UTC (``2026-06-14T00:00:00Z``).
+    ``parse_timestamp`` puts both at midnight UTC, which would let a password change
+    later that same day look newer than a record published after it.
     """
     published = datamodels.parse_timestamp(raw_date)
-    if published is not None and DATE_ONLY_PATTERN.fullmatch(str(raw_date).strip()):
+    if published is not None and (DATE_ONLY_PATTERN.fullmatch(str(raw_date).strip()) or published.time() == time.min):
         published = datetime.combine(published.date(), time.max, tzinfo=timezone.utc)
     return published
 

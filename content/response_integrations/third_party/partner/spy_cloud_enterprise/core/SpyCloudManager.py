@@ -420,7 +420,7 @@ class SpyCloudManager:
         it equals ``until`` only when the whole window was drained this cycle.
         ``None`` means nothing was fetched and the checkpoint must not move.
         """
-        response = []
+        response: list[dict[str, Any]] = []
 
         watchlist_chunks = self._build_time_chunks(since=since, until=until, max_hours=MAX_WATCHLIST_WINDOW_HOURS)
 
@@ -587,7 +587,7 @@ class SpyCloudManager:
                 f"severities={self.severities}"
             )
         else:
-            cursor_since = self._get_context_property(WATCHLIST_MODIFICATION_CURSOR_SINCE_KEY)
+            cursor_since = self._get_context_property(WATCHLIST_MODIFICATION_CURSOR_SINCE_KEY) or ""
             cursor = self._get_context_property(WATCHLIST_MODIFICATION_CURSOR_KEY) or ""
             self.siemplify.LOGGER.info(
                 "Resuming in-progress Watchlist modification drain. "

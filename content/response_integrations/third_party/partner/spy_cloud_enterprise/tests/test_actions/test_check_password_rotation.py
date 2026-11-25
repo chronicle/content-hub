@@ -310,3 +310,22 @@ class TestCheckPasswordRotation:
 
         assert end_calls[0]["result_value"] == 1
         assert _json(siemplify)["latest_exposure_publish_date"].startswith("2026-06-14T23:59:59")
+
+    def test_midnight_publish_date_counts_as_end_of_day(self) -> None:
+        """SpyCloud carries the publish date as midnight UTC, which is still day-granular."""
+        alerts = [_Alert("SpyCloud", [_event(spycloud_publish_date="2026-06-14T00:00:00Z")])]
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-06-14T08:00:00Z"})
+
+        _run(siemplify)
+
+        assert end_calls[0]["result_value"] == 1
+        assert _json(siemplify)["latest_exposure_publish_date"].startswith("2026-06-14T23:59:59")
+
+    def test_reset_the_day_after_a_midnight_publish_date_is_rotated(self) -> None:
+        """The end-of-day reading must not swallow a reset on a later day."""
+        alerts = [_Alert("SpyCloud", [_event(spycloud_publish_date="2026-06-14T00:00:00Z")])]
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-06-15T00:00:01Z"})
+
+        _run(siemplify)
+
+        assert end_calls[0]["result_value"] == 0

@@ -15,8 +15,11 @@ not satisfy the configured policy:
 
 A password that still matches the policy is one the identity provider would accept,
 so an exposed copy of it is a live account-takeover risk worth resetting. ``result_value``
-is the number of policy-conforming exposed passwords that remain after filtering;
-the playbook resets the user's password only when it is greater than zero.
+is the number of policy-conforming exposed passwords that remain after filtering and
+are tied to an email address; the playbook resets the user's password only when it is
+greater than zero. A matching password with no email still counts toward ``remaining``
+in the JSON result, but not toward ``result_value``: with no identity to act on, a
+reset step would receive an empty target.
 
 Data source: this action does NOT call the SpyCloud API. It reads the exposures
 already attached to the case, exactly like Get Watchlist Exposures.
@@ -183,9 +186,11 @@ def main() -> None:
         )
 
         dropped = total_passwords - remaining
-        result_value = remaining
-
         emails_with_remaining = sorted(data["email"] for data in per_email.values() if data["email"] and data["kept"])
+        # Only passwords tied to an identity can drive a reset. The JSON keeps the
+        # full ``remaining`` count, but a result above zero with no email to act on
+        # would send the playbook into a reset step with an empty target.
+        result_value = sum(len(data["kept"]) for data in per_email.values() if data["email"])
 
         siemplify.result.add_result_json({
             "case_id": str(getattr(siemplify, "case_id", "") or ""),
@@ -206,6 +211,11 @@ def main() -> None:
         })
 
         output_message = _build_output_message(total_passwords, remaining, policy)
+        if remaining > result_value:
+            output_message += (
+                f" {remaining - result_value} matching password(s) carry no email address "
+                "and are not counted in the result value, since there is no identity to reset."
+            )
 
     except Exception as error:
         siemplify.LOGGER.error(f'Error executing action "{SCRIPT_NAME}". Reason: {error}')
