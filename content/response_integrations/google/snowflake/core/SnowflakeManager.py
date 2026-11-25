@@ -13,19 +13,33 @@
 # limitations under the License.
 
 from __future__ import annotations
-from urllib.parse import urljoin
-import requests
-from .constants import ENDPOINTS, EXECUTION_IN_PROGRESS, EXECUTION_FINISHED
-from .UtilsManager import validate_response
-from .SnowflakeParser import SnowflakeParser
+
 import base64
-import jwt
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from cryptography.hazmat.primitives.serialization import Encoding
-from cryptography.hazmat.primitives.serialization import PublicFormat
-from cryptography.hazmat.backends import default_backend
 import hashlib
-from datetime import timedelta, timezone, datetime
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urljoin
+
+import jwt
+import requests
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat, load_pem_private_key
+
+from .constants import (
+    ALL_FIELDS_WILDCARD,
+    ENDPOINTS,
+    EXECUTION_FINISHED,
+    EXECUTION_IN_PROGRESS,
+    MULTI_STATEMENT_COUNT_PARAMETER,
+)
+from .query_validation import (
+    validate_fields_to_return,
+    validate_sort_field,
+    validate_sort_order,
+    validate_table,
+    validate_where_filter,
+)
+from .SnowflakeParser import SnowflakeParser
+from .UtilsManager import validate_response
 
 
 class SnowflakeManager:
@@ -159,13 +173,22 @@ class SnowflakeManager:
         response = self.session.post(request_url, json=payload)
         validate_response(response)
 
-    def submit_query(self, query, database, schema, limit):
+    def submit_query(
+        self,
+        query: str,
+        database: str,
+        schema: str | None,
+        limit: int,
+        statement_count: int | None = None,
+    ) -> str | None:
         """
         Submit query
         :param query: {str} The query to submit
         :param database: {str} The database to use
         :param schema: {str} Schema to use
         :param limit: {int} Results limit
+        :param statement_count: {int} Exact number of statements Snowflake accepts in the request.
+            If not provided, the account or user setting applies.
         :return: {str} Query id
         """
         request_url = self._get_full_url("submit_query")
@@ -177,6 +200,8 @@ class SnowflakeManager:
         }
         if schema:
             payload["schema"] = schema
+        if statement_count is not None:
+            payload["parameters"] = {MULTI_STATEMENT_COUNT_PARAMETER: str(statement_count)}
 
         response = self.session.post(request_url, json=payload)
         validate_response(response)
@@ -188,20 +213,23 @@ class SnowflakeManager:
     ):
         """
         Build the query to submit
+        Each value is validated so it can't change the query structure.
         :param fields_to_return: {str} Csv of fields to return
         :param table: {str} Name of the table where to execute the query
         :param where_filter: {str} Where filter to add to the query
         :param sort_order: {str} Sort order
         :param sort_field: {str} Field to sort with
         :return: {str}
+        :raises InvalidQueryParameterError: If any parameter can't be used safely in the query.
         """
-        query_string = f"SELECT {fields_to_return}" if fields_to_return else "SELECT *"
+        fields: str = validate_fields_to_return(fields_to_return) if fields_to_return else ALL_FIELDS_WILDCARD
+        query_string = f"SELECT {fields}"
         if table:
-            query_string += f" FROM {table}"
+            query_string += f" FROM {validate_table(table)}"
         if where_filter:
-            query_string += f" WHERE {where_filter}"
+            query_string += f" WHERE ({validate_where_filter(where_filter)})"
         if sort_field:
-            query_string += f" ORDER BY {sort_field} {sort_order}"
+            query_string += f" ORDER BY {validate_sort_field(sort_field)} {validate_sort_order(sort_order)}"
 
         return query_string
 
