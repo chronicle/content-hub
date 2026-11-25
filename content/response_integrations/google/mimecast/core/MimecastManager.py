@@ -1,17 +1,32 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
-import dataclasses
-from urllib.parse import urljoin
-import requests
 import base64
+import dataclasses
+import datetime
 import hashlib
 import hmac
-import uuid
-import datetime
+import os
+from urllib.parse import urljoin
+
+import requests
 
 from TIPCommon.filters import filter_old_alerts
 
-from mimecast.core.constants import *
-from mimecast.core.datamodels import (
+from .constants import *
+from .datamodels import (
     Attachment,
     BlockSenderPolicy,
     BlockSenderPolicyActionParams,
@@ -19,9 +34,18 @@ from mimecast.core.datamodels import (
     Message,
     MessageDetails,
 )
-from mimecast.core.MimecastExceptions import MimecastException
-from mimecast.core.MimecastParser import MimecastParser
-from mimecast.core.UtilsManager import validate_response, lazy_chunk_iterable, filter_message
+from .MimecastExceptions import MimecastException
+from .MimecastParser import MimecastParser
+from .UtilsManager import validate_response, lazy_chunk_iterable, filter_message
+
+
+def _generate_request_nonce() -> str:
+    """Generate a random RFC 4122 v4 request nonce for Mimecast request headers."""
+    random_bytes = bytearray(os.urandom(16))
+    random_bytes[6] = (random_bytes[6] & 0x0F) | 0x40
+    random_bytes[8] = (random_bytes[8] & 0x3F) | 0x80
+    hex_str = random_bytes.hex()
+    return f"{hex_str[:8]}-{hex_str[8:12]}-{hex_str[12:16]}-{hex_str[16:20]}-{hex_str[20:]}"
 
 
 @dataclasses.dataclass
@@ -149,14 +173,14 @@ class MimecastManager:
         validate_response(response)
         return response.json().get("access_token")
 
-    def _generate_request_headers(self, uri):
+    def _generate_request_headers(self, uri: str) -> dict[str, str]:
         """
         Request access token
         :param uri: {str} Request endpoint.
         :return: {dict} Request headers
         """
         # Generate request header values
-        request_id = str(uuid.uuid4())
+        request_id = _generate_request_nonce()
         hdr_date = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S") + " UTC"
 
         # DataToSign is used in hmac_sha1

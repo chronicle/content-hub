@@ -1,18 +1,34 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
+
 import json
-from integration_testing.common import get_def_file_content
 import pathlib
+from typing import TYPE_CHECKING
 
-from TIPCommon.types import SingleJson
-
-from mimecast.core.datamodels import (
-    Attachment,
-    HoldMessage,
-    Message,
-    MessageDetails,
-)
 from mimecast.core.MimecastParser import MimecastParser
-from integration_testing.common import get_def_file_content
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+    from mimecast.core.datamodels import (
+        Attachment,
+        HoldMessage,
+        Message,
+        MessageDetails,
+    )
 
 
 class IdNotFoundError(Exception):
@@ -22,11 +38,13 @@ class IdNotFoundError(Exception):
 class AlreadyExistsError(Exception):
     """Generic error for when an ID already exists"""
 
-INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
-CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
-CONFIG: SingleJson = get_def_file_content(CONFIG_PATH)
-MOCK_PATH: pathlib.Path = pathlib.Path(__file__).parent / "mock_data.json"
-MOCK_DATA: SingleJson = get_def_file_content(MOCK_PATH)
+
+TESTS_DIR: pathlib.Path = pathlib.Path(__file__).parent
+INTEGRATION_PATH: pathlib.Path = TESTS_DIR.parent
+CONFIG_PATH: pathlib.Path = TESTS_DIR / "config.json"
+CONFIG: SingleJson = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+MOCK_PATH: pathlib.Path = TESTS_DIR / "mock_data.json"
+MOCK_DATA: SingleJson = json.loads(MOCK_PATH.read_text(encoding="utf-8"))
 
 MOCK_MESSAGE_DATA: SingleJson = MOCK_DATA.get("message_data")
 MOCK_MESSAGE_DETAILS_DATA: SingleJson = MOCK_DATA.get("message_details_data")

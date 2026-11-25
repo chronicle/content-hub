@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
@@ -20,18 +34,18 @@ from TIPCommon.transformation import  (
 )
 from TIPCommon.utils import is_overflowed
 
-from mimecast.core.constants import (
+from ..core.constants import (
     CONNECTOR_NAME,
     DEFAULT_TIME_FRAME,
     DEFAULT_MAX_LIMIT,
     POSSIBLE_STATUSES,
     POSSIBLE_ROUTES,
 )
-from mimecast.core.UtilsManager import (
+from ..core.UtilsManager import (
     create_siemplify_case_wall_attachment_object,
     pass_severity_filter
 )
-from mimecast.core.MimecastManager import EmailSearchCriteria, MimecastManager
+from ..core.MimecastManager import EmailSearchCriteria, MimecastManager
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 import sys
 
