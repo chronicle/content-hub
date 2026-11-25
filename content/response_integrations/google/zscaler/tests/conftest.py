@@ -1,10 +1,33 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
-pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
+
+import dataclasses
 import importlib
+import json
+import pathlib
+import pkgutil
+import sys
+from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
+
+import pytest
 import soar_sdk
+
+pytest_plugins = ("integration_testing.conftest",)
+
 sdk_dir = soar_sdk.__path__[0]
 if sdk_dir not in sys.path:
     sys.path.insert(0, sdk_dir)
@@ -12,31 +35,25 @@ original_stdout = sys.stdout
 for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
     try:
         flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
+        sys.modules[f"soar_sdk.{name}"] = flat_mod
         setattr(soar_sdk, name, flat_mod)
     except Exception:
         pass
 sys.stdout = original_stdout
 
-import dataclasses
-import json
-import pathlib
-import auth
-from typing import Any, Generator
-from unittest.mock import MagicMock
-from TIPCommon.base.utils import CreateSession
+from TIPCommon.base.utils import CreateSession  # noqa: E402
 
-import pytest
+from zscaler.core import auth, base_action  # noqa: E402
+from zscaler.core.data_models import IntegrationParameters  # noqa: E402
+from zscaler.tests.core.session import ZscalerSession  # noqa: E402
+from zscaler.tests.core.zscaler import Zscaler  # noqa: E402
 
-import zscalerManager
-
-import base_action
-from zscaler.core.data_models import IntegrationParameters
-from zscaler.tests.core.session import ZscalerSession
-from zscaler.tests.core.zscaler import Zscaler
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from typing import Any
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
-CONFIG: dict = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+CONFIG: dict[str, Any] = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 
 
 @dataclasses.dataclass
@@ -66,7 +83,7 @@ class LegacyActionOutput:
 
 
 @pytest.fixture
-def action_output() -> LegacyActionOutput:
+def action_output() -> Iterator[LegacyActionOutput]:
     """Fixture providing an instance of LegacyActionOutput."""
     yield LegacyActionOutput()
 
@@ -86,7 +103,7 @@ class LegacyJsonResults:
 
 
 @pytest.fixture
-def json_results() -> LegacyJsonResults:
+def json_results() -> Iterator[LegacyJsonResults]:
     """Fixture providing an instance of LegacyJsonResults."""
     yield LegacyJsonResults()
 
@@ -97,7 +114,7 @@ def mock_siemplify(
     monkeypatch: pytest.MonkeyPatch,
     action_output: LegacyActionOutput,
     json_results: LegacyJsonResults,
-) -> MagicMock:
+) -> Iterator[MagicMock]:
     """
     (autouse=True)
     Fully mocks the SiemplifyAction object for legacy scripts
@@ -140,10 +157,10 @@ def mock_siemplify(
         pass
 
     def mock_extract_param(
-        siemplify: Any,
+        siemplify: Any,  # noqa: ANN401
         provider_name: str,
-        **kwargs,
-    ) -> Any:
+        **kwargs: Any,  # noqa: ANN401
+    ) -> Any:  # noqa: ANN401
         """
         Mock implementation of extract_configuration_param
         that respects is_mandatory and default_value.
@@ -187,7 +204,7 @@ def mock_data() -> dict[str, Any]:
 
 
 @pytest.fixture
-def zscaler_product() -> Zscaler:
+def zscaler_product() -> Iterator[Zscaler]:
     """
     Provides an instance of the mock Zscaler product (our mock database).
     """
@@ -199,18 +216,15 @@ def script_session(  # pylint: disable=redefined-outer-name
     monkeypatch: pytest.MonkeyPatch,
     zscaler_product: Zscaler,
     mock_data: dict[str, Any],
-) -> Generator[ZscalerSession, None, None]:
+) -> Iterator[ZscalerSession]:
+    """Patch the requests.Session used by ZscalerManager."""
     session = ZscalerSession(zscaler_product)
-    """
-    (autouse=True)
-    The core fixture that patches the requests.Session used by ZscalerManager.
-    """
     zscaler_product.mock_data = mock_data
 
     monkeypatch.setattr(
         base_action,
         "build_auth_params",
-        lambda soar_sdk_object: IntegrationParameters(
+        lambda _soar_sdk_object: IntegrationParameters(
             api_root="https://admin.zscalertwo.net",
             login_id="dummy@test.com",
             api_key="dummy_key",
@@ -223,10 +237,7 @@ def script_session(  # pylint: disable=redefined-outer-name
     monkeypatch.setattr(
         auth.AuthenticatedSession,
         "_obfuscate_api_key",
-        lambda self, api_key, timestamp: zscaler_product.expected_api_key,
+        lambda _self, _api_key, _timestamp: zscaler_product.expected_api_key,
     )
     yield session
 
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
-    return script_session
