@@ -1,24 +1,39 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
 import copy
 import re
 import requests
 
 from TIPCommon.base.job.job_case import (
+    CaseTagsData,
+    JobAssigneeResult,
     JobCase,
     JobCommentsResult,
+    JobSeverityResult,
+    JobStatusResult,
     JobTagsResult,
     ProductTagsData,
-    CaseTagsData,
-    JobSeverityResult,
-    JobAssigneeResult,
-    JobStatusResult,
 )
-from TIPCommon.data_models import AlertCard
+from TIPCommon.data_models import AlertCard, CaseDetails
 from TIPCommon.types import SingleJson
 
 from sentinel_one_v2.tests.common import MOCK_QUERY_STATUS
 from sentinel_one_v2.tests.core.product import SentinelOneV2
 from integration_testing import router
-from integration_testing.common import create_case_details
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, RouteFunction
@@ -515,7 +530,8 @@ class MockJobCase(JobCase):
                 "priority": 40,
             }
         )
-        case_detail = create_case_details(id_=1, name=case_id, alerts=[alert])
+        case_detail = CaseDetails.from_json({"id": 1, "name": case_id, "alerts": []})
+        case_detail.alerts = [alert]
         super().__init__(case_detail=case_detail, modification_time=0)
         self.case_comments = []
 

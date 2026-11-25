@@ -1,20 +1,34 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
-from sentinel_one_v2.core.constants import (
+from ..core.constants import (
     DEFAULT_GET_BLACKLIST_ITEM_LIMIT,
     REMOVE_HASH_BLACKLIST_RECORD_SCRIPT_NAME,
     INTEGRATION_NAME,
     PRODUCT_NAME,
     SHA1_LENGTH,
 )
-from sentinel_one_v2.core.exceptions import SentinelOneV2ValidationError, SentinelOneV2PermissionError
-from sentinel_one_v2.core.utils import get_entity_original_identifier
-from sentinel_one_v2.core.SentinelOneV2Factory import SentinelOneV2ManagerFactory
-from sentinel_one_v2.core.utils import string_to_multi_value
+from ..core.exceptions import SentinelOneV2ValidationError, SentinelOneV2PermissionError
+from ..core.utils import get_entity_original_identifier
+from ..core.SentinelOneV2Factory import SentinelOneV2ManagerFactory
+from ..core.utils import string_to_multi_value
 
 
 @output_handler

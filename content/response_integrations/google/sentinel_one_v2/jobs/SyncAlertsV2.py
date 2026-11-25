@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import datetime
@@ -16,10 +30,10 @@ from TIPCommon.base.action.data_models import (
 from TIPCommon.base.job.base_sync_job import BaseSyncJob
 from TIPCommon.base.job.job_case import JobCase, SyncMetadata
 from TIPCommon.data_models import CaseDataStatus
-from sentinel_one_v2.core import constants
-from sentinel_one_v2.core.exceptions import SentinelOneV2ManagerError
-from sentinel_one_v2.core.SentinelOneV2Factory import API_VERSION_2_1, SentinelOneV2ManagerFactory
-from sentinel_one_v2.core.SentinelOneV2ManagerV2 import SentinelOneV2ManagerV2
+from ..core import constants
+from ..core.exceptions import SentinelOneV2ManagerError
+from ..core.SentinelOneV2Factory import API_VERSION_2_1, SentinelOneV2ManagerFactory
+from ..core.SentinelOneV2ManagerV2 import SentinelOneV2ManagerV2
 
 if TYPE_CHECKING:
     from typing import Any, NoReturn
@@ -28,7 +42,7 @@ if TYPE_CHECKING:
 
     from TIPCommon.types import SingleJson
 
-    from sentinel_one_v2.core.datamodelsV2 import Alert
+    from ..core.datamodelsV2 import Alert
 
 
 class SyncAlertsV2(BaseSyncJob[SentinelOneV2ManagerV2]):
