@@ -13,4 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 DEFAULT_API_VERSION: str = "64.0"
+DEFAULT_MAX_RECORDS: int = 50
+MAX_RECORDS_LIMIT: int = 1000

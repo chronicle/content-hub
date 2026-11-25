@@ -13,14 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import construct_csv
-from ..core.SalesforceManager import SalesforceManager
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+
+from ..core.SalesforceManager import SalesforceManager, SalesforceManagerError, parse_max_records
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     configurations = siemplify.get_configuration("Salesforce")
     server_addr = configurations["Api Root"]
@@ -29,14 +31,19 @@ def main():
     token = configurations["Token"]
     verify_ssl = configurations.get("Verify SSL", "False").lower() == "true"
 
-    salesforce_manager = SalesforceManager(
-        username, password, token, server_addr=server_addr, verify_ssl=verify_ssl
-    )
+    try:
+        max_records = parse_max_records(siemplify.parameters.get("Max Records To Return"))
+    except SalesforceManagerError as err:
+        siemplify.end(f'Error executing action "List Cases". Reason: {err}', "false", EXECUTION_STATE_FAILED)
+        return
 
-    cases = salesforce_manager.get_cases()
+    salesforce_manager = SalesforceManager(username, password, token, server_addr=server_addr, verify_ssl=verify_ssl)
 
-    csv_output = construct_csv(cases)
-    siemplify.result.add_data_table("Cases", csv_output)
+    cases = salesforce_manager.get_cases(max_records=max_records)
+
+    if cases:
+        csv_output = construct_csv(cases)
+        siemplify.result.add_data_table("Cases", csv_output)
 
     siemplify.result.add_result_json(cases)
     siemplify.end(f"Found {len(cases)} cases.", "true")
