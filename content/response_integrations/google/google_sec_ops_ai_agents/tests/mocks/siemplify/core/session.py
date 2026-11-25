@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -25,7 +39,6 @@ from integration_testing import router
 from integration_testing.common import (
     create_case_comment,
     get_request_payload,
-    get_def_file_content
 )
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
@@ -33,9 +46,10 @@ from integration_testing.requests.session import MockSession, RouteFunction
 
 
 MOCK_CASE_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent / "mock_data.json"
-MOCK_CASE: SingleJson = get_def_file_content(MOCK_CASE_PATH)["mock_case"]
-MOCK_CYBER_ALERTS: SingleJson = get_def_file_content(MOCK_CASE_PATH)["mock_cyber_alert"]
-MOCK_SEARCH_CASES: SingleJson = get_def_file_content(MOCK_CASE_PATH)["search_cases"]
+_MOCK_CASE_DATA: SingleJson = json.loads(MOCK_CASE_PATH.read_text(encoding="utf-8"))
+MOCK_CASE: SingleJson = _MOCK_CASE_DATA["mock_case"]
+MOCK_CYBER_ALERTS: SingleJson = _MOCK_CASE_DATA["mock_cyber_alert"]
+MOCK_SEARCH_CASES: SingleJson = _MOCK_CASE_DATA["search_cases"]
 
 
 class GoogleSecOpsSoarSession(MockSession[MockRequest, MockResponse, GoogleSecOpsSoar]):
