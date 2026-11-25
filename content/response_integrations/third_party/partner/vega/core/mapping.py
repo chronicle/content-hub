@@ -191,37 +191,87 @@ RELATED_ALERTS_TITLE_MARK = "(related alerts)"
 
 
 def incident_case_title(record: SingleJson, related: bool = False, batch: int | None = None) -> str:
-    """SOAR case title for the incident case or one related-alert chunk.
+    """SOAR case title: ``{vegaUniqueIncidentId} - {incident name}``.
 
-    Related alerts use ``(cluster N)`` in chunks of up to 90. ``N`` advances per
-    incident in the connector checkpoint so cluster numbers are not reused.
+    ``related`` / ``batch`` are ignored (case never splits).
     """
-    title = case_display_name(record, ENTITY_TYPE_INCIDENT)
-    if batch:
-        return f"{title} (cluster {int(batch)})"
-    if related:
-        return f"{title} {RELATED_ALERTS_TITLE_MARK}"
-    return title
+    del related, batch
+    display_id = record_display_id(record, ENTITY_TYPE_INCIDENT)
+    name = record_name(record)
+    if display_id:
+        return f"{display_id} - {name}"
+    return name
 
 
 def incident_grouping_id(incident_id: str, related: bool = False, batch: int | None = None) -> str:
-    """SOAR source grouping key.
+    """SOAR source grouping key: ``Vega:incident:<id>`` (case never splits).
 
-    The incident case is ``Vega:incident:<id>``. Related alerts use one
-    grouping key per cluster chunk: ``Vega:incident:<id>:related:cluster:<N>``.
-    Legacy ``related=True`` without ``batch`` keeps ``...:related``.
+    ``related`` / ``batch`` are ignored; kept for call-site compatibility.
     """
-    base = f"{VENDOR_NAME}:incident:{incident_id}"
-    if batch:
-        return f"{base}:related:cluster:{int(batch)}"
-    if related:
-        return f"{base}:related"
-    return base
+    del related, batch
+    return f"{VENDOR_NAME}:incident:{incident_id}"
+
+
+def signal_ticket_id(incident_id: str, alert_id: str) -> str:
+    """display_id / ticket_id for a signal in an incident case."""
+    return f"{VENDOR_NAME}:incident:{incident_id}:signal:{alert_id}:test 01"
+
+
+def signal_rule_generator(rank: int, signal_name: str) -> str:
+    """Rule Generator: ``ALRT-<n> - <signal name>`` (1-based rank)."""
+    name = str(signal_name or "Vega signal").strip() or "Vega signal"
+    return f"ALRT-{int(rank)} - {name}"
 
 
 def alert_grouping_id(alert_id: str) -> str:
-    """Return the SOAR source grouping id for a standalone Vega alert."""
+    """Legacy standalone alert grouping; unused after incident-only ingest."""
     return f"{VENDOR_NAME}:alert:{alert_id}"
+
+
+def _escalation_status(record: SingleJson) -> str:
+    raw = record.get("escalation") if isinstance(record, dict) else None
+    if isinstance(raw, dict):
+        return str(raw.get("status") or "").strip().upper()
+    return ""
+
+
+def _created_at_sort_ts(record: SingleJson) -> float:
+    """Oldest-first createdAt as a unix timestamp; missing sorts last."""
+    from datetime import datetime, timezone
+
+    raw = str((record or {}).get("createdAt") or "").strip()
+    if not raw:
+        return float("inf")
+    if raw.endswith("Z"):
+        raw = raw[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return float("inf")
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.timestamp()
+
+
+def signal_rank_key(record: SingleJson) -> tuple[int, int, float]:
+    """Sort key: escalated first, then severity, then oldest createdAt."""
+    from .constants import ESCALATION_RANK
+
+    esc = ESCALATION_RANK.get(_escalation_status(record), len(ESCALATION_RANK))
+    severity = str((record or {}).get("severity") or "").strip().upper()
+    # Higher priority value first → invert so CRITICAL sorts before LOW.
+    sev_rank = -int(SEVERITY_TO_ALERT_PRIORITY.get(severity, 0))
+    return (esc, sev_rank, _created_at_sort_ts(record))
+
+
+def rank_signals(signals: list[SingleJson], limit: int) -> list[SingleJson]:
+    """Return the top ``limit`` signals for one incident case."""
+    ordered = sorted(
+        [item for item in signals if isinstance(item, dict)],
+        key=signal_rank_key,
+    )
+    cap = max(0, int(limit))
+    return ordered[:cap] if cap else []
 
 
 def _label_items(value: Any) -> list:

@@ -1,38 +1,8 @@
-"""Fetch Vega alerts/incidents, enrich, checkpoint, and return records.
+"""Fetch Vega incidents + top-N signals, enrich, checkpoint, return records.
 
-Connector flow
---------------
-1. The connector reads instance configuration (entities, lookback, filters,
-   Has Related Incidents) and constructs this pipeline.
-2. `run()` computes the time window from checkpoint + lookback/backfill.
-   If a cycle stops early to avoid connector timeout, the checkpoint stores
-   the last packaged record timestamp (not the current time) so the next
-   run continues the remaining incidents, alerts, and events.
-3. Vega Entities to Fetch and Has Related Incidents together decide what is
-   packaged. Each emitted record becomes one SOAR alert inside a case:
-
-   Incidents + Alerts
-     Yes,No: incident-only case, related alerts sharing one grouping id,
-             unrelated alerts as their own cases.
-     Yes:    incident-only case plus related alerts on that grouping id;
-             skip unrelated alerts.
-     No:     incident-only case; unrelated alerts as their own cases.
-
-   Incidents only (Yes, No, or Yes,No): incident-only cases. Do not fetch
-     related or unrelated alerts as their own cases.
-
-   Fetch Related Alert Metadata: when enabled, each incident's vega_alerts
-   field is the full getAlerts record for every nested alert id (up to 1000
-   UUIDs per request; the response is paged until those alerts return). When
-   disabled, vega_alerts is only alertId, name, and createdAt from
-   getIncidents. This does not create related-alert cases.
-
-   Alerts only
-     Yes,No: standalone cases for related alerts and unrelated alerts.
-     Yes:    standalone cases for related alerts only.
-     No:     standalone cases for unrelated alerts only.
-
-4. Records are packaged into SOAR AlertInfo objects by AlertPackager.
+One Vega incident → one SecOps case (``Vega:incident:<id>``). The connector
+emits only signal AlertInfos (ranked, capped by Max Alerts in Case). Incident
+fields and overflow counts are maintained by the Sync Alerts job.
 """
 
 from __future__ import annotations
@@ -53,21 +23,20 @@ from .constants import (
     ENTITY_TYPE_ALERT,
     ENTITY_TYPE_INCIDENT,
     INGESTED_ID_CAP,
+    MAX_ALERTS_IN_CASE_DEFAULT,
     MAX_ALERTS_PER_CASE,
     RELATED_BATCH_VERSION,
     SOAR_ALERT_TYPE_ALERT,
-    SOAR_ALERT_TYPE_INCIDENT,
     TEST_RUN_MAX_FETCH,
 )
 from .mapping import (
-    alert_grouping_id,
-    case_display_name,
     collect_label_tags,
     incident_alert_ids,
     incident_alert_stubs,
     incident_case_title,
     incident_grouping_id,
     is_graphql_alert_id,
+    rank_signals,
     record_alert_ids,
     record_display_id,
     record_id,
@@ -82,7 +51,6 @@ from .utils import (
     parse_iso_timestamp,
     parse_lookback_minutes,
     resolve_alert_filters,
-    resolve_entities,
     resolve_incident_filters,
     safe_log,
     to_iso,
@@ -97,23 +65,21 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
     def __init__(
         self,
         manager: Any,
-        entities_raw: str,
         lookback_minutes: str,
         backfill_days: str,
         alert_severities: str = "",
         alert_statuses: str = "",
         alert_verdicts: str = "",
-        has_related: str = "Yes,No",
         incident_severities: str = "",
         incident_user_statuses: str = "",
         incident_investigation_statuses: str = "",
         incident_verdicts: str = "",
-        fetch_related_alert_metadata: bool = False,
+        max_alerts_in_case: int = MAX_ALERTS_IN_CASE_DEFAULT,
+        max_events_in_alert: int | None = None,
         max_fetch: int | None = None,
         logger_instance: Any = None,
     ) -> None:
         self.manager = manager
-        self.entities = resolve_entities(entities_raw)
         self.max_fetch = max_fetch
         self.lookback_minutes = parse_lookback_minutes(lookback_minutes)
         self.backfill_days = parse_backfill_days(backfill_days)
@@ -121,9 +87,11 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             "alert_severities": alert_severities,
             "alert_statuses": alert_statuses,
             "alert_verdicts": alert_verdicts,
-            "has_related": has_related,
         })
-        self.fetch_related_alert_metadata = bool(fetch_related_alert_metadata)
+        # Always load full related-signal metadata for ranking / packaging.
+        self.fetch_related_alert_metadata = True
+        self.max_alerts_in_case = max(1, int(max_alerts_in_case or MAX_ALERTS_IN_CASE_DEFAULT))
+        self.max_events_in_alert = max_events_in_alert
         self.incident_filters = resolve_incident_filters({
             "incident_severities": incident_severities,
             "incident_user_statuses": incident_user_statuses,
@@ -292,8 +260,23 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         record["alert_events"] = events
         return record
 
+    def _event_fetch_cap(self) -> int:
+        """Max Vega alert-events to download per signal (Max Events in Alert)."""
+        from .constants import MAX_EVENTS_PER_ALERT_DEFAULT
+
+        raw = self.max_events_in_alert
+        if raw is None:
+            return MAX_EVENTS_PER_ALERT_DEFAULT
+        try:
+            return max(0, int(raw))
+        except (TypeError, ValueError):
+            return MAX_EVENTS_PER_ALERT_DEFAULT
+
     def _fetch_events_for_alerts(self, alerts: list[SingleJson]) -> dict[str, list]:
-        """Load events for these alerts. UUID ids are batched (max 10 per call)."""
+        """Load Vega alert-events for these signals. UUID ids batched (max 10)."""
+        cap = self._event_fetch_cap()
+        if cap == 0:
+            return {}
         query_ids: list[str] = []
         seen: set[str] = set()
         for alert in alerts:
@@ -310,7 +293,11 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         if not callable(batch_fetch):
             return self._fetch_events_one_by_one(alerts)
         try:
-            fetched = batch_fetch(query_ids, deadline_monotonic=self._deadline) or {}
+            fetched = batch_fetch(
+                query_ids,
+                max_records=cap,
+                deadline_monotonic=self._deadline,
+            ) or {}
             self._mark_if_truncated()
         except Exception as exc:
             self._log(
@@ -357,10 +344,18 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         if not candidates:
             record.setdefault("alert_events", [])
             return record
+        cap = self._event_fetch_cap()
+        if cap == 0:
+            record["alert_events"] = []
+            return record
         events: list = []
         for alert_id in candidates:
             try:
-                events = self.manager.get_all_alert_events(alert_id, deadline_monotonic=self._deadline)
+                events = self.manager.get_all_alert_events(
+                    alert_id,
+                    max_records=cap,
+                    deadline_monotonic=self._deadline,
+                )
                 self._mark_if_truncated()
             except Exception as exc:
                 self._log(
@@ -611,27 +606,23 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             index += batch_size
 
     def _ingest_plan(self) -> SingleJson:
-        """Map Vega Entities + Has Related Incidents to fetch/package behavior."""
-        fetch_alerts = "Alerts" in self.entities
-        fetch_incidents = "Incidents" in self.entities
-        has_related = self.alert_filters["has_related"]
-        want_related = has_related is not False
-        want_unrelated = has_related is not True
+        """Incidents only: package top-N related signals into one case each."""
         return {
-            "fetch_incidents": fetch_incidents,
-            "nest_related_alerts": fetch_incidents and fetch_alerts and want_related,
-            "standalone_related_alerts": fetch_alerts and not fetch_incidents and want_related,
-            "standalone_unrelated_alerts": fetch_alerts and want_unrelated,
-            "has_related": has_related,
+            "fetch_incidents": True,
+            "nest_related_alerts": True,
+            "standalone_related_alerts": False,
+            "standalone_unrelated_alerts": False,
+            "has_related": True,
         }
 
-    def _append_sample_incidents(
+    def _append_sample_signals(
         self,
         window: SingleJson,
         records: list[tuple[str, SingleJson]],
         remaining: int,
         incidents: list[SingleJson] | None = None,
     ) -> int:
+        """Preview packages: top signals from sample incidents (no incident alert)."""
         if remaining <= 0:
             return 0
         if incidents is None:
@@ -645,56 +636,34 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             identifier = record_id(incident, ENTITY_TYPE_INCIDENT)
             if not identifier:
                 continue
-            display_id = record_display_id(incident, ENTITY_TYPE_INCIDENT)
             incident = self._attach_vega_alerts(incident, window)
-            packaged = set_soar_meta(
-                incident,
-                soar_alert_type=SOAR_ALERT_TYPE_INCIDENT,
-                grouping_id=incident_grouping_id(identifier),
-                case_tags=collect_label_tags(incident),
-                case_title=incident_case_title(incident),
-                grouping_time=record_timestamp(incident),
-                incident_id=identifier,
-                incident_display_id=display_id,
-                incident_name=record_name(incident),
-                is_incident_case=True,
-                is_related_batch=False,
-                case_part=0,
-            )
-            records.append((ENTITY_TYPE_INCIDENT, packaged))
-            added += 1
-        return added
-
-    def _append_sample_alerts(
-        self,
-        window: SingleJson,
-        records: list[tuple[str, SingleJson]],
-        remaining: int,
-        has_related: bool,
-    ) -> int:
-        if remaining <= 0:
-            return 0
-        alerts = self.manager.get_alerts(self._alert_variables(window, has_related), remaining)
-        added = 0
-        for alert in alerts:
-            if added >= remaining:
-                break
-            if not isinstance(alert, dict):
-                continue
-            identifier = record_id(alert, ENTITY_TYPE_ALERT)
-            if not identifier:
-                continue
-            packaged = set_soar_meta(
-                alert,
-                soar_alert_type=SOAR_ALERT_TYPE_ALERT,
-                grouping_id=alert_grouping_id(identifier),
-                case_tags=collect_label_tags(alert),
-                case_title=case_display_name(alert, ENTITY_TYPE_ALERT),
-                incident_id="",
-                is_incident_case=False,
-            )
-            records.append((ENTITY_TYPE_ALERT, packaged))
-            added += 1
+            related = self._resolve_related_alerts(incident, {})
+            selected = rank_signals(related, self.max_alerts_in_case)
+            total = max(int(incident.get("alertsCount") or 0), len(related))
+            for rank, alert in enumerate(selected, start=1):
+                if added >= remaining:
+                    break
+                alert_id = record_id(alert, ENTITY_TYPE_ALERT)
+                if not alert_id:
+                    continue
+                packaged = set_soar_meta(
+                    alert,
+                    soar_alert_type=SOAR_ALERT_TYPE_ALERT,
+                    grouping_id=incident_grouping_id(identifier),
+                    case_tags=collect_label_tags(incident, alert),
+                    case_title=incident_case_title(incident),
+                    grouping_time=record_timestamp(incident),
+                    incident_id=identifier,
+                    incident_display_id=record_display_id(incident, ENTITY_TYPE_INCIDENT),
+                    incident_name=record_name(incident),
+                    incident_link=str(incident.get("link") or incident.get("href") or ""),
+                    signal_rank=rank,
+                    total_signals=total,
+                    signals_in_case=len(selected),
+                    is_incident_case=False,
+                )
+                records.append((ENTITY_TYPE_ALERT, packaged))
+                added += 1
         return added
 
     def _related_alert_count(self, incidents: list[SingleJson]) -> int:
@@ -716,50 +685,24 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         return len(seen) if seen else alerts_count_sum
 
     def preview(self, sample_limit: int = TEST_RUN_MAX_FETCH) -> SingleJson:
-        """Count matching Vega records and return sample packages without ingest.
-
-        Does not fetch timelines or alert events, and does not write a checkpoint.
-        When Fetch Related Alert Metadata is enabled, sample incidents include
-        full getAlerts rows in vega_alerts.
-        Counts follow Vega Entities to Fetch and Has Related Incidents.
-        """
+        """Count matching Vega incidents/signals and return sample packages."""
         window = compute_time_window({}, self.backfill_days, self.lookback_minutes)
-        plan = self._ingest_plan()
-        include_incidents = bool(plan["fetch_incidents"])
-        include_related = bool(plan["nest_related_alerts"] or plan["standalone_related_alerts"])
-        include_unrelated = bool(plan["standalone_unrelated_alerts"])
-        incident_count = 0
-        related_count = 0
-        unrelated_count = 0
-        incidents: list[SingleJson] = []
-        if include_incidents:
-            incidents = [
-                item for item in self.manager.get_incidents(self._incident_variables(window)) if isinstance(item, dict)
-            ]
-            incident_count = len(incidents)
-        if include_related:
-            if include_incidents:
-                related_count = self._related_alert_count(incidents)
-            else:
-                related_count = self.manager.count_alerts(self._alert_variables(self._id_lookup_window(window), True))
-        if include_unrelated:
-            unrelated_count = self.manager.count_alerts(self._alert_variables(window, False))
+        incidents = [
+            item for item in self.manager.get_incidents(self._incident_variables(window)) if isinstance(item, dict)
+        ]
+        incident_count = len(incidents)
+        related_count = self._related_alert_count(incidents)
         remaining = max(1, int(sample_limit))
         records: list[tuple[str, SingleJson]] = []
-        if include_incidents:
-            remaining -= self._append_sample_incidents(window, records, remaining, incidents=incidents)
-        if remaining and include_related:
-            remaining -= self._append_sample_alerts(window, records, remaining, True)
-        if remaining and include_unrelated:
-            self._append_sample_alerts(window, records, remaining, False)
+        self._append_sample_signals(window, records, remaining, incidents=incidents)
         return {
             "incident_count": incident_count,
             "related_alert_count": related_count,
-            "unrelated_alert_count": unrelated_count,
-            "total_alert_count": related_count + unrelated_count,
-            "include_incidents": include_incidents,
-            "include_related": include_related,
-            "include_unrelated": include_unrelated,
+            "unrelated_alert_count": 0,
+            "total_alert_count": related_count,
+            "include_incidents": True,
+            "include_related": True,
+            "include_unrelated": False,
             "records": records,
             "window": window,
         }
@@ -774,8 +717,6 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         Uses the checkpoint watermark and optional deadline so a long cycle can
         resume without skipping remaining incidents, alerts, or events.
         """
-        # 1. Configuration is already on this pipeline (entities, filters, has-related).
-        # 2. Time window: first run uses backfill; later runs resume from watermark.
         state = dict(checkpoint or {})
         ingested = list(state.get("ingested_ids") or [])
         ingested_set = set(ingested)
@@ -791,30 +732,20 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         checkpoint_ids = len(ingested_set)
         self._log(
             "info",
-            "Ingest start: entities=%s has_related=%s nest_related=%s "
-            "standalone_related=%s standalone_unrelated=%s window=%s checkpoint_ids=%s",
-            ",".join(self.entities),
-            plan["has_related"],
-            plan["nest_related_alerts"],
-            plan["standalone_related_alerts"],
-            plan["standalone_unrelated_alerts"],
+            "Ingest start: incidents+signals max_alerts_in_case=%s window=%s checkpoint_ids=%s",
+            self.max_alerts_in_case,
             {key: window.get(key) for key in ("from", "to", "updated_from", "updated_to", "origin_from")},
             checkpoint_ids,
         )
 
         try:
-            if plan["fetch_incidents"]:
-                self._ingest_incidents(
-                    window,
-                    records,
-                    ingested,
-                    ingested_set,
-                    include_related=plan["nest_related_alerts"],
-                )
-            if not self._should_stop(len(records)) and plan["standalone_related_alerts"]:
-                self._ingest_standalone_alerts(window, records, ingested, ingested_set, True, "related")
-            if not self._should_stop(len(records)) and plan["standalone_unrelated_alerts"]:
-                self._ingest_standalone_alerts(window, records, ingested, ingested_set, False, "unrelated")
+            self._ingest_incidents(
+                window,
+                records,
+                ingested,
+                ingested_set,
+                include_related=plan["nest_related_alerts"],
+            )
         except Exception as exc:
             self._incomplete = True
             self._log(

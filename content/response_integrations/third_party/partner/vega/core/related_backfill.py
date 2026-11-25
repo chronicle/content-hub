@@ -261,11 +261,13 @@ class RelatedBackfillMixin:
 
     def _new_related_alert_ids(self, incident: SingleJson, ingested_set: set[str]) -> list[str]:
         """Alert IDs from this incident that are not already in the checkpoint."""
+        incident_id = record_id(incident, ENTITY_TYPE_INCIDENT)
         ids: list[str] = []
         seen: set[str] = set()
         for stub in incident_alert_stubs(incident):
             keys = record_alert_ids(stub)
-            if any(key in ingested_set for key in keys):
+            compound = [f"{incident_id}:{key}" for key in keys if incident_id]
+            if any(key in ingested_set for key in keys) or any(key in ingested_set for key in compound):
                 continue
             for key in keys:
                 if key not in seen:

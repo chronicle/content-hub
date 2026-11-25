@@ -25,6 +25,7 @@ from .mapping import (
     index_alert_records,
     is_graphql_alert_id,
     merge_related_alert,
+    rank_signals,
     record_alert_ids,
     record_display_id,
     record_id,
@@ -99,19 +100,8 @@ class CaseEmissionMixin:
         return index_alert_records(collected)
 
     def _vega_alerts_payload(self, incident: SingleJson, window: SingleJson) -> list[SingleJson]:
-        """Related alerts for the incident vega_alerts property.
-
-        Checkbox off: getIncidents stubs (alertId, name, createdAt).
-        Checkbox on: full getAlerts records, stub when an id is missing.
-        """
+        """Full getAlerts rows for incident signals (always on)."""
         stubs = incident_alert_stubs(incident)
-        if not self.fetch_related_alert_metadata:
-            payload: list[dict] = []
-            for stub in stubs:
-                summary = incident_alert_summary(stub)
-                if summary:
-                    payload.append(summary)
-            return payload
         lookup_ids = self._metadata_lookup_ids(incident)
         index = self._fetch_alert_metadata_index(lookup_ids, window) if lookup_ids else {}
         payload: list[dict] = []
@@ -343,40 +333,37 @@ class CaseEmissionMixin:
         alert: SingleJson,
         incident: SingleJson,
         case_tags: list[str | None] = None,
-        batch: int = 1,
+        signal_rank: int = 1,
+        total_signals: int = 0,
+        signals_in_case: int = 0,
     ) -> SingleJson:
         incident_id = record_id(incident, ENTITY_TYPE_INCIDENT)
         display_id = record_display_id(incident, ENTITY_TYPE_INCIDENT)
         alert = dict(alert)
-        # Related alerts keep their own Vega labels. Empty stays empty on the
-        # event (`[]`); never copy incident labels onto a related alert's
-        # `labels` field. Incident names still go on case_tags and
-        # incident_label_tags so the related-alert case can tag from events.
-        if incident.get("timeline") and not alert.get("timeline"):
-            alert["timeline"] = incident.get("timeline")
-        description = str(alert.get("description") or "").strip()
-        summary = str(
-            incident.get("incidentSummary") or incident.get("incidentFindings") or incident.get("description") or ""
-        ).strip()
-        if summary and summary not in description:
-            alert["description"] = f"{summary}\n\n{description}".strip() if description else summary
         grouping_start, grouping_end = self._incident_time_window(incident)
+        incident_link = str(incident.get("link") or incident.get("href") or "").strip()
+        incident_summary = str(incident.get("incidentSummary") or "").strip()
         return set_soar_meta(
             alert,
             soar_alert_type=SOAR_ALERT_TYPE_ALERT,
-            grouping_id=incident_grouping_id(incident_id, related=True, batch=batch),
+            grouping_id=incident_grouping_id(incident_id),
             case_tags=list(case_tags or []),
             incident_label_tags=record_label_tags(incident),
-            case_title=incident_case_title(incident, batch=batch),
+            case_title=incident_case_title(incident),
             grouping_time=grouping_start or record_timestamp(incident),
             grouping_start=grouping_start,
             grouping_end=grouping_end,
             incident_id=incident_id,
             incident_display_id=display_id,
             incident_name=record_name(incident),
-            is_incident_case=True,
-            is_related_batch=True,
-            case_part=batch,
+            incident_link=incident_link,
+            incident_summary=incident_summary,
+            signal_rank=signal_rank,
+            total_signals=total_signals,
+            signals_in_case=signals_in_case,
+            is_incident_case=False,
+            is_related_batch=False,
+            case_part=0,
         )
 
     def _append_incident_alert(
@@ -423,16 +410,19 @@ class CaseEmissionMixin:
         case_tags: list[str | None] = None,
         apply_case_tags: bool = False,
         events_by_id: dict[str, list[SingleJson]] | None = None,
-        batch: int | None = None,
+        signal_rank: int = 1,
+        total_signals: int = 0,
+        signals_in_case: int = 0,
+        ingest_key: str | None = None,
     ) -> bool:
         if self._should_stop(len(records)):
             return False
         identifier = record_id(alert, ENTITY_TYPE_ALERT)
-        if not identifier or identifier in ingested_set:
-            return False
         incident_id = record_id(incident, ENTITY_TYPE_INCIDENT)
-        if batch is None:
-            batch = self._consume_related_batch_slot(incident_id)
+        # One Vega signal can belong to multiple incidents → unique per case.
+        key = ingest_key or (f"{incident_id}:{identifier}" if incident_id else identifier)
+        if not identifier or key in ingested_set:
+            return False
         try:
             if events_by_id is not None:
                 enriched = self._apply_prefetched_events(alert, events_by_id)
@@ -441,17 +431,24 @@ class CaseEmissionMixin:
         except Exception as exc:
             self._log(
                 "warn",
-                "Unable to enrich Vega alert %s; packaging without events: %s",
+                "Unable to enrich Vega alert %s; packaging without alert-events: %s",
                 identifier,
                 exc,
             )
             enriched = dict(alert)
             enriched.setdefault("alert_events", [])
-        packaged = self._apply_incident_context(enriched, incident, case_tags=case_tags, batch=batch)
+        packaged = self._apply_incident_context(
+            enriched,
+            incident,
+            case_tags=case_tags,
+            signal_rank=signal_rank,
+            total_signals=total_signals,
+            signals_in_case=signals_in_case,
+        )
         if apply_case_tags:
             packaged = set_soar_meta(packaged, apply_case_tags=True)
         records.append((ENTITY_TYPE_ALERT, packaged))
-        self._mark_ingested(ingested, ingested_set, identifier)
+        self._mark_ingested(ingested, ingested_set, key)
         self._note_progress(packaged)
         return True
 
@@ -507,30 +504,16 @@ class CaseEmissionMixin:
         ingested: list[str],
         ingested_set: set[str],
     ) -> None:
-        """Incident case, then every related alert.
+        """Emit top-N signal AlertInfos for one incident (one SecOps case).
 
-        Batch numbers and ``Vega:incident:<id>:related:batch:<N>`` grouping
-        keys advance in ingest order (up to 90 alerts per batch) and persist
-        in the checkpoint so batch numbers are not reused across runs.
+        No synthetic incident alert. Overflow signals stay in Vega; SyncAlerts
+        writes ``"{total} signals, {N} in case"`` into case insight.
         """
         identifier = record_id(incident, ENTITY_TYPE_INCIDENT)
         display_id = record_display_id(incident, ENTITY_TYPE_INCIDENT)
         label = (
             f"{display_id} ({identifier})" if display_id and display_id != identifier else (identifier or display_id)
         )
-        self._append_incident_alert(
-            incident,
-            records,
-            ingested,
-            ingested_set,
-            case_tags=collect_label_tags(incident),
-        )
-        if not related:
-            return
-        ordered = self._ordered_stubs(incident)
-        from .IngestionPipeline import MAX_ALERTS_PER_CASE
-
-        case_size = max(1, int(MAX_ALERTS_PER_CASE))
         resolved_index: dict[str, dict] = {}
         for alert in related or []:
             if not isinstance(alert, dict):
@@ -539,8 +522,15 @@ class CaseEmissionMixin:
                 resolved_index.setdefault(key, alert)
         queue: list[dict] = []
         known: set[str] = set()
-        for stub in self._pending_stubs(incident, ingested_set):
+        for stub in incident_alert_stubs(incident):
             keys = record_alert_ids(stub)
+            if not keys:
+                continue
+            ingest_key = f"{identifier}:{keys[0]}" if identifier else keys[0]
+            if ingest_key in ingested_set or any(key in ingested_set for key in keys):
+                continue
+            if any(key in known for key in keys):
+                continue
             known.update(keys)
             full = None
             for key in keys:
@@ -550,48 +540,51 @@ class CaseEmissionMixin:
             queue.append(full or stub)
         for alert in related or []:
             keys = record_alert_ids(alert)
-            if not keys or any(key in known or key in ingested_set for key in keys):
+            if not keys:
+                continue
+            ingest_key = f"{identifier}:{keys[0]}" if identifier else keys[0]
+            if ingest_key in ingested_set or any(key in known or key in ingested_set for key in keys):
                 continue
             known.update(keys)
             queue.append(alert)
-        if not ordered and not queue:
+        total_signals = 0
+        try:
+            total_signals = max(int(incident.get("alertsCount") or 0), len(queue))
+        except (TypeError, ValueError):
+            total_signals = len(queue)
+        if not queue:
             self._log(
                 "info",
-                "Vega incident %s: no related alert ids were loaded, so no related-alert cases will be created.",
+                "Vega incident %s: no signals to package (total_signals=%s).",
                 label,
+                total_signals,
             )
+            # Mark incident visited so we do not re-enrich forever.
+            if identifier:
+                self._mark_ingested(ingested, ingested_set, f"incident:{identifier}")
             return
-        already_sent = max(len(ordered) - len(self._pending_stubs(incident, ingested_set)), 0)
-        to_package = len(queue)
-        try:
-            next_batch = max(int(self._next_related_batch.get(identifier, 1)), 1)
-        except (TypeError, ValueError):
-            next_batch = 1
+        case_size = max(1, int(getattr(self, "max_alerts_in_case", 30)))
+        selected = rank_signals(queue, case_size)
+        signals_in_case = len(selected)
         self._log(
             "info",
-            "Step 6 — %s: %s related alert(s) in batches of %s. "
-            "%s already checkpointed. This run adds all %s "
-            "(starting at batch %s). Each batch uses its own source grouping "
-            "identifier.",
+            "Step 6 — %s: %s signal(s) total, packaging top %s "
+            "(Max Alerts in Case=%s). Ranking: ESCALATED, severity, oldest.",
             label,
-            len(ordered) or to_package,
+            total_signals,
+            signals_in_case,
             case_size,
-            already_sent,
-            to_package,
-            next_batch,
         )
-        if not queue:
-            return
-        case_tags = collect_label_tags(incident, *queue)
+        case_tags = collect_label_tags(incident, *selected)
         event_batch = max(1, int(ALERT_EVENTS_ID_BATCH))
+        packaged = 0
         offset = 0
         stopped_early = False
-        packaged = 0
-        while offset < len(queue):
+        while offset < len(selected):
             if self._should_stop(len(records)):
                 stopped_early = True
                 break
-            window = queue[offset : offset + event_batch]
+            window = selected[offset : offset + event_batch]
             pending = list(window)
             remaining = self._remaining(len(records))
             if remaining is not None:
@@ -599,6 +592,9 @@ class CaseEmissionMixin:
             events_by_id = self._fetch_events_for_alerts(pending) if pending else {}
             halt = False
             for batch_index, alert in enumerate(window):
+                rank = offset + batch_index + 1
+                alert_id = record_id(alert, ENTITY_TYPE_ALERT)
+                ingest_key = f"{identifier}:{alert_id}" if identifier and alert_id else alert_id
                 if self._append_related_alert(
                     alert,
                     incident,
@@ -606,8 +602,12 @@ class CaseEmissionMixin:
                     ingested,
                     ingested_set,
                     case_tags=case_tags,
-                    apply_case_tags=(offset + batch_index) == 0,
+                    apply_case_tags=rank == 1,
                     events_by_id=events_by_id,
+                    signal_rank=rank,
+                    total_signals=total_signals,
+                    signals_in_case=signals_in_case,
+                    ingest_key=ingest_key,
                 ):
                     packaged += 1
                 elif self._should_stop(len(records)):
@@ -617,31 +617,21 @@ class CaseEmissionMixin:
             if halt:
                 break
             offset += event_batch
-        still_waiting = max(to_package - packaged, 0)
-        if still_waiting and stopped_early:
-            self._log(
-                "info",
-                "Step 6 — %s: added %s related alert(s) to this package. "
-                "%s are still waiting because the connector time limit was "
-                "reached. The next run will fetch and package those.",
-                label,
-                packaged,
-                still_waiting,
-            )
-        elif still_waiting:
-            self._log(
-                "warn",
-                "Step 6 — %s: added %s related alert(s) to this package. %s were not packaged.",
-                label,
-                packaged,
-                still_waiting,
-            )
-        else:
-            self._log(
-                "info",
-                "Step 6 — %s: added %s related alert(s) to this package. "
-                "None are left waiting in the connector. SecOps has not "
-                "created the cases yet.",
-                label,
-                packaged,
-            )
+        overflow = max(total_signals - packaged, 0)
+        self._log(
+            "info",
+            "Step 6 — %s: added %s signal alert(s)%s.",
+            label,
+            packaged,
+            (
+                f"; {overflow} past the cap stay in Vega only"
+                if overflow and not stopped_early
+                else (
+                    f"; stopped early with {max(signals_in_case - packaged, 0)} still waiting"
+                    if stopped_early
+                    else ""
+                )
+            ),
+        )
+        if identifier and not stopped_early:
+            self._mark_ingested(ingested, ingested_set, f"incident:{identifier}")

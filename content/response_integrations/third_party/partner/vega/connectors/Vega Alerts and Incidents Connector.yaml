@@ -31,21 +31,6 @@ parameters:
     is_mandatory: false
     is_advanced: false
     mode: script
--   name: Vega Entities to Fetch
-    default_value: Alerts,Incidents
-    type: string
-    description: 'Possible Values: Alerts, Incidents (singular Alert or Incident is
-        also accepted). Combined with Has Related Incidents: Incidents+Alerts creates
-        one SOAR case for the Vega incident and groups related Vega alerts by one
-        source grouping identifier when Yes is selected. SecOps fills that case
-        up to Max. alerts grouped into a case, then starts another. Unrelated
-        alerts are one SOAR case each when No is selected. Incidents only creates
-        Vega Incident cases. Alerts only
-        creates one case per Vega alert. At least one is required. Unsupported values
-        cause a configuration error.'
-    is_mandatory: true
-    is_advanced: false
-    mode: script
 -   name: Fetch Lookback Minutes
     default_value: '5'
     type: string
@@ -60,6 +45,31 @@ parameters:
     type: string
     description: Days to backfill on the first run only. Enter an integer from 0 to
         365 (0 starts from today). Invalid values cause a configuration error.
+    is_mandatory: true
+    is_advanced: false
+    mode: script
+-   name: Max Alerts in Case
+    default_value: '30'
+    type: string
+    description: 'Maximum number of Vega signals (alerts) packaged into one SecOps
+        case per incident. Enter an integer from 1 to 90. Default is 30. Ranking:
+        ESCALATED first, then severity (CRITICAL to LOW), then oldest createdAt.
+        Signals past this cap are not sent as alerts; the Sync Alerts job records
+        the overflow in case insight (for example "312 signals, 30 in case") and
+        links to Vega. Please keep this value the same as the value in the Alerts
+        Grouping setting (max alerts grouped into a case) so SecOps does not open
+        multiple cases for the same Vega incident. Invalid values cause a configuration
+        error.'
+    is_mandatory: true
+    is_advanced: false
+    mode: script
+-   name: Max Events in Alert
+    default_value: '50'
+    type: string
+    description: Maximum number of Vega alert-events attached as SecOps events on
+        each signal alert. The Vega alert itself is not written as a SecOps event.
+        Enter an integer from 0 to 200. Default is 50. 0 attaches no events. Invalid
+        values cause a configuration error.
     is_mandatory: true
     is_advanced: false
     mode: script
@@ -86,19 +96,6 @@ parameters:
         Empty = all. Unsupported values cause a configuration error.'
     is_mandatory: false
     is_advanced: true
-    mode: script
--   name: Has Related Incidents
-    default_value: Yes,No
-    type: string
-    description: 'Possible Values: Yes, No. Applies when Alerts are selected. Yes
-        loads related Vega alerts in chunks of up to 90 per source grouping
-        identifier (Vega:incident:<id>:related:batch:<N>, not on the incident
-        case) when Incidents is also selected, or as one case per alert when only
-        Alerts is selected. No loads unrelated Vega alerts as one SOAR case each
-        and does not fetch related alerts. Select both to run both flows. At least
-        one is required. Unsupported values cause a configuration error.'
-    is_mandatory: true
-    is_advanced: false
     mode: script
 -   name: Incident Severities to Fetch
     default_value: LOW,MEDIUM,HIGH,CRITICAL
@@ -132,33 +129,6 @@ parameters:
     is_mandatory: false
     is_advanced: true
     mode: script
--   name: Fetch Related Alert Metadata
-    default_value: 'true'
-    type: boolean
-    description: When enabled, the incident event field vega_alerts is the full
-        getAlerts metadata for related alerts. Alert UUIDs are sent in batches
-        of up to 1000 per request, and each response is paged until those alerts
-        are returned. When disabled, vega_alerts is only alertId, name, and
-        createdAt from getIncidents. vega_related_alert_ids lists those ids.
-        The event field is not named alerts, because SecOps reserves that name.
-        This does not create extra SOAR cases.
-    is_mandatory: false
-    is_advanced: true
-    mode: script
--   name: Sync Case Close to Vega
-    default_value: 'true'
-    type: boolean
-    description: When true, closing a SOAR case sets Vega alert status or incident
-        user status to RESOLVED on the next connector run. Only cases that are
-        actually closed in SecOps are synced. Creating or updating a case during
-        ingest does not resolve Vega. The first run after enable only sets a
-        baseline and does not send historical closes. An incident-only case
-        resolves that Vega incident. A related-alert case or unrelated alert
-        case resolves those Vega alerts. Closing the related-alert case does not
-        resolve the Vega incident.
-    is_mandatory: false
-    is_advanced: true
-    mode: script
 -   name: DeviceProductField
     default_value: product
     type: string
@@ -182,15 +152,18 @@ parameters:
         process. This is not the schedule. Use Run Every to control how often a run
         starts. The connector stops before this limit, packages what it fetched,
         and saves the last packaged record timestamp as the watermark. The next
-        run continues from that watermark so remaining incidents, alerts, and
-        events are not skipped.
+        run continues from that watermark so remaining incidents and signals are
+        not skipped.
     is_mandatory: true
     is_advanced: false
     mode: regular
-description: 'Ingests Vega incidents and alerts as SOAR cases. Incidents become
-    their own cases. Related alerts go into separate grouped cases. Unrelated alerts become one case each. Add an Alerts Grouping
-    rule for Product Vega, Group By Source Grouping Identifier, above All alerts,
-    and set Case Name to Rule Generator.'
+description: 'Ingests Vega incidents as one SecOps case each. Creates signal alerts
+    only (no incident alert). All signals share source grouping identifier
+    Vega:incident:<incident id>. Add an Alerts Grouping rule for Product Vega,
+    Group By Source Grouping Identifier, above All alerts, and set Case Name to
+    Rule Generator. Keep Max Alerts in Case equal to the grouping max so the case
+    never splits. Use the Sync Alerts job for case title, insight, tags, comments,
+    and close/reopen.'
 integration: Vega
 documentation_link: https://vega.io/
 rules: []
