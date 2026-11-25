@@ -125,12 +125,16 @@ def incident_ids_from_soar_alert(alert: Any) -> list[str]:
     for candidate in (
         getattr(alert, "ticket_id", None),
         getattr(alert, "display_id", None),
+        getattr(alert, "alert_group_identifier", None),
+        getattr(alert, "source_grouping_identifier", None),
         getattr(alert, "identifier", None),
         props.get("ticket_id"),
         props.get("ticketId"),
         props.get("SourceGroupingIdentifier"),
         props.get("source_grouping_identifier"),
         props.get("sourceGroupingIdentifier"),
+        props.get("alertGroupIdentifier"),
+        props.get("alert_group_identifier"),
     ):
         _add(extract_incident_id_from_ticket(str(candidate or "")))
     plain = str(props.get("vega_incident_id") or "").strip()

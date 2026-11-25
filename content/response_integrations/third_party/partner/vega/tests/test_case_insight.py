@@ -53,3 +53,18 @@ def test_incident_ids_from_soar_alert_parses_json_props() -> None:
         ),
     )
     assert incident_ids_from_soar_alert(alert) == ["inc-42"]
+
+
+def test_incident_ids_from_soar_alert_reads_alert_group_identifier() -> None:
+    # SecOps AlertCard exposes connector source_grouping_identifier here.
+    alert = SimpleNamespace(
+        ticket_id=None,
+        display_id=None,
+        identifier="soar-guid-not-vega",
+        alert_group_identifier="Vega:incident:inc-99",
+        source_grouping_identifier=None,
+        device_vendor="Vega",
+        device_product="Vega",
+        additional_properties=None,
+    )
+    assert incident_ids_from_soar_alert(alert) == ["inc-99"]

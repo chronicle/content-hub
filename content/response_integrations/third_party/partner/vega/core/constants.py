@@ -64,9 +64,9 @@ MAX_EVENTS_PER_ALERT_MAX = 200
 MAX_EVENTS_PER_ALERT = MAX_EVENTS_PER_ALERT_MAX
 NESTED_RELATED_KEY = "nested_related_alerts"
 SYNC_RESOLVED_STATUS = "RESOLVED"
-# SyncAlerts job (case title, insight, comments, close/reopen).
-SYNC_ALERTS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Sync Alerts"
-SYNC_ALERTS_IDENTIFIER = "vega_sync_alerts"
+# Jobs
+SYNC_ALERTS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Sync Alerts"
+SYNC_ALERTS_IDENTIFIER: str = "Vega_SyncAlerts"
 SYNC_ALERTS_TAG = "Vega"
 CASES_SYNC_LIMIT = 50
 # Escalation status rank for top-N signal selection (lower = first).

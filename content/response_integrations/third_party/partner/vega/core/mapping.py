@@ -214,7 +214,7 @@ def incident_grouping_id(incident_id: str, related: bool = False, batch: int | N
 
 def signal_ticket_id(incident_id: str, alert_id: str) -> str:
     """display_id / ticket_id for a signal in an incident case."""
-    return f"{VENDOR_NAME}:incident:{incident_id}:signal:{alert_id}:test 01"
+    return f"{VENDOR_NAME}:incident:{incident_id}:signal:{alert_id}:test 03"
 
 
 def signal_rule_generator(rank: int, signal_name: str) -> str:

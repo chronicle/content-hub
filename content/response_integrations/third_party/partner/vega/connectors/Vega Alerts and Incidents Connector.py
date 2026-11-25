@@ -2,9 +2,8 @@
 Vega Alerts and Incidents Connector.
 
 Fetches Vega incidents and packages the top-N related signals as SOAR alerts
-that share ``Vega:incident:<id>`` and the ``Vega`` case tag. Case title,
-description, insight, tags, comments, and close/reopen are maintained by the
-Sync Alerts job (not this connector).
+that share ``Vega:incident:<id>``. Case description (from incidentSummary) is
+maintained by the Sync Alerts job (not this connector).
 """
 
 from __future__ import annotations
