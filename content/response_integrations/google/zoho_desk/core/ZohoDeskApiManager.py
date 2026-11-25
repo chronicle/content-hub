@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import datetime
@@ -8,11 +22,11 @@ import requests
 from TIPCommon.base.interfaces import Apiable, AuthenticatedSession, ScriptLogger
 from TIPCommon.types import SingleJson
 
-from zoho_desk.core.UtilsManager import validate_response
-from zoho_desk.core.ZohoDeskExceptions import ZohoDeskException
-from zoho_desk.core.ZohoDeskParser import ZohoDeskParser
-from zoho_desk.core.constants import ENDPOINTS, ERROR_KEY, FIND_CONTACT_CHAR_LIMIT
-from zoho_desk.core.datamodels import IntegrationParameters, Contact
+from .UtilsManager import validate_response
+from .ZohoDeskExceptions import ZohoDeskException
+from .ZohoDeskParser import ZohoDeskParser
+from .constants import ENDPOINTS, ERROR_KEY, FIND_CONTACT_CHAR_LIMIT
+from .datamodels import IntegrationParameters, Contact
 
 
 class ZohoDeskApiClient(Apiable):

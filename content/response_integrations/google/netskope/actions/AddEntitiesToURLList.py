@@ -1,10 +1,24 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 from typing import Any
 
-from netskope.core.datamodels import AddEntitiesResult
-from netskope.core.NetskopeManagerFactory import NetskopeManagerFactory
-from netskope.core.NetskopeManagerV2 import NetskopeManagerV2, NetskopeManagerV2Error
+from ..core.datamodels import AddEntitiesResult
+from ..core.NetskopeManagerFactory import NetskopeManagerFactory
+from ..core.NetskopeManagerV2 import NetskopeManagerV2, NetskopeManagerV2Error
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
