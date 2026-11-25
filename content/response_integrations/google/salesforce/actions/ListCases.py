@@ -17,7 +17,9 @@ from __future__ import annotations
 from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from TIPCommon.extraction import extract_action_param
 
+from ..core.constants import DEFAULT_MAX_RECORDS
 from ..core.SalesforceManager import SalesforceManager, SalesforceManagerError, parse_max_records
 
 
@@ -32,7 +34,16 @@ def main() -> None:
     verify_ssl = configurations.get("Verify SSL", "False").lower() == "true"
 
     try:
-        max_records = parse_max_records(siemplify.parameters.get("Max Records To Return"))
+        max_records = parse_max_records(
+            extract_action_param(
+                siemplify,
+                param_name="Max Records To Return",
+                default_value=str(DEFAULT_MAX_RECORDS),
+                input_type=str,
+                is_mandatory=False,
+                print_value=True,
+            )
+        )
     except SalesforceManagerError as err:
         siemplify.end(f'Error executing action "List Cases". Reason: {err}', "false", EXECUTION_STATE_FAILED)
         return
