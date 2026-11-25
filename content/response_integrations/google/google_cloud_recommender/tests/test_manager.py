@@ -1,20 +1,35 @@
-from collections import namedtuple
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
 import json
-import os
+from collections import namedtuple
+from typing import TYPE_CHECKING
 
 import pytest
-from pytest_mock import MockerFixture
-
-from TIPCommon.types import JSON
 
 from google_cloud_recommender.core import authentication
+from google_cloud_recommender.core.exceptions import GoogleCloudRecommenderError
 from google_cloud_recommender.core.GoogleCloudRecommenderManager import (
-    GoogleCloudRecommenderManager
+    GoogleCloudRecommenderManager,
 )
-from google_cloud_recommender.core.exceptions import (
-    GoogleCloudRecommenderError,
-)
-from integration_testing.logger import Logger
+from google_cloud_recommender.tests.common import CONFIG_PATH, TESTS_DIR
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
+    from TIPCommon.types import JSON
 
 GoogleAPIResponse = namedtuple(
     'GoogleAPIResponse',
@@ -50,7 +65,7 @@ class CustomReponse:
         data: Property that gets or sets the JSON data
     """
 
-    def __init__(self,initial_data: JSON = None) -> None:
+    def __init__(self, initial_data: JSON | None = None) -> None:
         """Consturcts a new CustomReponse object.
 
         Args:
@@ -69,7 +84,7 @@ class CustomReponse:
         return self._result
 
     @data.setter
-    def data(self, json_data: JSON):
+    def data(self, json_data: JSON) -> None:
         """Sets the JSON data
 
         Args:
@@ -79,8 +94,9 @@ class CustomReponse:
 
 
 @pytest.fixture
-def recommender_manager(mocker):
-    with open("config.json", "r", encoding="utf-8") as config_file:
+def recommender_manager(mocker: MockerFixture) -> GoogleCloudRecommenderManager:
+    """Create a GoogleCloudRecommenderManager instance with mocked authentication."""
+    with CONFIG_PATH.open(encoding="utf-8") as config_file:
         config = json.load(config_file)
 
     api_root = config.get("API Root")
@@ -98,18 +114,16 @@ def recommender_manager(mocker):
         return_value=mocker.Mock(),
     )
 
-    manager = GoogleCloudRecommenderManager(
+    return GoogleCloudRecommenderManager(
         api_root=api_root,
         organization_id=organization_id,
         project_id=project_id,
         quota_project_id=quota_project_id,
         workload_identity_email=workload_identity_email,
-        siemplify_logger=Logger(),
+        siemplify_logger=mocker.MagicMock(),
         user_service_account=user_service_account,
-        verify_ssl=verify_ssl
+        verify_ssl=verify_ssl,
     )
-
-    return manager
 
 class TestGoogleCloudRecommender:
     """
@@ -437,7 +451,5 @@ class TestGoogleCloudRecommender:
         - json.JSONDecoderError: If the file content is not valid JSON.
         """
 
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        with open(os.path.join(dir_path, file_name), 'r') as f:
-            response = json.load(f)
-        return response
+        with (TESTS_DIR / file_name).open(encoding="utf-8") as f:
+            return json.load(f)
