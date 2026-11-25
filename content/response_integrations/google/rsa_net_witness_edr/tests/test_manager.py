@@ -1,23 +1,31 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import json
-import os
 import unittest
 from unittest.mock import Mock, patch
 
 import pytest
 
+from rsa_net_witness_edr.core.RSAExceptions import RSAError
 from rsa_net_witness_edr.core.RSAManager import RSAManager
-from rsa_net_witness_edr.core.RSAExceptions import (
-    RSAError,
-)
+from rsa_net_witness_edr.tests.common import TESTS_DIR
 
 # Constants
-MOCK_DATA = json.load(
-    open(
-        os.path.join(os.path.dirname(__file__), "mock_data.json")
-    )
-)
+MOCK_DATA = json.loads((TESTS_DIR / "mock_data.json").read_text(encoding="utf-8"))
 
 TEST_IP_ADDRESS = "172.30.203.155"
 TEST_HOSTNAME = "RSA-HOST02"
