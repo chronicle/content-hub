@@ -286,7 +286,7 @@ def _run_ingest(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) 
     alerts = create_alerts(records, siemplify, siemplify.LOGGER, max_events_in_alert=max_events)
     siemplify.LOGGER.info(
         f"Step 7 — handing {len(alerts)} signal alert package(s) to SecOps. "
-        "Incident fields are maintained by the Sync Alerts job. "
+        "Incident description/insight are maintained by the Sync Alerts job. "
         "SecOps creates/groups cases after this handoff."
     )
     if summary.get("incomplete"):

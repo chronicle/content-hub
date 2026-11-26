@@ -1,4 +1,4 @@
-"""Sync Alerts — populate SecOps case description from Vega incidentSummary."""
+"""Sync Alerts — SecOps case description + insight from Vega incident."""
 
 from __future__ import annotations
 
@@ -7,20 +7,22 @@ from typing import TYPE_CHECKING, Any
 from TIPCommon.base.job.base_sync_job import BaseSyncJob
 from TIPCommon.base.job.job_case import JobCase
 from TIPCommon.rest.custom_types import HttpMethod
-from TIPCommon.rest.soar_api import change_case_description, validate_response
+from TIPCommon.rest.soar_api import change_case_description, get_case_insights, validate_response
 from TIPCommon.rest.soar_platform_clients.api_client_factory import get_soar_client
 from TIPCommon.rest.soar_platform_clients.one_platform_soar_api import OnePlatformSoarApi
 
 from ..core import constants
-from ..core.case_insight import incident_ids_from_soar_alert
+from ..core.case_insight import build_incident_insight, incident_ids_from_soar_alert
 from ..core.VegaManager import VegaClientConfig, VegaManager
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
+_INSIGHT_TITLE = "Vega Incident"
+
 
 class SyncAlerts(BaseSyncJob[VegaManager]):
-    """Write Vega incidentSummary onto tagged SecOps cases as case description."""
+    """Write Vega incidentSummary (description) and incident fields (insight JSON)."""
 
     def __init__(self) -> None:
         super().__init__(
@@ -94,7 +96,13 @@ class SyncAlerts(BaseSyncJob[VegaManager]):
                 break
         if not incident:
             return
+        signals_in_case = len(job_case.case_detail.alerts or [])
+        try:
+            total_signals = int(incident.get("alertsCount") or signals_in_case)
+        except (TypeError, ValueError):
+            total_signals = signals_in_case
         self._sync_case_description(job_case, incident)
+        self._sync_case_insight(job_case, incident, signals_in_case, total_signals)
 
     def _update_case_description(self, case_id: int, description: str) -> None:
         client = get_soar_client(self.soar_job)
@@ -122,6 +130,44 @@ class SyncAlerts(BaseSyncJob[VegaManager]):
             self.logger.info(f"Updated description on case {case_id}.")
         except Exception as exc:
             self.logger.warn(f"Unable to set description on case {case_id}: {exc}")
+
+    def _sync_case_insight(
+        self,
+        job_case: JobCase,
+        incident: SingleJson,
+        signals_in_case: int,
+        total_signals: int,
+    ) -> None:
+        insight = build_incident_insight(
+            incident,
+            signals_in_case=signals_in_case,
+            total_signals=total_signals,
+        )
+        case_id = int(job_case.case_detail.id_)
+        alerts = list(job_case.case_detail.alerts or [])
+        # Pin to one alert — None fans the insight out under every alert on the case.
+        alert_identifier = getattr(alerts[0], "identifier", None) if alerts else None
+        try:
+            from soar_sdk.SiemplifyDataModel import InsightSeverity, InsightType
+
+            for item in get_case_insights(self.soar_job, case_id) or []:
+                title = item.get("title") if isinstance(item, dict) else getattr(item, "title", None)
+                if title == _INSIGHT_TITLE:
+                    self.logger.info(f"Vega insight already on case {case_id}; skipping.")
+                    return
+            self.soar_job.create_case_insight_internal(
+                str(case_id),
+                alert_identifier,
+                constants.INTEGRATION_NAME,
+                _INSIGHT_TITLE,
+                insight,
+                "",
+                InsightSeverity.INFO,
+                InsightType.General,
+            )
+            self.logger.info(f"Wrote Vega insight on case {case_id}.")
+        except Exception as exc:
+            self.logger.warn(f"Unable to write insight on case {case_id}: {exc}")
 
     def is_alert_and_product_closed(self, job_case: JobCase, product: Any) -> bool:
         return False

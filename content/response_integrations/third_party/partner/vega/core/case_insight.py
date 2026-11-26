@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -24,12 +25,18 @@ _INSIGHT_KEYS = (
     "incidentFindings",
     "createdAt",
     "lastUpdated",
-    "link",
-    "href",
     "alertsCount",
     "dataSources",
     "assets",
 )
+
+
+def _insight_value(value: Any) -> str:
+    if isinstance(value, (dict, list)):
+        text = json.dumps(value, ensure_ascii=False, default=str)
+    else:
+        text = str(value)
+    return html.escape(text)
 
 
 def build_incident_insight(
@@ -38,17 +45,11 @@ def build_incident_insight(
     signals_in_case: int,
     total_signals: int | None = None,
 ) -> str:
-    """JSON key/value insight string for a Vega incident case.
+    """HTML key/value insight for a Vega incident case (rendered on case wall).
 
     Includes overflow summary like ``"312 signals, 30 in case"``.
     """
-    payload: dict[str, Any] = {}
     record = incident if isinstance(incident, dict) else {}
-    for key in _INSIGHT_KEYS:
-        value = record.get(key)
-        if value in (None, "", [], {}):
-            continue
-        payload[key] = value
     total = total_signals
     if total is None:
         try:
@@ -57,13 +58,27 @@ def build_incident_insight(
             total = 0
     total = max(int(total or 0), int(signals_in_case or 0))
     in_case = max(0, int(signals_in_case or 0))
-    payload["signals_summary"] = f"{total} signals, {in_case} in case"
-    payload["signals_in_case"] = in_case
-    payload["signals_total"] = total
+
+    rows: list[tuple[str, Any]] = []
+    for key in _INSIGHT_KEYS:
+        value = record.get(key)
+        if value in (None, "", [], {}):
+            continue
+        rows.append((key, value))
+    rows.append(("signals_summary", f"{total} signals, {in_case} in case"))
+    rows.append(("signals_in_case", in_case))
+    rows.append(("signals_total", total))
+
+    body = "".join(
+        f"<strong>{html.escape(key)}: </strong>{_insight_value(value)}<br/>" for key, value in rows
+    )
     link = str(record.get("link") or record.get("href") or "").strip()
     if link:
-        payload["vega_incident_link"] = link
-    return json.dumps(payload, ensure_ascii=False, default=str)
+        safe_link = html.escape(link, quote=True)
+        body += (
+            f"<p>Open in Vega: <a href='{safe_link}' target='_blank'>{html.escape(link)}</a></p>"
+        )
+    return f"<p>{body}</p>"
 
 
 def extract_incident_id_from_ticket(ticket_id: str) -> str:

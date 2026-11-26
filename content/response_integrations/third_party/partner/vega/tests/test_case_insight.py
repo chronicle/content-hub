@@ -18,24 +18,22 @@ def test_extract_incident_id_from_ticket() -> None:
 
 
 def test_build_incident_insight_includes_overflow_summary() -> None:
-    payload = json.loads(
-        build_incident_insight(
-            {
-                "id": "inc-1",
-                "name": "Campaign",
-                "severity": "HIGH",
-                "incidentSummary": "summary goes to case description",
-                "alertsCount": 312,
-                "link": "https://vega.io/incidents/inc-1",
-            },
-            signals_in_case=30,
-        )
+    insight = build_incident_insight(
+        {
+            "id": "inc-1",
+            "name": "Campaign",
+            "severity": "HIGH",
+            "incidentSummary": "summary goes to case description",
+            "alertsCount": 312,
+            "link": "https://vega.io/incidents/inc-1",
+        },
+        signals_in_case=30,
     )
-    assert payload["signals_summary"] == "312 signals, 30 in case"
-    assert payload["signals_in_case"] == 30
-    assert payload["name"] == "Campaign"
-    assert payload["vega_incident_link"] == "https://vega.io/incidents/inc-1"
-    assert "incidentSummary" not in payload
+    assert "<strong>name: </strong>Campaign" in insight
+    assert "<strong>signals_summary: </strong>312 signals, 30 in case" in insight
+    assert "https://vega.io/incidents/inc-1" in insight
+    assert "incidentSummary" not in insight
+    assert not insight.strip().startswith("{")
 
 
 def test_incident_ids_from_soar_alert_parses_json_props() -> None:
