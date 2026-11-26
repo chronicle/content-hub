@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 
 from TIPCommon.base.job.base_sync_job import BaseSyncJob
 from TIPCommon.base.job.job_case import JobCase, SyncMetadata
-from TIPCommon.data_models import CaseDataStatus
+from TIPCommon.data_models import AlertCard, CaseDataStatus
 from TIPCommon.rest.soar_api import get_case_overview_details
 from TIPCommon.soar_ops import get_users_profile_cards_with_pagination
 from TIPCommon.validation import ParameterValidator
@@ -32,10 +32,43 @@ from ..core.api_client import WizApiClient
 from ..core.datamodels import WizIncidentComment
 
 if TYPE_CHECKING:
-    from TIPCommon.data_models import AlertCard
     from TIPCommon.types import SingleJson
 
     from ..core.datamodels import Issue
+
+
+_orig_alert_card_from_json = AlertCard.from_json
+
+
+def _alert_card_from_json_with_source_grouping_id(
+    alert_card_json: SingleJson,
+) -> AlertCard:
+    alert_card: AlertCard = _orig_alert_card_from_json(alert_card_json)
+    if isinstance(alert_card_json, dict) and not getattr(
+        alert_card, "source_grouping_identifier", None
+    ):
+        alert_card.source_grouping_identifier = alert_card_json.get(
+            constants.SOURCE_GROUPING_IDENTIFIER_CAMEL_KEY
+        ) or alert_card_json.get(constants.SOURCE_GROUPING_IDENTIFIER_KEY)
+    return alert_card
+
+
+AlertCard.from_json = _alert_card_from_json_with_source_grouping_id
+
+
+def _get_threat_id_from_fields_groups(alert: AlertCard) -> str | None:
+    for group in getattr(alert, "fields_groups", None) or []:
+        for item in getattr(group, "items", None) or []:
+            if (
+                getattr(item, "original_name", None)
+                in constants.ALERT_THREAT_ID_FIELD_GROUP_KEYS
+                or getattr(item, "name", None)
+                in constants.ALERT_THREAT_ID_FIELD_GROUP_KEYS
+            ):
+                val: Any = getattr(item, "value", None)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+    return None
 
 
 class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
@@ -135,21 +168,24 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         return threat_id
 
     def _get_wiz_threat_id(self, alert: AlertCard) -> str | None:
-        if not alert.additional_properties:
-            return None
-        try:
-            props: SingleJson = json.loads(alert.additional_properties)
-            if isinstance(props, dict):
-                val: Any = (
-                    props.get("security_result_threat_id")
-                    or props.get("SourceGroupingIdentifier")
-                    or props.get("sourceGroupingIdentifier")
-                )
-                if val:
-                    return str(val)
-        except (json.JSONDecodeError, TypeError):
-            self.logger.exception("Failed to parse additional_properties.")
-        return None
+        if alert.additional_properties:
+            try:
+                props: SingleJson = json.loads(alert.additional_properties)
+                if isinstance(props, dict):
+                    for key in constants.ALERT_THREAT_ID_PROPS_KEYS:
+                        val: Any = props.get(key)
+                        if val is not None and str(val).strip():
+                            return str(val).strip()
+            except (json.JSONDecodeError, TypeError):
+                self.logger.exception("Failed to parse additional_properties.")
+
+        source_grouping_id: Any = getattr(
+            alert, "source_grouping_identifier", None
+        ) or getattr(alert, constants.SOURCE_GROUPING_IDENTIFIER_KEY, None)
+        if isinstance(source_grouping_id, str) and source_grouping_id.strip():
+            return source_grouping_id.strip()
+
+        return _get_threat_id_from_fields_groups(alert)
 
     def _fetch_and_add_threats_to_case(self, job_case: JobCase) -> None:
         threat_ids: list[str] = self._extract_product_ids_from_case(job_case)
