@@ -333,6 +333,7 @@ def init_python_project(project_path: Path) -> None:
         "init",
         "--no-readme",
         "--no-workspace",
+        "--no-package",
         "--python",
         python_version,
     ]
