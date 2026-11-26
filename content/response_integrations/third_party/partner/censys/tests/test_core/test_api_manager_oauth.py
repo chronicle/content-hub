@@ -14,19 +14,23 @@
 
 from __future__ import annotations
 
+import json
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from TIPCommon.types import SingleJson
 
 from censys.core.api_manager import APIManager
 from censys.core.censys_exceptions import UnauthorizedErrorException, ValidationException
+from censys.core.constants import RETRY_COUNT
 from censys.core.params import IntegrationParams
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 TOKEN_POST: str = "censys.core.oauth.requests.post"
 SESSION_REQUEST: str = "requests.Session.request"
-PING_URL_PART: str = "/accounts/organizations/"
 
 
 class FakeSoar:
@@ -64,14 +68,14 @@ class FakeSoar:
         self.store[(identifier, property_key)] = property_value
 
 
-def _token_response(token: str) -> MagicMock:
+def _token_response(token: str, expires_in: int = 3599) -> MagicMock:
     """Build a successful token endpoint response."""
     response = MagicMock()
     response.status_code = 200
     response.ok = True
     response.json.return_value = {
         "access_token": token,
-        "expires_in": 3599,
+        "expires_in": expires_in,
         "token_type": "bearer",
     }
     return response
@@ -81,7 +85,7 @@ def _api_response(status: int, body: SingleJson | None = None) -> requests.Respo
     """Build a real ``requests.Response`` so raise_for_status behaves as in production."""
     response = requests.Response()
     response.status_code = status
-    response._content = str(body if body is not None else {}).replace("'", '"').encode()
+    response._content = json.dumps(body if body is not None else {}).encode()
     return response
 
 
@@ -126,6 +130,22 @@ class TestAuthenticationSetup:
                     _oauth_manager(FakeSoar())
 
         request.assert_not_called()
+
+    def test_session_is_closed_when_oauth_setup_fails(self) -> None:
+        """A rejected token request must not leave the HTTP session open."""
+        rejected = MagicMock(status_code=401, ok=False, text="invalid_client")
+        with patch(TOKEN_POST, return_value=rejected), patch("requests.Session.close") as close:
+            with pytest.raises(UnauthorizedErrorException):
+                _oauth_manager(FakeSoar())
+
+        close.assert_called_once()
+
+    def test_session_stays_open_when_oauth_setup_succeeds(self) -> None:
+        """The session is only closed on failure."""
+        with patch(TOKEN_POST, return_value=_token_response("tok-1")), patch("requests.Session.close") as close:
+            _oauth_manager(FakeSoar())
+
+        close.assert_not_called()
 
     @pytest.mark.parametrize(
         ("kwargs", "message"),
@@ -185,6 +205,36 @@ class TestUnauthorizedHandling:
         assert manager.session.headers["Authorization"] == "Bearer tok-2"
         logged = " ".join(c.args[0] for c in soar.LOGGER.info.call_args_list)
         assert "Request was rejected with 401" in logged
+
+    def test_refresh_does_not_log_a_cached_token_reuse_or_request_a_third_token(self) -> None:
+        """A token with a very short lifetime is used as returned, with one extra token request."""
+        soar = FakeSoar()
+        tokens = [_token_response("tok-1"), _token_response("tok-2", expires_in=30)]
+        with patch(TOKEN_POST, side_effect=tokens) as post:
+            manager = _oauth_manager(soar)
+            with patch(
+                SESSION_REQUEST,
+                side_effect=[_api_response(401), _api_response(200, {"result": "ok"})],
+            ):
+                assert manager.test_connectivity() is True
+
+        assert post.call_count == 2
+        assert manager.session.headers["Authorization"] == "Bearer tok-2"
+        logged = " ".join(c.args[0] for c in soar.LOGGER.info.call_args_list)
+        assert "Reusing cached access token" not in logged
+
+    def test_401_after_rate_limit_retries_still_refreshes_the_token(self) -> None:
+        """Using up the rate-limit retries does not stop a later 401 from refreshing the token."""
+        tokens = [_token_response("tok-1"), _token_response("tok-2")]
+        responses = [_api_response(429) for _ in range(RETRY_COUNT)]
+        responses += [_api_response(401), _api_response(200, {"result": "ok"})]
+        with patch(TOKEN_POST, side_effect=tokens) as post:
+            manager = _oauth_manager(FakeSoar())
+            with patch(SESSION_REQUEST, side_effect=responses), patch("censys.core.api_manager.time.sleep"):
+                assert manager.test_connectivity() is True
+
+        assert post.call_count == 2
+        assert manager.session.headers["Authorization"] == "Bearer tok-2"
 
     def test_second_401_is_reported_with_oauth_wording_and_not_retried_again(self) -> None:
         """If the new token is rejected too, the error names the OAuth settings."""

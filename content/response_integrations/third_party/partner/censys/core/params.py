@@ -33,6 +33,6 @@ class IntegrationParams:
     organization_id: str
     verify_ssl: bool = True
     use_oauth: bool = False
-    api_key: str = ""
+    api_key: str = dataclasses.field(default="", repr=False)
     client_id: str = ""
-    client_secret: str = ""
+    client_secret: str = dataclasses.field(default="", repr=False)

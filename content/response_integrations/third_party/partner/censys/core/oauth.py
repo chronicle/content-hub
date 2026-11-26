@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import requests
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
@@ -28,7 +28,6 @@ from TIPCommon.oauth import (
     OauthToken,
 )
 from TIPCommon.smp_time import unix_now
-from TIPCommon.types import ChronicleSOAR
 
 from .censys_exceptions import CensysException, UnauthorizedErrorException
 from .constants import (
@@ -41,7 +40,11 @@ from .constants import (
     OAUTH_TOKEN_EXPIRY_BUFFER_SECONDS,
     UNAUTHORIZED_STATUS_CODE,
 )
-from .params import IntegrationParams
+
+if TYPE_CHECKING:
+    from TIPCommon.types import ChronicleSOAR, SingleJson
+
+    from .params import IntegrationParams
 
 PBKDF2_ITERATIONS: int = 200_000
 
@@ -76,7 +79,7 @@ def generate_encryption_key(client_id: str, client_secret: str, organization_id:
         organization_id: Censys Organization ID.
 
     Returns:
-        str: Hex-encoded 32 byte key.
+        Hex-encoded 32 byte key.
     """
     key_bytes = hashlib.pbkdf2_hmac(
         "sha256",
@@ -95,13 +98,16 @@ def _usable_lifetime_seconds(expires_in: object) -> int:
         expires_in: The ``expires_in`` value from the token response, if any.
 
     Returns:
-        int: Seconds the token can be reused; falls back to the default lifetime when the value
+        Seconds the token can be reused; falls back to the default lifetime when the value
             is missing or not a number.
     """
-    try:
-        lifetime = int(expires_in) if expires_in is not None else OAUTH_DEFAULT_EXPIRY_SECONDS
-    except (TypeError, ValueError):
+    if isinstance(expires_in, bool) or not isinstance(expires_in, (int, float, str)):
         lifetime = OAUTH_DEFAULT_EXPIRY_SECONDS
+    else:
+        try:
+            lifetime = int(expires_in)
+        except (ValueError, OverflowError):
+            lifetime = OAUTH_DEFAULT_EXPIRY_SECONDS
     return max(lifetime - OAUTH_TOKEN_EXPIRY_BUFFER_SECONDS, 0)
 
 
@@ -114,7 +120,7 @@ def _error_code(response: requests.Response) -> str:
         response: The failed token endpoint response.
 
     Returns:
-        str: `` - <error code>`` or an empty string when the body has no error code.
+        `` - <error code>`` or an empty string when the body has no error code.
     """
     try:
         code = response.json().get("error")
@@ -126,12 +132,7 @@ def _error_code(response: requests.Response) -> str:
 class CensysOAuthAdapter(OAuthAdapter):
     """Adapter that obtains Censys access tokens using the client credentials grant."""
 
-    def __init__(
-        self,
-        client_id: str,
-        client_secret: str,
-        verify_ssl: bool = True,
-    ) -> None:
+    def __init__(self, client_id: str, client_secret: str, verify_ssl: bool = True) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
         self.verify_ssl = verify_ssl
@@ -144,7 +145,7 @@ class CensysOAuthAdapter(OAuthAdapter):
         """Request a new access token from the Censys OAuth server.
 
         Returns:
-            OauthToken: The new token, with its absolute expiration time in milliseconds.
+            The new token, with its absolute expiration time in milliseconds.
 
         Raises:
             UnauthorizedErrorException: If the client credentials are rejected.
@@ -175,8 +176,13 @@ class CensysOAuthAdapter(OAuthAdapter):
             )
 
         try:
-            data = response.json()
-            access_token = data["access_token"]
+            data: SingleJson = response.json()
+            if not isinstance(data, dict):
+                raise TypeError("Expected a JSON object in the token response")
+            raw_token: object = data["access_token"]
+            if not isinstance(raw_token, str) or not raw_token.strip():
+                raise ValueError("Missing or empty 'access_token'")
+            access_token: str = raw_token
         except (KeyError, ValueError, TypeError) as e:
             raise CensysException(f"Invalid OAuth token response: {e}") from e
 
@@ -251,27 +257,34 @@ class CensysOAuthManager(OauthManager):
         """Return a valid access token, requesting and caching a new one only when needed."""
         if self._token is None:
             self._log("No usable cached access token found. Requesting a new one.")
-            self.force_refresh()
-        elif not self._oauth_adapter.check_signer(self._token):
+            return self.force_refresh()
+        if not self._oauth_adapter.check_signer(self._token):
             self._log("Cached access token belongs to a different Client ID. Requesting a new one.")
-            self.force_refresh()
-        elif self._token_is_expired():
+            return self.force_refresh()
+        if self._token_is_expired():
             self._log("Cached access token has expired. Requesting a new one.")
-            self.force_refresh()
-        else:
-            remaining = (self._token.expiration_time - unix_now()) // NUM_OF_MILLI_IN_SEC
-            self._log(f"Reusing cached access token (valid for another {remaining}s).")
+            return self.force_refresh()
+
+        remaining = (self._token.expiration_time - unix_now()) // NUM_OF_MILLI_IN_SEC
+        self._log(f"Reusing cached access token (valid for another {remaining}s).")
         return self._token.access_token
 
-    def force_refresh(self) -> None:
-        """Request a new access token and persist it."""
+    def force_refresh(self) -> str:
+        """Request a new access token and persist it.
+
+        Returns:
+            The new access token.
+        """
         try:
             self._refresh_token()
         except AuthenticationError as e:
             raise UnauthorizedErrorException(str(e)) from e
+        if self._token is None:
+            raise CensysException("OAuth token refresh completed without producing a token.")
         self.save_token()
         remaining = (self._token.expiration_time - unix_now()) // NUM_OF_MILLI_IN_SEC
         self._log(f"New access token obtained and stored (valid for {remaining}s).")
+        return self._token.access_token
 
 
 def build_oauth_manager(
@@ -288,7 +301,7 @@ def build_oauth_manager(
         logger: Optional logger for the ``[OAuth]`` lifecycle messages.
 
     Returns:
-        CensysOAuthManager: Manager that returns a valid access token.
+        Manager that returns a valid access token.
     """
     return CensysOAuthManager(
         oauth_adapter=CensysOAuthAdapter(params.client_id, params.client_secret, params.verify_ssl),

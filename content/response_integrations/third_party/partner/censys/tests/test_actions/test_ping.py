@@ -141,6 +141,4 @@ class TestPing:
         ping.main()
 
         assert action_output.results.execution_state == ExecutionState.FAILED
-        assert "Client ID and Client Secret are required" in (
-            action_output.results.output_message
-        )
+        assert "Client ID and Client Secret are required" in action_output.results.output_message

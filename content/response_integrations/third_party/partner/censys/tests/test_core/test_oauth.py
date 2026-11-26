@@ -14,14 +14,13 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
 from TIPCommon.oauth import AuthenticationError
 from TIPCommon.smp_time import unix_now
-from TIPCommon.types import SingleJson
 
 from censys.core.censys_exceptions import CensysException, UnauthorizedErrorException
 from censys.core.oauth import (
@@ -31,6 +30,9 @@ from censys.core.oauth import (
     generate_encryption_key,
 )
 from censys.core.params import IntegrationParams
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 TOKEN_POST: str = "censys.core.oauth.requests.post"
 
@@ -181,9 +183,20 @@ class TestTokenCaching:
             manager = _manager(soar)
             manager.get_access_token()
         with patch(TOKEN_POST, return_value=_response(200, _token_body("tok-2"))):
-            manager.force_refresh()
+            refreshed = manager.force_refresh()
 
+        assert refreshed == "tok-2"
         assert manager.get_access_token() == "tok-2"
+
+    def test_force_refresh_without_a_token_raises(self) -> None:
+        """If the refresh produces no token, the error is clear and nothing is stored."""
+        soar = FakeSiemplify()
+        with patch.object(CensysOAuthManager, "_refresh_token"):
+            manager = _manager(soar)
+            with pytest.raises(CensysException, match="without producing a token"):
+                manager.force_refresh()
+
+        assert soar.store == {}
 
     def test_token_issued_for_another_client_id_is_not_used(self) -> None:
         """A cached token whose signer is another Client ID is replaced."""
@@ -253,6 +266,20 @@ class TestSecureDefaults:
 
         assert post.call_args.kwargs["verify"] is False
 
+    def test_secrets_are_not_shown_in_the_params_repr(self) -> None:
+        """The API Key and Client Secret never appear in the printed parameters."""
+        params = IntegrationParams(
+            organization_id="org",
+            api_key="distinct-api-key-value",
+            client_id="cid",
+            client_secret="distinct-secret-value",
+        )
+
+        text = repr(params)
+        assert "distinct-api-key-value" not in text
+        assert "distinct-secret-value" not in text
+        assert "cid" in text
+
 
 class TestAdapterErrors:
     """The adapter turns token endpoint problems into integration errors."""
@@ -285,6 +312,29 @@ class TestAdapterErrors:
             with pytest.raises(CensysException, match="Invalid OAuth token response"):
                 CensysOAuthAdapter("cid", "secret").refresh_token()
 
+    @pytest.mark.parametrize(
+        "token",
+        ["", "   ", None, 123, ["x"], True],
+    )
+    def test_empty_or_non_string_access_token_is_rejected(self, token: object) -> None:
+        """An empty, blank or non-string access_token is never accepted (and so never cached)."""
+        body = _token_body()
+        body["access_token"] = token
+        with patch(TOKEN_POST, return_value=_response(200, body)):
+            with pytest.raises(CensysException, match="Invalid OAuth token response"):
+                CensysOAuthAdapter("cid", "secret").refresh_token()
+
+    def test_empty_access_token_is_not_stored(self) -> None:
+        """A bad token response leaves the cache empty, so the next run asks again."""
+        soar = FakeSiemplify()
+        body = _token_body()
+        body["access_token"] = ""
+        with patch(TOKEN_POST, return_value=_response(200, body)):
+            with pytest.raises(CensysException):
+                _manager(soar).get_access_token()
+
+        assert soar.store == {}
+
     def test_connection_error_raises_censys_exception(self) -> None:
         """A network failure while requesting the token is reported clearly."""
         with patch(TOKEN_POST, side_effect=requests.ConnectionError("no route")):
@@ -301,10 +351,13 @@ class TestAdapterErrors:
         remaining_ms = token.expiration_time - unix_now()
         assert 3500_000 < remaining_ms < 3600_000
 
-    @pytest.mark.parametrize("expires_in", ["not-a-number", None])
+    @pytest.mark.parametrize(
+        "expires_in",
+        ["not-a-number", None, True, False, [1], {}, float("inf")],
+    )
     def test_invalid_expires_in_falls_back_to_default_lifetime(
         self,
-        expires_in: str | None,
+        expires_in: object,
     ) -> None:
         """A missing or non-numeric expires_in uses the default lifetime."""
         body = _token_body()
@@ -314,6 +367,24 @@ class TestAdapterErrors:
 
         remaining_ms = token.expiration_time - unix_now()
         assert 3500_000 < remaining_ms < 3600_000
+
+    @pytest.mark.parametrize(
+        ("expires_in", "expected_seconds"),
+        [("7200", 7140), (7200.9, 7140), (" 7200 ", 7140)],
+    )
+    def test_numeric_expires_in_values_are_converted(
+        self,
+        expires_in: object,
+        expected_seconds: int,
+    ) -> None:
+        """Numbers and numeric strings give expires_in minus the safety buffer."""
+        body = _token_body()
+        body["expires_in"] = expires_in
+        with patch(TOKEN_POST, return_value=_response(200, body)):
+            token = CensysOAuthAdapter("cid", "secret").refresh_token()
+
+        remaining_ms = token.expiration_time - unix_now()
+        assert (expected_seconds - 5) * 1000 < remaining_ms <= expected_seconds * 1000
 
     def test_expires_in_shorter_than_buffer_is_not_negative(self) -> None:
         """A very short lifetime does not produce an expiry time in the past."""

@@ -364,6 +364,9 @@ def mock_requests_session(
         def update(self, *args, **kwargs):
             pass
 
+        def close(self):
+            pass
+
         def request(self, method, url, **kwargs):
             requested_host_ip = None
             if "/asset/enrichment/host/" in url:

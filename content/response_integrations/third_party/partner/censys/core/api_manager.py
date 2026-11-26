@@ -4,10 +4,9 @@ import json
 import sys
 import time
 import urllib.parse
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import requests
-from TIPCommon.types import ChronicleSOAR, SingleJson
 
 from .censys_exceptions import (
     CensysException,
@@ -55,8 +54,13 @@ from .constants import (
     WAIT_TIME_FOR_RETRY,
 )
 from .oauth import build_oauth_manager
-from .params import IntegrationParams
 from .utils import HandleExceptions
+
+if TYPE_CHECKING:
+    from TIPCommon.types import ChronicleSOAR, SingleJson
+
+    from .oauth import CensysOAuthManager
+    from .params import IntegrationParams
 
 
 def _validate_credentials(params: IntegrationParams, siemplify: ChronicleSOAR | None) -> None:
@@ -72,13 +76,9 @@ def _validate_credentials(params: IntegrationParams, siemplify: ChronicleSOAR | 
     """
     if params.use_oauth:
         if not params.client_id or not params.client_secret:
-            raise ValidationException(
-                "Client ID and Client Secret are required when OAuth authentication is enabled."
-            )
+            raise ValidationException("Client ID and Client Secret are required when OAuth authentication is enabled.")
         if siemplify is None:
-            raise ValidationException(
-                "Chronicle SOAR instance is required when OAuth authentication is enabled."
-            )
+            raise ValidationException("Chronicle SOAR instance is required when OAuth authentication is enabled.")
     elif not params.api_key:
         raise ValidationException("API Key is required when OAuth authentication is disabled.")
 
@@ -90,7 +90,7 @@ def _build_user_agent(siemplify: ChronicleSOAR | None) -> str:
         siemplify: SOAR object used to read the platform version, if available.
 
     Returns:
-        str: The User-Agent string.
+        The User-Agent string.
     """
     google_secops_version = siemplify.get_system_version() if siemplify else "Unknown"
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
@@ -127,15 +127,15 @@ class APIManager:
         self.session = requests.Session()
         self.session.verify = self.verify_ssl
 
-        self.oauth_manager = None
+        self.oauth_manager: CensysOAuthManager | None = None
         bearer_token = params.api_key
         if self.use_oauth:
-            self.oauth_manager = build_oauth_manager(
-                params,
-                siemplify,
-                getattr(siemplify, "LOGGER", None),
-            )
-            bearer_token = self.oauth_manager.get_access_token()
+            try:
+                self.oauth_manager = build_oauth_manager(params, siemplify, getattr(siemplify, "LOGGER", None))
+                bearer_token = self.oauth_manager.get_access_token()
+            except Exception:
+                self.session.close()
+                raise
 
         self.session.headers.update(
             {
@@ -210,12 +210,14 @@ class APIManager:
                     api_identifier, method, url, params, body, data, retry_count - 1
                 )
             raise
-        except UnauthorizedErrorException:
-            if retry_count > 0 and self._refresh_oauth_token():
-                return self._make_rest_call(
-                    api_identifier, method, url, params, body, data, 0
-                )
-            raise self._unauthorized_error()
+        except UnauthorizedErrorException as err:
+            if not self._refresh_oauth_token():
+                raise self._unauthorized_error() from err
+            response = self.session.request(method, url, verify=self.verify_ssl, **request_kwargs)
+            try:
+                self.validate_response(api_identifier, response)
+            except UnauthorizedErrorException as retry_err:
+                raise self._unauthorized_error() from retry_err
 
         try:
             return response.json()
@@ -232,7 +234,7 @@ class APIManager:
         and used for a single retry.
 
         Returns:
-            bool: True if a new token is now in use, False when OAuth is not enabled.
+            True if a new token is now in use, False when OAuth is not enabled.
         """
         if self.oauth_manager is None:
             return False
@@ -240,8 +242,8 @@ class APIManager:
         self.siemplify.LOGGER.info(
             "[OAuth] Request was rejected with 401. Refreshing the access token and retrying once."
         )
-        self.oauth_manager.force_refresh()
-        self.session.headers["Authorization"] = f"Bearer {self.oauth_manager.get_access_token()}"
+        access_token = self.oauth_manager.force_refresh()
+        self.session.headers["Authorization"] = f"Bearer {access_token}"
         return True
 
     def _unauthorized_error(self) -> UnauthorizedErrorException:
@@ -250,9 +252,7 @@ class APIManager:
             return UnauthorizedErrorException(
                 "Unauthorized, please verify your Client ID, Client Secret, and Organization ID."
             )
-        return UnauthorizedErrorException(
-            "Unauthorized, please verify your API Key and Organization ID."
-        )
+        return UnauthorizedErrorException("Unauthorized, please verify your API Key and Organization ID.")
 
     def _raise_for_http_status(
         self,
