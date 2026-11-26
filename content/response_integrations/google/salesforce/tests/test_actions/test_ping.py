@@ -52,10 +52,7 @@ def test_ping_executes_lightweight_connectivity_query(sf_client: MagicMock) -> N
 
     sf_client.query.assert_called_once_with("SELECT Id FROM Case LIMIT 1")
     sf_client.query_more.assert_not_called()
-    siemplify.end.assert_called_once_with(
-        "Successfully connected to the Salesforce server with the provided connection parameters!",
-        "true",
-    )
+    siemplify.end.assert_called_once_with("Successfully connected.", "true")
 
 
 def test_ping_handles_connection_failure_cleanly(sf_client: MagicMock) -> None:

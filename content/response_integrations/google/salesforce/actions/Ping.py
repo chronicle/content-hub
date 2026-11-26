@@ -45,7 +45,7 @@ def main() -> None:
         )
         return
 
-    output_message = "Successfully connected to the Salesforce server with the provided connection parameters!"
+    output_message = "Successfully connected."
     siemplify.end(output_message, "true")
 
 
