@@ -13,10 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.SalesforceManager import SalesforceManager
+
 import json
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
+from ..core.SalesforceManager import SalesforceManager, SalesforceManagerError
 
 
 @output_handler
@@ -35,7 +39,11 @@ def main():
 
     case_number = siemplify.parameters.get("Case Number")
 
-    case = salesforce_manager.get_case_by_number(case_number)
+    try:
+        case = salesforce_manager.get_case_by_number(case_number)
+    except SalesforceManagerError as err:
+        siemplify.end(f'Error executing action "Get Case". Reason: {err}', "false", EXECUTION_STATE_FAILED)
+        return
 
     siemplify.result.add_json(f"Case {case_number}", json.dumps(case))
 

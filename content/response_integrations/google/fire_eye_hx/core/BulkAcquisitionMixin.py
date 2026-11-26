@@ -123,7 +123,7 @@ class BulkAcquisitionMixin:
         url = f"{self.api_root}/acqs/bulk/{bulk_acquisition_id}"
         response = self.session.get(url)
         self.validate_response(response, f"Unable to fetch status for bulk acquisition {bulk_acquisition_id}")
-        return response.json().get("data", {})
+        return response.json().get("data") or {}
 
     def stop_bulk_acquisition(self, bulk_acquisition_id: str | int) -> bool:
         """Stop an active bulk acquisition.
