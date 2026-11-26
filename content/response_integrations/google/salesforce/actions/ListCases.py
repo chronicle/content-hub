@@ -20,7 +20,8 @@ from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 from TIPCommon.extraction import extract_action_param
 
 from ..core.constants import DEFAULT_MAX_RECORDS
-from ..core.SalesforceManager import SalesforceManager, SalesforceManagerError, parse_max_records
+from ..core.SalesforceManager import SalesforceManager
+from ..core.utils import parse_max_records
 
 
 @output_handler
@@ -44,13 +45,14 @@ def main() -> None:
                 print_value=True,
             )
         )
-    except SalesforceManagerError as err:
+        salesforce_manager = SalesforceManager(
+            username, password, token, server_addr=server_addr, verify_ssl=verify_ssl
+        )
+        cases = salesforce_manager.get_cases(max_records=max_records)
+    except Exception as err:
+        siemplify.LOGGER.exception(err)
         siemplify.end(f'Error executing action "List Cases". Reason: {err}', "false", EXECUTION_STATE_FAILED)
         return
-
-    salesforce_manager = SalesforceManager(username, password, token, server_addr=server_addr, verify_ssl=verify_ssl)
-
-    cases = salesforce_manager.get_cases(max_records=max_records)
 
     if cases:
         csv_output = construct_csv(cases)

@@ -13,13 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.SalesforceManager import SalesforceManager
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     configurations = siemplify.get_configuration("Salesforce")
     server_addr = configurations["Api Root"]
@@ -28,14 +31,21 @@ def main():
     token = configurations["Token"]
     verify_ssl = configurations.get("Verify SSL", "False").lower() == "true"
 
-    salesforce_manager = SalesforceManager(
-        username, password, token, server_addr=server_addr, verify_ssl=verify_ssl
-    )
+    try:
+        salesforce_manager = SalesforceManager(
+            username, password, token, server_addr=server_addr, verify_ssl=verify_ssl
+        )
+        salesforce_manager.test_connectivity()
+    except Exception as err:
+        siemplify.LOGGER.exception(err)
+        siemplify.end(
+            f"Failed to connect to the Salesforce server! Error is {err}",
+            "false",
+            EXECUTION_STATE_FAILED,
+        )
+        return
 
-    salesforce_manager.test_connectivity()
-
-    output_message = "Successfully connected."
-
+    output_message = "Successfully connected to the Salesforce server with the provided connection parameters!"
     siemplify.end(output_message, "true")
 
 

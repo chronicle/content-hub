@@ -19,13 +19,13 @@ from unittest.mock import patch
 
 import pytest
 
-from salesforce.core.constants import DEFAULT_MAX_RECORDS, MAX_RECORDS_LIMIT
+from salesforce.core.constants import DEFAULT_MAX_RECORDS, INVALID_MAX_RECORDS_MSG, MAX_RECORDS_LIMIT
 from salesforce.core.SalesforceManager import (
     CASE_PROPERTIES,
     SalesforceManager,
     SalesforceManagerError,
-    parse_max_records,
 )
+from salesforce.core.utils import parse_max_records
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -211,15 +211,33 @@ def test_get_cases_uses_default_limit_and_descending_order(manager: SalesforceMa
         pytest.param(None, DEFAULT_MAX_RECORDS, id="none-uses-default"),
         pytest.param("", DEFAULT_MAX_RECORDS, id="empty-string-uses-default"),
         pytest.param("   ", DEFAULT_MAX_RECORDS, id="whitespace-uses-default"),
-        pytest.param(1, 1, id="minimum-int"),
+        pytest.param("1", 1, id="minimum-str"),
         pytest.param("25", 25, id="numeric-string"),
         pytest.param("  100  ", 100, id="padded-numeric-string"),
-        pytest.param(MAX_RECORDS_LIMIT, MAX_RECORDS_LIMIT, id="maximum-int"),
+        pytest.param(str(MAX_RECORDS_LIMIT), MAX_RECORDS_LIMIT, id="maximum-str"),
     ],
 )
-def test_parse_max_records_accepts_valid_inputs(raw_limit: int | str | None, expected_limit: int) -> None:
-    """Valid inputs normalize to a positive integer within [1, MAX_RECORDS_LIMIT]."""
+def test_parse_max_records_accepts_valid_inputs(raw_limit: str | None, expected_limit: int) -> None:
+    """Valid string/None inputs normalize to a positive integer within [1, MAX_RECORDS_LIMIT]."""
     assert parse_max_records(raw_limit) == expected_limit
+
+
+@pytest.mark.parametrize(
+    "invalid_raw",
+    [
+        pytest.param("0", id="zero"),
+        pytest.param("-1", id="negative-str"),
+        pytest.param(str(MAX_RECORDS_LIMIT + 1), id="above-max-str"),
+        pytest.param("abc", id="non-numeric-str"),
+        pytest.param("10.5", id="float-str"),
+    ],
+)
+def test_parse_max_records_rejects_invalid_inputs(invalid_raw: str) -> None:
+    """Invalid string inputs raise SalesforceManagerError with INVALID_MAX_RECORDS_MSG."""
+    with pytest.raises(SalesforceManagerError) as exc_info:
+        parse_max_records(invalid_raw)
+
+    assert str(exc_info.value) == INVALID_MAX_RECORDS_MSG
 
 
 @pytest.mark.parametrize(
@@ -227,20 +245,15 @@ def test_parse_max_records_accepts_valid_inputs(raw_limit: int | str | None, exp
     [
         pytest.param(0, id="zero"),
         pytest.param(-5, id="negative-int"),
-        pytest.param("-1", id="negative-str"),
         pytest.param(MAX_RECORDS_LIMIT + 1, id="above-max-int"),
-        pytest.param(str(MAX_RECORDS_LIMIT + 1), id="above-max-str"),
-        pytest.param("abc", id="non-numeric-str"),
-        pytest.param("10.5", id="float-str"),
-        pytest.param(True, id="bool-true-rejected"),
-        pytest.param(False, id="bool-false-rejected"),
     ],
 )
-def test_get_cases_rejects_invalid_max_records_before_query(manager: SalesforceManager, invalid_limit: Any) -> None:
-    """Invalid max_records raises SalesforceManagerError without querying Salesforce."""
-    with pytest.raises(SalesforceManagerError, match="Max Records To Return"):
+def test_get_cases_rejects_invalid_max_records_before_query(manager: SalesforceManager, invalid_limit: int) -> None:
+    """Out-of-range max_records raises SalesforceManagerError without querying Salesforce."""
+    with pytest.raises(SalesforceManagerError) as exc_info:
         manager.get_cases(max_records=invalid_limit)
 
+    assert str(exc_info.value) == INVALID_MAX_RECORDS_MSG
     manager.sf.query.assert_not_called()
 
 

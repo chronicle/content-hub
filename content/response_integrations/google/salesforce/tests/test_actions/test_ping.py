@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
+from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 
 from salesforce.actions import Ping
 
@@ -51,15 +52,24 @@ def test_ping_executes_lightweight_connectivity_query(sf_client: MagicMock) -> N
 
     sf_client.query.assert_called_once_with("SELECT Id FROM Case LIMIT 1")
     sf_client.query_more.assert_not_called()
-    siemplify.end.assert_called_once_with("Successfully connected.", "true")
+    siemplify.end.assert_called_once_with(
+        "Successfully connected to the Salesforce server with the provided connection parameters!",
+        "true",
+    )
 
 
-def test_ping_propagates_connection_failure(sf_client: MagicMock) -> None:
-    """Ping surfaces client exceptions when the connectivity query fails."""
+def test_ping_handles_connection_failure_cleanly(sf_client: MagicMock) -> None:
+    """Ping catches connectivity errors, logs them, and ends with EXECUTION_STATE_FAILED."""
     sf_client.query.side_effect = RuntimeError("INVALID_LOGIN")
 
     with patch.object(Ping, "SiemplifyAction") as action_cls:
         siemplify: MagicMock = action_cls.return_value
         siemplify.get_configuration.return_value = CONFIG
-        with pytest.raises(RuntimeError, match="INVALID_LOGIN"):
-            Ping.main()
+        Ping.main()
+
+    siemplify.LOGGER.exception.assert_called_once()
+    siemplify.end.assert_called_once_with(
+        "Failed to connect to the Salesforce server! Error is INVALID_LOGIN",
+        "false",
+        EXECUTION_STATE_FAILED,
+    )

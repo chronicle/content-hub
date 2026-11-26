@@ -33,7 +33,7 @@ import requests
 from pypika import Field, Query, Table
 from simple_salesforce import Salesforce, format_soql
 
-from .constants import DEFAULT_API_VERSION, DEFAULT_MAX_RECORDS, MAX_RECORDS_LIMIT
+from .constants import DEFAULT_API_VERSION, DEFAULT_MAX_RECORDS, INVALID_MAX_RECORDS_MSG, MAX_RECORDS_LIMIT
 
 # ============================== CONSTS ===================================== #
 
@@ -91,45 +91,6 @@ class SalesforceManagerError(Exception):
     """
 
     pass
-
-
-def parse_max_records(max_records: int | str | None) -> int:
-    """Validate and normalize the maximum number of records to return.
-
-    Args:
-        max_records: Raw parameter value; None or blank uses DEFAULT_MAX_RECORDS.
-
-    Returns:
-        Validated integer within [1, MAX_RECORDS_LIMIT].
-
-    Raises:
-        SalesforceManagerError: If max_records is not an integer in [1, MAX_RECORDS_LIMIT].
-
-    """
-    if max_records is None or (isinstance(max_records, str) and not max_records.strip()):
-        return DEFAULT_MAX_RECORDS
-
-    if isinstance(max_records, bool):
-        msg = f'"Max Records To Return" must be an integer between 1 and {MAX_RECORDS_LIMIT}.'
-        raise SalesforceManagerError(msg)
-
-    if isinstance(max_records, int):
-        limit = max_records
-    elif isinstance(max_records, str):
-        try:
-            limit = int(max_records.strip())
-        except ValueError as err:
-            msg = f'"Max Records To Return" must be an integer between 1 and {MAX_RECORDS_LIMIT}.'
-            raise SalesforceManagerError(msg) from err
-    else:
-        msg = f'"Max Records To Return" must be an integer between 1 and {MAX_RECORDS_LIMIT}.'
-        raise SalesforceManagerError(msg)
-
-    if limit < 1 or limit > MAX_RECORDS_LIMIT:
-        msg = f'"Max Records To Return" must be between 1 and {MAX_RECORDS_LIMIT}.'
-        raise SalesforceManagerError(msg)
-
-    return limit
 
 
 class SalesforceManager:
@@ -212,7 +173,7 @@ class SalesforceManager:
 
         return case[0]
 
-    def get_cases(self, max_records: int | str | None = DEFAULT_MAX_RECORDS) -> list[dict[str, Any]]:
+    def get_cases(self, max_records: int = DEFAULT_MAX_RECORDS) -> list[dict[str, Any]]:
         """Get cases ordered from newest to oldest up to max_records.
 
         Args:
@@ -222,16 +183,17 @@ class SalesforceManager:
             List of case records.
 
         Raises:
-            SalesforceManagerError: If max_records is invalid or out of range.
+            SalesforceManagerError: If max_records is out of range.
 
         """
-        limit = parse_max_records(max_records)
+        if not 1 <= max_records <= MAX_RECORDS_LIMIT:
+            raise SalesforceManagerError(INVALID_MAX_RECORDS_MSG)
         query: str = format_soql(
             "SELECT {:literal} FROM Case ORDER BY CreatedDate DESC LIMIT {:literal}",
             ", ".join(CASE_PROPERTIES),
-            str(limit),
+            str(max_records),
         )
-        return self.run_query(query, max_records=limit)
+        return self.run_query(query, max_records=max_records)
 
     def close_case(self, case_id):
         """

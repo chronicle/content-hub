@@ -17,3 +17,4 @@ from __future__ import annotations
 DEFAULT_API_VERSION: str = "64.0"
 DEFAULT_MAX_RECORDS: int = 50
 MAX_RECORDS_LIMIT: int = 1000
+INVALID_MAX_RECORDS_MSG: str = f'"Max Records To Return" must be an integer between 1 and {MAX_RECORDS_LIMIT}.'
