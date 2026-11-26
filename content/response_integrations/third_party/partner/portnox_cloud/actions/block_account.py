@@ -53,10 +53,11 @@ def main() -> None:
                 siemplify.LOGGER.error(f"Failed to block {account_id}: {block_error}")
                 failed.append(account_id)
 
+        blocked_lower = {account.lower() for account in blocked}
         blocked_entities = [
             e
             for e in siemplify.target_entities
-            if e.entity_type == EntityTypes.USER and e.identifier.lower() in blocked
+            if e.entity_type == EntityTypes.USER and e.identifier.lower() in blocked_lower
         ]
         for entity in blocked_entities:
             entity.is_suspicious = True

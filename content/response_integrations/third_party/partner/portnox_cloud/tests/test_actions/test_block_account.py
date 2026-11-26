@@ -122,3 +122,24 @@ class TestBlockAccount:
         assert action_output.results.output_message.startswith(
             'Error executing action "Block Account". Reason: Portnox Cloud rejected the credentials'
         )
+
+
+class TestBlockAccountEntityMatching:
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={"Account ID": "User@Example.com", "Reason": "Compromised account"},
+        entities=[create_entity(ACCOUNT, EntityTypesEnum.USER)],
+    )
+    def test_mixed_case_account_id_still_marks_user_entity_suspicious(
+        self,
+        sdk_session: PortnoxCloudSession,
+        action_output: MockActionOutput,
+        portnox: PortnoxCloud,
+    ) -> None:
+        portnox.accounts.add("User@Example.com")
+
+        block_account.main()
+
+        assert action_output.results.result_value is True
+        update_calls = [r for r in sdk_session.request_history if "UpdateEntities" in r.request.url.path]
+        assert len(update_calls) == 1
