@@ -1,0 +1,70 @@
+name: Rubrik Security Cloud - Close Duplicate Violation Alerts Job
+parameters:
+-   name: Close Reason
+    default_value: NotMalicious
+    type: string
+    description: "Reason applied when auto-closing a case whose violation(s) reached\n\
+        \ a terminal status in RSC."
+    is_mandatory: true
+-   name: Comment Prefix
+    default_value: '[Rubrik Dedup]'
+    type: string
+    description: "Prefix used on the case comment and close comment this job adds,\
+        \ for\n traceability in the case activity feed."
+    is_mandatory: false
+-   name: Rule Generator
+    default_value: ''
+    type: string
+    description: Optional comma-separated list of values to scope this job to Rubrik-originated
+        cases only. Matched as a case-insensitive substring of the alert's rule_generator,
+        which carries the violation's composed alert name (e.g. "Overexposed PII"
+        matches "Critical severity violation of policy 'Overexposed PII' detected
+        on 'Admin'"). That name is identical across a violation's transitions, so
+        one entry matches all of its alerts. Leave empty to inspect every open case;
+        alerts carrying no violation id are skipped either way.
+    is_mandatory: false
+-   name: Max Cases To Process
+    default_value: '2000'
+    type: integer
+    description: Max open cases to fetch and inspect per run.
+    is_mandatory: true
+-   name: Lookback Days
+    default_value: '7'
+    type: integer
+    description: Number of days to look back when fetching open cases.
+    is_mandatory: true
+-   name: Dry Run
+    default_value: 'true'
+    type: boolean
+    description: "Set true for test run purposes only -- logs intended comments/closures\n\
+        \ without calling add_comment or close_case. Otherwise false."
+    is_mandatory: false
+-   name: Close Root Cause
+    default_value: Normal behavior
+    type: string
+    description: Root cause applied when auto-closing a case whose violation(s) reached
+        a terminal status in RSC.
+    is_mandatory: true
+-   name: Environment
+    default_value: ''
+    type: string
+    description: Optional comma-separated list of SOAR environments to restrict this
+        job to, e.g. "Production, Staging". Applied to both case searches, so cases
+        in any other environment are never fetched and their violations are neither
+        inspected nor closed. Leave empty to process cases across all environments.
+    is_mandatory: false
+description: Closes Rubrik violation cases whose violations have all reached a terminal
+    status in RSC. The connector raises one alert per activity-series transition,
+    so a single violation arrives as several immutable alerts. This job groups open
+    cases' Rubrik alerts by activitySeriesId, which every alert of one violation shares,
+    and if the latest status
+    for a violation is terminal (POLICY_VIOLATION_STATUS_REMEDIATED / _CLOSED / _DISMISSED),
+    closes every case touched by that violation -- unless the case also holds a different,
+    still-open violation. Classification alerts carry no violation and are ignored.
+    Because SecOps groups alerts into one case only within 24 hours, a violation remediated
+    days after it was detected lands its terminal alert in a new case; the job also
+    searches by case name for the violation's earlier cases and closes those too,
+    confirming identity by activitySeriesId.
+documentation_link: null
+integration: RubrikSecurityCloud
+creator: 322ce0cd-9b16-4871-8c2d-134b55f8317f

@@ -1,25 +1,46 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional
 
 from TIPCommon.types import SingleJson
+
+
+def _empty_violations_list() -> SingleJson:
+    return {
+        "data": {
+            "policyViolations": {
+                "count": 0,
+                "edges": [],
+                "pageInfo": {"hasNextPage": False, "endCursor": None},
+            }
+        }
+    }
 
 
 @dataclasses.dataclass(slots=True)
 class RubrikSecurityCloud:
     deployment_version: str = "8.0.0"
-    token_response: Optional[SingleJson] = None
-    cdm_cluster_location_response: Optional[SingleJson] = None
-    cdm_cluster_connection_state_response: Optional[SingleJson] = None
-    sonar_policy_objects_list_response: Optional[SingleJson] = None
-    sonar_object_detail_response: Optional[SingleJson] = None
-    ioc_scan_results_response: Optional[SingleJson] = None
-    turbo_ioc_scan_response: Optional[SingleJson] = None
-    list_events_response: Optional[SingleJson] = None
-    list_object_snapshots_response: Optional[SingleJson] = None
-    list_sonar_file_contexts_response: Optional[SingleJson] = None
-    advanced_ioc_scan_response: Optional[SingleJson] = None
+    token_response: SingleJson | None = None
+    cdm_cluster_location_response: SingleJson | None = None
+    cdm_cluster_connection_state_response: SingleJson | None = None
+    sonar_policy_objects_list_response: SingleJson | None = None
+    sonar_object_detail_response: SingleJson | None = None
+    ioc_scan_results_response: SingleJson | None = None
+    turbo_ioc_scan_response: SingleJson | None = None
+    list_events_response: SingleJson | None = None
+    list_object_snapshots_response: SingleJson | None = None
+    list_sonar_file_contexts_response: SingleJson | None = None
+    advanced_ioc_scan_response: SingleJson | None = None
+    search_dspm_violations_response: SingleJson | None = None
+    dspm_violation_details_response: SingleJson | None = None
+    search_ir_violations_response: SingleJson | None = None
+    ir_violation_details_response: SingleJson | None = None
+    violation_file_list_response: SingleJson | None = None
+    update_violation_status_response: SingleJson | None = None
+    download_snapshot_results_csv_response: SingleJson | None = None
+    create_violation_remediation_response: SingleJson | None = None
+    user_files: list[SingleJson] | None = None
+    file_download_content: str = ""
 
     def get_deployment_version(self) -> SingleJson:
         return {"data": {"deploymentVersion": self.deployment_version}}
@@ -95,3 +116,55 @@ class RubrikSecurityCloud:
         if self.advanced_ioc_scan_response:
             return self.advanced_ioc_scan_response
         return {"data": {"startBulkThreatHunt": {"huntId": "", "status": "PENDING"}}}
+
+    def get_search_dspm_violations(self) -> SingleJson:
+        if self.search_dspm_violations_response:
+            return self.search_dspm_violations_response
+        return _empty_violations_list()
+
+    def get_dspm_violation_details(self) -> SingleJson:
+        if self.dspm_violation_details_response:
+            return self.dspm_violation_details_response
+        return {"data": {"policyViolation": None}}
+
+    def get_search_ir_violations(self) -> SingleJson:
+        if self.search_ir_violations_response:
+            return self.search_ir_violations_response
+        return _empty_violations_list()
+
+    def get_ir_violation_details(self) -> SingleJson:
+        if self.ir_violation_details_response:
+            return self.ir_violation_details_response
+        return {"data": {"policyViolation": None}}
+
+    def get_violation_file_list(self) -> SingleJson:
+        if self.violation_file_list_response:
+            return self.violation_file_list_response
+        return {
+            "data": {
+                "policyObj": {
+                    "fileResultConnection": {
+                        "edges": [],
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    }
+                }
+            }
+        }
+
+    def get_update_violation_status(self) -> SingleJson:
+        if self.update_violation_status_response:
+            return self.update_violation_status_response
+        return {"data": {"bulkUpdatePolicyViolations": None}}
+
+    def get_download_snapshot_results_csv(self) -> SingleJson:
+        if self.download_snapshot_results_csv_response:
+            return self.download_snapshot_results_csv_response
+        return {"data": {"downloadSnapshotResultsCsv": {"isSuccessful": False}}}
+
+    def get_create_violation_remediation(self) -> SingleJson:
+        if self.create_violation_remediation_response:
+            return self.create_violation_remediation_response
+        return {"data": {"createViolationRemediation": {"remediationId": None}}}
+
+    def get_all_user_files(self) -> SingleJson:
+        return {"data": {"allUserFiles": [{"downloads": self.user_files or []}]}}

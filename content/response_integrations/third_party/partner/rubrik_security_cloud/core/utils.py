@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 from urllib.parse import urlparse
@@ -97,6 +98,35 @@ def validate_required_string(value: Optional[str], param_name: str) -> str:
     if not value or not value.strip():
         raise ValueError(f"{param_name} must be a non-empty string.")
     return value.strip()
+
+
+_UUID_PATTERN: re.Pattern[str] = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+
+def validate_uuid_format(value: str, param_name: str) -> str:
+    """Validate that a string parameter is a well-formed UUID.
+
+    RSC violation/policy/resource IDs all follow this format. Shared across
+    actions so any ID param can be format-checked identically.
+
+    Args:
+        value: The already-required, stripped value to validate.
+        param_name: The name of the parameter for error messages.
+
+    Returns:
+        The validated value, unchanged.
+
+    Raises:
+        ValueError: If the value does not match the UUID format.
+    """
+    if not _UUID_PATTERN.match(value):
+        raise ValueError(
+            f"{param_name} must be a valid UUID. "
+            f"Example: 1fa1bd94-0512-495c-a992-107c6f4e64aa. Received: {value}"
+        )
+    return value
 
 
 def validate_integer_param(
