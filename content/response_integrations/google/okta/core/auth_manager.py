@@ -41,9 +41,9 @@ def build_auth_manager_params(
         AuthManagerParams: AuthManagerParams object
 
     """
-    if hasattr(chronicle_soar, 'get_configuration'):
+    if isinstance(chronicle_soar, SiemplifyAction):
         input_dictionary = chronicle_soar.get_configuration(INTEGRATION_IDENTIFIER)
-    elif hasattr(chronicle_soar, 'parameters'):
+    elif isinstance(chronicle_soar, (SiemplifyConnectorExecution, SiemplifyJob)):
         input_dictionary = chronicle_soar.parameters
     else:
         raise OktaException("Provided SOAR instance is not supported.")

@@ -92,6 +92,40 @@ if not hasattr(MockRequest, "params"):
     MockRequest.params = property(_mock_request_params)  # type: ignore[attr-defined]
 
 
+def _install_html2text_links_shim() -> None:
+    """Populate legacy siemplify_html2text link attributes when standard html2text is installed."""
+    import html2text
+    from bs4 import BeautifulSoup
+
+    if hasattr(html2text.HTML2Text(), "html_links"):
+        return
+
+    orig_handle = html2text.HTML2Text.handle
+
+    def _patched_handle(self: html2text.HTML2Text, data: str) -> str:
+        result = orig_handle(self, data)
+        soup = BeautifulSoup(data, "html.parser")
+        html_links: list[str] = []
+        html_links_original_src: list[str] = []
+        for anchor in soup.find_all("a", href=True):
+            href = anchor.get("href")
+            if href is None:
+                continue
+            text = anchor.get_text().replace("\xa0", "")
+            if text != href:
+                html_links.append(text)
+            if original_src := anchor.get("originalsrc"):
+                html_links_original_src.append(str(original_src))
+        self.html_links = html_links  # type: ignore[attr-defined]
+        self.html_links_original_src = html_links_original_src  # type: ignore[attr-defined]
+        return result
+
+    html2text.HTML2Text.handle = _patched_handle  # type: ignore[method-assign]
+
+
+_install_html2text_links_shim()
+
+
 @pytest.fixture
 def google_gmail() -> Iterator[GoogleGmail]:
     """Return mock Gmail product state."""

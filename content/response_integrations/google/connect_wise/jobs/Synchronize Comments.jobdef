@@ -1,0 +1,66 @@
+{
+    "CreationTimeUnixTimeInMs": 1525090337868,
+    "Creator": "admin",
+    "Description": "Synchronize comments between Siemplify cases and ConnectWise tickets.",
+    "Id": -1,
+    "Integration": "ConnectWise",
+    "IsCustom": false,
+    "IsEnabled": true,
+    "ModificationTimeUnixTimeInMs": 1525090337868,
+    "Name": "Synchronize Comments",
+    "Parameters": [
+        {
+            "CreationTimeUnixTimeInMs": 1525090337868,
+            "DefaultValue": "https://<Host Name>/v4_6_Release/apis/3.0/",
+            "Id": -1,
+            "IsMandatory": true,
+            "JobDefinitionId": -1,
+            "ModificationTimeUnixTimeInMs": 1525090337868,
+            "Name": "API Root",
+            "Type": 2
+        },
+        {
+            "CreationTimeUnixTimeInMs": 1525090337868,
+            "DefaultValue": "",
+            "Id": -1,
+            "IsMandatory": true,
+            "JobDefinitionId": -1,
+            "ModificationTimeUnixTimeInMs": 1525090337868,
+            "Name": "Company Name",
+            "Type": 2
+        },
+        {
+            "CreationTimeUnixTimeInMs": 1525090337868,
+            "DefaultValue": null,
+            "Id": -1,
+            "IsMandatory": true,
+            "JobDefinitionId": -1,
+            "ModificationTimeUnixTimeInMs": 1525090337868,
+            "Name": "API Public Key",
+            "Type": 2
+        },
+        {
+            "CreationTimeUnixTimeInMs": 1525090337868,
+            "DefaultValue": null,
+            "Id": -1,
+            "IsMandatory": true,
+            "JobDefinitionId": -1,
+            "ModificationTimeUnixTimeInMs": 1525090337868,
+            "Name": "API Private Key",
+            "Type": 2
+        },
+        {
+            "CreationTimeUnixTimeInMs": 1525090337868,
+            "DefaultValue": "",
+            "Id": -1,
+            "IsMandatory": true,
+            "JobDefinitionId": -1,
+            "ModificationTimeUnixTimeInMs": 1525090337868,
+            "Name": "Script Name",
+            "Type": 2
+        }
+    ],
+    "RunIntervalInSeconds": 900,
+    "Script": "# ==============================================================================\n# title           :UpdateComments.py\n# description     :Siemplify job for updating comments in CaseWall and in ConnectWize\n# author          :org@siemplify.co\n# date            :01-07-17\n# python_version  :2.7\n# ==============================================================================\n\n# =====================================\n#              IMPORTS                #\n# =====================================\nfrom ConnectWiseManager import ConnectWiseManager\nfrom SiemplifyJob import SiemplifyJob\nfrom SiemplifyUtils import convert_unixtime_to_datetime\nimport datetime\nimport logging\nimport urllib3\nimport requests\n\nurllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)\nrequests.packages.urllib3.disable_warnings()\n\n# =====================================\n#             CONSTANTS               #\n# =====================================\nCASES_OPEN_STATUS_ENUM = '1'\nSIEMPLIFY_COMMENT_PREFIX = \"TN: \"\nCW_COMMENT_PREFIX = \"CW: \"\nCW_SIEMPLIFY_CATEGORY = \"Siemplify\"\nCW_LASTUPDATED_CONDITIONS_STR = \"conditions=status/name='Completed' and lastUpdated>[{0}]\"\n\n\n# =====================================\n#              CLASSES                #\n# =====================================\ndef main():\n    siemplify = SiemplifyJob()\n\n    try:\n\n        # Parameters.\n        api_root = siemplify.parameters['API Root']\n        company_name = siemplify.parameters['Company Name']\n        public_api_key = siemplify.parameters['API Public Key']\n        private_api_key = siemplify.parameters['API Private Key']\n       \tscript_name = siemplify.parameters['Script Name']\n        \n        siemplify.script_name = script_name\n\n        siemplify.LOGGER.info(\"-----Job Started-----\")\n\n        cw_manager = ConnectWiseManager(api_root, company_name, public_api_key, private_api_key)\n\n        last_successful_execution_time = siemplify.fetch_timestamp(datetime_format=True)\n\n        siemplify.LOGGER.info(\"Last successfuly execution time - {0}\".format(str(last_successful_execution_time)))\n\n        # Replicate all cases comments to ConnectWize tickets comments\n        siemplify.LOGGER.info(\" +++ Starts synchronize comments from cases to ConnectWise tickets +++ \")\n        cases_ids = siemplify.get_cases_by_filter(statuses=[CASES_OPEN_STATUS_ENUM])\n\n        siemplify.LOGGER.info(\"Found {0} open cases\".format(len(cases_ids)))\n        for case_id in cases_ids:\n            siemplify.LOGGER.info('Run on case with id: {0}'.format(case_id))\n            case = siemplify._get_case_by_id(str(case_id))\n            case_comments = siemplify.get_case_comments(case['identifier'])\n            siemplify.LOGGER.info(\"Found {0} comments for case with id: {1} \".format(len(case_comments), str(case_id)))\n\n            for comment in case_comments:\n                # Covert to datetime\n                comment_time = convert_unixtime_to_datetime((comment['modification_time_unix_time_in_ms']))\n\n                # Check that the comment is newer than the JOB timestamp\n                if comment_time > last_successful_execution_time:\n                    siemplify.LOGGER.info(\"Found Case {0} new comment\".format(str(case_id)))\n\n                    # Add to comment Siemplify prefix in order to identify the comment as a siemplify TN comment\n                    comment_text = \"{0}{1}\".format(SIEMPLIFY_COMMENT_PREFIX, comment['comment'])\n\n                    # Update all Alert's tickets in ConnectWise\n                    for alert in case['cyber_alerts']:\n                        siemplify.LOGGER.info(\"Iterate over case {0} alerts\".format(str(case_id)))\n                        ticket_id = alert['additional_data']\n\n                        # Add the comment to CW ticket\n                        try:\n                            siemplify.LOGGER.info(\"Add comment to ticket {0}\".format(ticket_id))\n                            cw_manager.add_comment_to_ticket(ticket_id, comment_text)\n                        except Exception as err:\n                            siemplify.LOGGER.error(\"Failed to add comment to ticket {0}, error: {1}\".format(ticket_id,\n                                                                                                            err.message))\n                            siemplify.LOGGER._log.exception(err)\n\n        siemplify.LOGGER.info(\" --- Finish synchronize comments from cases to ConnectWise tickets --- \")\n\n        # Replicate all ConnectWIze tickets comments to TN cases comments\n        siemplify.LOGGER.info(\" +++ Start synchronize comments from ConnectWise tickets to cases +++ \")\n        cw_last_time_format = cw_manager.covert_datetime_to_cw_format(last_successful_execution_time)\n        tickets = cw_manager.get_tickets_by_conditions(\"status/name!='Completed' and lastUpdated>[{0}]\".format(cw_last_time_format))\n        siemplify.LOGGER.info(\"Found {0} tickets since: {1}\".format(len(tickets), last_successful_execution_time))\n        siemplify.LOGGER.info(\"Start iterating over the tickets\")\n\n        for ticket in tickets:\n            # Ticket summary is the related alert id in TN\n            alert_id = ticket['summary']\n\n            # Fetch case id of the relevant alert\n            alert_cases_ids = siemplify.get_cases_by_ticket_id(alert_id)\n            siemplify.LOGGER.info('Case ids {0} found for ticket with id: {1}'.format(len(alert_cases_ids), ticket['id']))\n\n            # Fetch only the open cases\n            alert_open_cases_ids = []\n            for case_id in alert_cases_ids:\n                case_obj = siemplify._get_case_by_id(str(case_id))\n                if str(case_obj['status']) == CASES_OPEN_STATUS_ENUM:\n                    alert_open_cases_ids.append(case_id)\n\n            if alert_open_cases_ids:\n                siemplify.LOGGER.info(\"Got ticket's open cases attached to alert-{0}, cases count-{1}\".format(alert_id, len(alert_open_cases_ids)))\n\n                # Fetch all ticket's comments\n                ticket_comments = cw_manager.get_ticket_comments_since_time(str(ticket['id']), last_successful_execution_time)\n                if ticket_comments:\n                    siemplify.LOGGER.info(\"Fetch ticket-{0} last comments, new comments count: {1}\".format(ticket['id'], len(ticket_comments)))\n\n                    # Get all comments that didn't come from TN system\n                    comments_to_add = [comment for comment in ticket_comments if not comment['text'].startswith(SIEMPLIFY_COMMENT_PREFIX)]\n                    siemplify.LOGGER.info(\"Found {0} relevant comments to update in cases\".format(len(comments_to_add)))\n\n                    for alert_case_id in alert_open_cases_ids:\n                        for comment in comments_to_add:\n                            comment_with_prefix = \"{0}{1}\".format(CW_COMMENT_PREFIX, comment['text'])\n                            siemplify.add_comment(comment_with_prefix, alert_case_id)\n                            siemplify.LOGGER.info(\"Add comments to case-{0}\".format(alert_case_id))\n                else:\n                    logging.debug(\"No new comments in ticket -{0}\".format(str(ticket['id'])))\n\n                # Fetch all ticket's time entries\n                ticket_times_entries = cw_manager.get_ticket_times_entries(str(ticket['id']), last_successful_execution_time)\n\n                if ticket_times_entries:\n                    siemplify.LOGGER.info(\"Fetch ticket-{0} last time-entries, new relevant entries count: {1}\".format(ticket['id'], len(ticket_comments)))\n                    for alert_case_id in alert_open_cases_ids:\n                        for entry in ticket_times_entries:\n                            comment_with_prefix = \"{0}{1}\".format(CW_COMMENT_PREFIX, entry['notes'])\n                            siemplify.add_comment(comment_with_prefix, alert_case_id)\n                            siemplify.LOGGER.info(\"Add time-entries to case-{0}\".format(alert_case_id))\n                else:\n                    siemplify.LOGGER.info(\"No new time_entries in ticket -{0}\".format(str(ticket['id'])))\n\n        siemplify.LOGGER.info(\" --- Finish synchronize comments from ConnectWise tickets to cases --- \")\n        siemplify.save_timestamp(datetime_format=True)\n        siemplify.LOGGER.info(\"Update Job last execution timestamp\")\n        logging.info(\"-----Job Finished-----\")\n\n    except Exception as err:\n        siemplify.LOGGER.error('Got exception on main handler, ERROR: {0}'.format(err.message))\n        raise\n\n\nif __name__ == '__main__':\n    main()\n",
+    "Version": 1
+}

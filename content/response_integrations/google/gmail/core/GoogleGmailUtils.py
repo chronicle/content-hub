@@ -153,9 +153,7 @@ def build_regex_map(logger: NewLineLogger, regex_list: list[str]) -> dict[str, s
 
 
 # TODO move to TIPCommon
-def get_html_urls_from_html_2_text_obj(
-    html_content: str,
-) -> tuple[list[str], list[str]]:
+def get_html_urls_from_html_2_text_obj(html_content: str) -> tuple[str, str]:
     """Create a HTML2Text object and get html urls.
 
     Args:
@@ -171,22 +169,7 @@ def get_html_urls_from_html_2_text_obj(
     html_renderer.ignore_images = False
     html_renderer.ignore_links = False
     html_renderer.handle(html_content)
-    if hasattr(html_renderer, "html_links"):
-        return html_renderer.html_links, html_renderer.html_links_original_src
-
-    soup = BeautifulSoup(html_content, "html.parser")
-    html_links: list[str] = []
-    html_links_original_src: list[str] = []
-    for anchor in soup.find_all("a", href=True):
-        href = anchor.get("href")
-        if href is None:
-            continue
-        text = anchor.get_text().replace("\xa0", "")
-        if text != href:
-            html_links.append(text)
-        if original_src := anchor.get("originalsrc"):
-            html_links_original_src.append(str(original_src))
-    return html_links, html_links_original_src
+    return html_renderer.html_links, html_renderer.html_links_original_src
 
 
 # TODO move to TIPCommon

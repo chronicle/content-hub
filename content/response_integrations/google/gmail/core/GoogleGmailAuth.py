@@ -45,9 +45,9 @@ def build_auth_manager(
     Returns:
         Google Gmail Api manager object
     """
-    if hasattr(chronicle_soar, 'get_configuration'):
+    if isinstance(chronicle_soar, SiemplifyAction):
         input_dictionary = chronicle_soar.get_configuration(INTEGRATION_IDENTIFIER)
-    elif hasattr(chronicle_soar, 'parameters'):
+    elif isinstance(chronicle_soar, SiemplifyConnectorExecution):
         input_dictionary = chronicle_soar.parameters
     else:
         raise GoogleGmailManagerError("Provided SOAR instance is not supported.")

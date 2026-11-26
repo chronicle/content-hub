@@ -1,0 +1,66 @@
+{
+    "CreationTimeUnixTimeInMs": 1525090186669,
+    "Creator": "admin",
+    "Description": "Synchronize closed tickets at ConnectWise and dismissed alerts at Siemplify.",
+    "Id": -1,
+    "Integration": "ConnectWise",
+    "IsCustom": false,
+    "IsEnabled": true,
+    "ModificationTimeUnixTimeInMs": 1525090186669,
+    "Name": "Synchronize Closed Tickets And Dismissed",
+    "Parameters": [
+        {
+            "CreationTimeUnixTimeInMs": 1525090186669,
+            "DefaultValue": null,
+            "Id": -1,
+            "IsMandatory": true,
+            "JobDefinitionId": -1,
+            "ModificationTimeUnixTimeInMs": 1525090186669,
+            "Name": "API Root",
+            "Type": 2
+        },
+        {
+            "CreationTimeUnixTimeInMs": 1525090186669,
+            "DefaultValue": null,
+            "Id": -1,
+            "IsMandatory": true,
+            "JobDefinitionId": -1,
+            "ModificationTimeUnixTimeInMs": 1525090186669,
+            "Name": "Company Name",
+            "Type": 2
+        },
+        {
+            "CreationTimeUnixTimeInMs": 1525090186669,
+            "DefaultValue": null,
+            "Id": -1,
+            "IsMandatory": true,
+            "JobDefinitionId": -1,
+            "ModificationTimeUnixTimeInMs": 1525090186669,
+            "Name": "API Public Key",
+            "Type": 2
+        },
+        {
+            "CreationTimeUnixTimeInMs": 1525090186669,
+            "DefaultValue": null,
+            "Id": -1,
+            "IsMandatory": true,
+            "JobDefinitionId": -1,
+            "ModificationTimeUnixTimeInMs": 1525090186669,
+            "Name": "API Private Key",
+            "Type": 2
+        },
+        {
+            "CreationTimeUnixTimeInMs": 1525090186669,
+            "DefaultValue": "",
+            "Id": -1,
+            "IsMandatory": true,
+            "JobDefinitionId": -1,
+            "ModificationTimeUnixTimeInMs": 1525090186669,
+            "Name": "Script Name",
+            "Type": 2
+        }
+    ],
+    "RunIntervalInSeconds": 900,
+    "Script": "# ==============================================================================\n# title           : Job.ConnectWise.CloseTicketInCW.py\n# description     : Job - Closes ticket at ConnectWise for closed cases in Siemplify.\n# author          :victor@siemplify.co\n# date            :7-1-18\n# python_version  :2.7\n# ==============================================================================\n\n# =====================================\n#              IMPORTS                #\n# =====================================\nfrom SiemplifyJob import SiemplifyJob\nfrom SiemplifyUtils import convert_datetime_to_unix_time\nfrom ConnectWiseManager import ConnectWiseManager\nimport datetime\nimport urllib3\nimport requests\n\nurllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)\nrequests.packages.urllib3.disable_warnings()\n\n# =====================================\n#               CONSTS                #\n# =====================================\n\n\n\n# =====================================\n#              CLASSES                #\n# =====================================\ndef main():\n\n    siemplify = SiemplifyJob()\n\n    try:\n        # Parameters.\n        script_name = siemplify.parameters['Script Name']\n        api_root = siemplify.parameters['API Root']\n        company_name = siemplify.parameters['Company Name']\n        public_api_key = siemplify.parameters['API Public Key']\n        private_api_key = siemplify.parameters['API Private Key']\n\n        siemplify.script_name = script_name\n        \n        siemplify.LOGGER.info(\"-----Job Started-----\")\n\n        connectwise_manager = ConnectWiseManager(api_root, company_name, public_api_key, private_api_key)\n\n        # Get last successful execution time.\n        last_execution_time = siemplify.fetch_timestamp(datetime_format=True)\n        siemplify.LOGGER.info('Got last successful execution time: {0}'.format(str(last_execution_time)))\n\n        # Convert timestamp to unixtime.\n        time_stamp = convert_datetime_to_unix_time(last_execution_time)\n\n        siemplify.LOGGER.info(' +++ Close Ticket In CW. +++ ')\n        #         Close Ticket In CW\n        # =====================================\n\n        # Get  all scope alerts.\n        closed_cases_alerts = siemplify.get_alerts_ticket_ids_from_cases_closed_since_timestamp(time_stamp, None)\n\n        # Get dismissed alerts ids.\n        dismissed_alerts = siemplify.get_ticket_ids_for_alerts_dismissed_since_timestamp(time_stamp)\n\n        # Unite the alerts lists.\n        alerts_ids_list = closed_cases_alerts + dismissed_alerts\n\n        # Unify the united alerts ids list.\n        alerts_set = set(alerts_ids_list)\n        unique_alerts_ids_list = list(alerts_set)\n        siemplify.LOGGER.info('Found {0} dismissed alerts.'.format(len(unique_alerts_ids_list)))\n\n        for alert_ticket_id in unique_alerts_ids_list:\n            case_ids_list = siemplify.get_cases_by_ticket_id(alert_ticket_id)\n            siemplify.LOGGER.info('Found the following cases: {0} for alert with ticket id: {1}'.format(str(case_ids_list),\n                                                                                                alert_ticket_id))\n            # There has to be one case ID except the SIEM is QRadar.\n            for scope_case_id in case_ids_list:\n                # Get case JSON.\n                scope_case_json = siemplify._get_case_by_id(str(scope_case_id))\n\n                # Extract scope alert from case json.\n                for alert in scope_case_json['cyber_alerts']:\n                    if alert_ticket_id.lower() == alert['external_id'].lower() and alert['additional_data']:\n                        try:\n                            siemplify.LOGGER.info('Found ticket with id: {0} for alert with ticket id: {1}'.format(\n                                alert['additional_data'],\n                                alert['external_id']\n                            ))\n                            connectwise_manager.close_ticket(alert['additional_data'],\n                                                             custom_close_status=\"Completed\")\n                            siemplify.LOGGER.info('CW ticket with id: {0} closed successfully.'.format(\n                                alert['additional_data']))\n                        except Exception as e:\n                            # Write to log(Ticket does not exists anymore.)\n                            siemplify.LOGGER.error(\n                                'Ticket with id: {0} does not exists anymore or already closed. Error: {1}'.format(\n                                    alert['additional_data'], e.message))\n\n        siemplify.LOGGER.info(' +++ Dismiss Alerts In Siemplify. +++ ')\n\n        #      Dismiss Alerts In Siemplify\n        # =====================================\n\n        # Get closed ticket ids from flat execution time.\n        closed_tickets = connectwise_manager.get_close_tickets_since_time(last_execution_time,\n                                                                          custom_close_status=\"Completed\")\n        siemplify.LOGGER.info('Got {0} closed tickets from CW since {1}.'.format(str(len(closed_tickets)),\n                                                                         str(last_execution_time)))\n\n        for closed_ticket in closed_tickets:\n            siemplify.LOGGER.info('Run on ticket with id: {0}'.format(closed_ticket['id']))\n\n            # Extract context case data.\n            siemplify_alert_external_id = closed_ticket['summary']\n            case_ids = siemplify.get_cases_by_ticket_id(siemplify_alert_external_id)\n            siemplify.LOGGER.info('The following cases found for alert with ticket id {0}: {1}'.format(\n                siemplify_alert_external_id,\n                str(case_ids)))\n\n            # Dismiss alert.\n            if case_ids:\n                for case_id in case_ids:\n                    # Get alert identifier.\n                    scope_case_json = siemplify._get_case_by_id(str(case_id))\n                    for alert in scope_case_json['cyber_alerts']:\n                        if siemplify_alert_external_id.lower() == alert['external_id'].lower():\n                            # Dismiss alert.\n                            siemplify.dismiss_alert(alert['alert_group_identifier'], True, case_id)\n                            siemplify.LOGGER.info('Alert with ticket id {0} was dismissed'.format(alert['external_id']))\n\n        # Update Last Run Time.\n        siemplify.save_timestamp(datetime_format=True)\n        siemplify.LOGGER.info('--- JOB FINISHED. ---')\n\n    except Exception as err:\n        siemplify.LOGGER.error('Got exception on main handler.Error: {0}'.format(err.message))\n        raise\n\n\nif __name__ == '__main__':\n    main()",
+    "Version": 1
+}
