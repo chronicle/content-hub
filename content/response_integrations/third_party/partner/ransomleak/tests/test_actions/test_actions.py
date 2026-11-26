@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from integration_testing.common import create_entity
 from integration_testing.platform.script_output import MockActionOutput
@@ -27,14 +29,17 @@ from ransomleak.actions import (
     list_learning_paths,
     ping,
 )
-from ransomleak.tests.common import CONFIG_PATH
+from ransomleak.tests.common import CONFIG_PATH, INTEGRATION_PATH
 from ransomleak.tests.core.product import RansomLeak
+from ransomleak.tests.core.session import RansomLeakSession
 
 JANE = "jane.doe@example.com"
 JOHN = "john.smith@example.com"
 JANE_ID = "3f1c2a9e-7b4d-4e2a-9c1f-0a1b2c3d4e5f"
 JOHN_ID = "4a2b3c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d"
 LP_ID = "123e4567-e89b-12d3-a456-426614174000"
+EXAMPLE_RESULT = json.loads((INTEGRATION_PATH / "resources" / "assign_training_JsonResult_example.json").read_text())
+USER_ITEM_KEYS = set(EXAMPLE_RESULT["users"][0])
 
 
 @pytest.fixture(autouse=True)
@@ -91,6 +96,17 @@ class TestPing:
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert "Failed to connect to the RansomLeak server" in action_output.results.output_message
 
+    @set_metadata(
+        integration_config={"API Root": "http://acme.ransomleak.com", "API Key": "rl_acme.x", "Verify SSL": True},
+    )
+    def test_plain_http_api_root_fails_without_request(
+        self, action_output: MockActionOutput, script_session: RansomLeakSession
+    ) -> None:
+        ping.main()
+        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert "https" in action_output.results.output_message
+        assert script_session.request_history == []
+
 
 class TestEnrichUsers:
     @set_metadata(
@@ -107,11 +123,12 @@ class TestEnrichUsers:
         message = action_output.results.output_message
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
-        # SOAR upper-cases entity identifiers; lookups are case-insensitive.
-        assert JANE.upper() in message
-        assert "not found in RansomLeak:\nNOBODY@EXAMPLE.COM" in message
-        assert "not an email address:\nCORP\\JDOE" in message
+        # Messages and results keep the entity's original identifier; lookups are case-insensitive.
+        assert f"RansomLeak:\n{JANE}" in message
+        assert "not found in RansomLeak:\nnobody@example.com" in message
+        assert "not an email address:\nCORP\\jdoe" in message
         result = action_output.results.json_output.json_result
+        assert result[0]["Entity"] == JANE
         assert result[0]["EntityResult"]["risk_score"] == 58
         assert result[0]["EntityResult"]["risk_level"] == "high"
 
@@ -174,6 +191,41 @@ class TestAssignTraining:
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
         assert len(seeded.assignments) == 2
+        result = action_output.results.json_output.json_result
+        assert result["training_type"] == "exercise"
+        assert result["exercise_slug"] == "phishing-introduction"
+        assert result["learning_path"] is None
+        assert result["enrollment"] is None
+        assert result["due_in_days"] is None
+        assert set(result["users"][0]) == USER_ITEM_KEYS
+        assert result["users"][0]["assignment_id"] in seeded.assignments
+        assert result["users"][0]["enrollment_id"] is None
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={"Learning Path": LP_ID, "Email Addresses": JANE},
+    )
+    def test_learning_path_schema_matches_exercise_schema(self, action_output: MockActionOutput) -> None:
+        assign_training.main()
+        result = action_output.results.json_output.json_result
+        assert set(result) == set(EXAMPLE_RESULT)
+        assert result["exercise_slug"] is None
+        assert set(result["users"][0]) == USER_ITEM_KEYS
+        assert result["users"][0]["assignment_id"] is None
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={"Learning Path": LP_ID, "Email Addresses": JANE},
+    )
+    def test_null_counters_are_treated_as_zero(self, action_output: MockActionOutput, seeded: RansomLeak) -> None:
+        seeded.enrollment_response_overrides = {"alreadyEnrolled": None, "skippedUnlicensed": None}
+        assign_training.main()
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.json_output.json_result["enrollment"] == {
+            "assigned": 1,
+            "already_enrolled": 0,
+            "skipped_unlicensed": 0,
+        }
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,

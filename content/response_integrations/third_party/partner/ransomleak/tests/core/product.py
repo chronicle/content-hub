@@ -37,6 +37,8 @@ class RansomLeak:
     risk_endpoint_available: bool = True
     health_endpoint_available: bool = True
     api_key: str = VALID_API_KEY
+    # Merged into every enrollment response, e.g. to simulate JSON nulls in the counters.
+    enrollment_response_overrides: SingleJson = dataclasses.field(default_factory=dict)
 
     def add_user(self, user: SingleJson, analytics: SingleJson | None = None) -> None:
         self.users.append(user)
@@ -83,4 +85,5 @@ class RansomLeak:
                 counts["assigned"] += 1
                 status = "enrolled"
             results.append({key: value, "userId": user["id"], "status": status, "enrollmentId": f"enr-{user['id']}"})
-        return {**counts, "skippedUnlicensed": 0, "notFound": not_found, "results": results}
+        response = {**counts, "skippedUnlicensed": 0, "notFound": not_found, "results": results}
+        return {**response, **self.enrollment_response_overrides}

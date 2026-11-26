@@ -16,66 +16,45 @@
 
 from __future__ import annotations
 
+import html
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, TypeVar
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.transformation import string_to_multi_value
-from TIPCommon.types import SingleJson
+from TIPCommon.utils import get_entity_original_identifier
 
 from .constants import (
-    DEFAULT_API_ROOT,
+    EMAIL_PATTERN,
     ENRICHMENT_PREFIX,
-    INTEGRATION_NAME,
     MAX_LOOKUP_WORKERS,
     RECENT_HISTORY_LIMIT,
     SUMMARY_FIELDS,
 )
-from .ransomleak_manager import RansomLeakManager, is_email
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     from soar_sdk.SiemplifyAction import SiemplifyAction
+    from soar_sdk.SiemplifyDataModel import DomainEntityInfo
+    from TIPCommon.types import SingleJson
+
+    from .ransomleak_manager import RansomLeakManager
+
+_R = TypeVar("_R")
 
 
-def build_manager(siemplify: SiemplifyAction) -> RansomLeakManager:
-    """Create a manager from the integration configuration.
-
-    Args:
-        siemplify: The running action.
-
-    Returns:
-        A configured RansomLeakManager.
-
-    """
-    api_root = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Root",
-        default_value=DEFAULT_API_ROOT,
-        is_mandatory=True,
-        print_value=True,
-    )
-    api_key = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Key",
-        is_mandatory=True,
-    )
-    verify_ssl = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Verify SSL",
-        default_value=True,
-        input_type=bool,
-        print_value=True,
-    )
-    return RansomLeakManager(api_root=api_root, api_key=api_key, verify_ssl=verify_ssl)
+def is_email(value: str | None) -> bool:
+    """Return True when the value is a syntactically plausible email address."""
+    return bool(value) and bool(EMAIL_PATTERN.match(value.strip()))
 
 
-def user_entities(siemplify: SiemplifyAction) -> list[Any]:
+def entity_identifier(entity: DomainEntityInfo) -> str:
+    """Return the entity's original (not platform upper-cased) identifier, stripped."""
+    return get_entity_original_identifier(entity).strip()
+
+
+def user_entities(siemplify: SiemplifyAction) -> list[DomainEntityInfo]:
     """Return the USER entities in scope of the action.
 
     Args:
@@ -116,13 +95,13 @@ def collect_emails(siemplify: SiemplifyAction, csv_value: str | None) -> tuple[l
         csv_value: The raw comma-separated email parameter.
 
     Returns:
-        (emails, skipped): lower-cased email addresses, and values that are not email addresses.
+        (emails, skipped): email addresses, and values that are not email addresses.
 
     """
-    candidates = [e.identifier.strip() for e in user_entities(siemplify)]
+    candidates = [entity_identifier(e) for e in user_entities(siemplify)]
     candidates += string_to_multi_value(csv_value, only_unique=True)
-    # Deduped once here (first-seen order), case-insensitively; emails are lower-cased.
-    emails = list(dict.fromkeys(c.lower() for c in candidates if is_email(c)))
+    # Deduped case-insensitively, keeping the first-seen spelling.
+    emails = _dedupe_casefold([c for c in candidates if is_email(c)])
     skipped = _dedupe_casefold([c for c in candidates if not is_email(c)])
     return emails, skipped
 
@@ -141,16 +120,12 @@ def section(title: str, values: list[str]) -> str:
     return f"\n{title}:\n" + "\n".join(values) if values else ""
 
 
-def training_summary(
-    user: SingleJson,
-    analytics: SingleJson,
-    risk: SingleJson | None = None,
-) -> SingleJson:
+def training_summary(user: SingleJson, analytics: SingleJson | None, risk: SingleJson | None = None) -> SingleJson:
     """Build the per-user training summary used by enrichment and status actions.
 
     Args:
         user: The RansomLeak user record.
-        analytics: The user's analytics record.
+        analytics: The user's analytics record, or None when empty.
         risk: The user's Human Risk Score record, or None when unavailable.
 
     Returns:
@@ -158,11 +133,7 @@ def training_summary(
 
     """
     analytics = analytics or {}
-    history = sorted(
-        analytics.get("exerciseHistory") or [],
-        key=lambda h: h.get("completedAt") or "",
-        reverse=True,
-    )
+    history = sorted(analytics.get("exerciseHistory") or [], key=lambda h: h.get("completedAt") or "", reverse=True)
     return {
         "user_id": user.get("id"),
         "email": user.get("email"),
@@ -233,7 +204,7 @@ def enrichment_properties(summary: SingleJson) -> SingleJson:
     return {f"{ENRICHMENT_PREFIX}{key}": summary[key] for key in keys if summary.get(key) not in (None, "")}
 
 
-def map_concurrently(fn: Callable[[str], Any], items: list[str]) -> list[tuple[str, Any, Exception | None]]:
+def map_concurrently(fn: Callable[[str], _R], items: Sequence[str]) -> list[tuple[str, _R | None, Exception | None]]:
     """Run fn over items with a small thread pool, keeping input order.
 
     Args:
@@ -245,7 +216,7 @@ def map_concurrently(fn: Callable[[str], Any], items: list[str]) -> list[tuple[s
 
     """
 
-    def run(item: str) -> tuple[str, Any, Exception | None]:
+    def run(item: str) -> tuple[str, _R | None, Exception | None]:
         try:
             return item, fn(item), None
         except Exception as error:  # noqa: BLE001 - reported per item by the caller
@@ -270,3 +241,22 @@ def lookup_user_summary(manager: RansomLeakManager, email: str) -> SingleJson | 
     """
     user = manager.get_user_by_email(email)
     return None if user is None else user_summary(manager, user)
+
+
+def insight_html(summary: SingleJson) -> str:
+    """Render a training summary as the HTML body of an entity insight.
+
+    Args:
+        summary: Output of training_summary().
+
+    Returns:
+        An HTML table of the non-empty SUMMARY_FIELDS.
+
+    """
+    body = "".join(
+        f"<tr><td style='opacity:.65;padding-right:12px'>{html.escape(label)}</td>"
+        f"<td>{html.escape(str(summary[key]))}</td></tr>"
+        for key, label in SUMMARY_FIELDS
+        if summary.get(key) not in (None, "")
+    )
+    return f"<b>RansomLeak training status</b><table>{body}</table>"

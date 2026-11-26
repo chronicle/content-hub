@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import re
+
 INTEGRATION_NAME: str = "RansomLeak"
 INTEGRATION_DISPLAY_NAME: str = "RansomLeak"
 DEFAULT_API_ROOT: str = "https://app.ransomleak.com"
@@ -26,6 +28,12 @@ ENRICH_USERS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Enrich Users"
 ASSIGN_TRAINING_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Assign Training"
 GET_TRAINING_STATUS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Get Training Status"
 LIST_LEARNING_PATHS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - List Learning Paths"
+
+# Action display names, used in error output messages
+ENRICH_USERS_ACTION_NAME: str = "Enrich Users"
+ASSIGN_TRAINING_ACTION_NAME: str = "Assign Training"
+GET_TRAINING_STATUS_ACTION_NAME: str = "Get Training Status"
+LIST_LEARNING_PATHS_ACTION_NAME: str = "List Learning Paths"
 
 # Partner API (all routes are relative to the API Root)
 API_PREFIX: str = "/api/integration"
@@ -44,6 +52,20 @@ ENDPOINTS: dict[str, str] = {
 }
 
 REQUEST_TIMEOUT_SECONDS: int = 30
+USER_AGENT: str = "RansomLeak-GoogleSecOps/1.0"
+# Bounded backoff for idempotent reads only; POSTs are never retried.
+RETRY_TOTAL: int = 3
+RETRY_BACKOFF_FACTOR: float = 0.5
+RETRY_STATUS_CODES: tuple[int, ...] = (429, 502, 503, 504)
+RETRY_METHODS: frozenset[str] = frozenset({"GET"})
+# Hostnames that must never receive the tenant API key (loopback / cloud metadata).
+BLOCKED_API_HOSTS: frozenset[str] = frozenset({
+    "localhost",
+    "localhost.localdomain",
+    "metadata",
+    "metadata.google.internal",
+    "instance-data",
+})
 MAX_ENROLLMENT_BATCH: int = 1000
 MIN_DUE_DAYS: int = 1
 MAX_DUE_DAYS: int = 365
@@ -70,3 +92,11 @@ SUMMARY_FIELDS: tuple[tuple[str, str], ...] = (
 )
 # Max concurrent per-user lookups in Enrich Users / Get Training Status.
 MAX_LOOKUP_WORKERS: int = 5
+
+EMAIL_PATTERN: re.Pattern[str] = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+UUID_PATTERN: re.Pattern[str] = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+)
+# Per-user enrollment statuses that count as assigned. "submitted" is only reported by
+# RansomLeak versions without per-user enrollment results.
+ENROLLED_STATUSES: tuple[str, ...] = ("enrolled", "already_enrolled", "submitted")

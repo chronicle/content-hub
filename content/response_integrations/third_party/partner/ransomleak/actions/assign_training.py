@@ -14,170 +14,217 @@
 
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from typing import TYPE_CHECKING, NoReturn
+
 from TIPCommon.extraction import extract_action_param
-from TIPCommon.types import SingleJson
 
-from ..core.constants import ASSIGN_TRAINING_SCRIPT_NAME, MAX_ENROLLMENT_BATCH
+from ..core.base_action import BaseAction
+from ..core.constants import (
+    ASSIGN_TRAINING_ACTION_NAME,
+    ASSIGN_TRAINING_SCRIPT_NAME,
+    ENROLLED_STATUSES,
+    MAX_ENROLLMENT_BATCH,
+)
+from ..core.data_models import AssignmentRequest, EnrollmentCounts
 from ..core.exceptions import RansomLeakNotFoundError, RansomLeakValidationError
-from ..core.ransomleak_manager import RansomLeakManager
-from ..core.utils import build_manager, collect_emails, section
+from ..core.utils import collect_emails, section
 
-ACTION_NAME = "Assign Training"
-# "submitted" is only reported by RansomLeak versions without per-user enrollment results.
-ENROLLED_STATUSES = ("enrolled", "already_enrolled", "submitted")
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+    from ..core.data_models import LearningPath
+
+MAX_IDEMPOTENCY_KEY_LENGTH: int = 255
 
 
-def _enroll_learning_path(
-    siemplify: SiemplifyAction,
-    manager: RansomLeakManager,
-    learning_path_ref: str,
-    emails: list[str],
-    due_days: int | None,
-) -> SingleJson:
-    learning_path = manager.find_learning_path(learning_path_ref)
-    if learning_path is None:
-        msg = f"Learning path '{learning_path_ref}' was not found. Use 'List Learning Paths' to find a valid ID."
-        raise RansomLeakNotFoundError(msg)
-
-    by_email: dict[str, SingleJson] = {
-        email: {"email": email, "user_id": None, "enrollment_id": None, "status": "pending"} for email in emails
-    }
-    totals = {"assigned": 0, "already_enrolled": 0, "skipped_unlicensed": 0}
-    for start in range(0, len(emails), MAX_ENROLLMENT_BATCH):
-        batch = emails[start : start + MAX_ENROLLMENT_BATCH]
-        siemplify.LOGGER.info(f"Enrolling {len(batch)} user(s) in learning path {learning_path['id']}")
-        response = manager.enroll_learning_path(learning_path["id"], emails=batch, due_days=due_days)
-        totals["assigned"] += response.get("assigned", 0)
-        totals["already_enrolled"] += response.get("alreadyEnrolled", 0)
-        totals["skipped_unlicensed"] += response.get("skippedUnlicensed", 0)
-        for result in response.get("results") or []:
-            entry = by_email.get((result.get("email") or "").lower())
-            if entry is None:
-                continue
-            entry.update({
-                "user_id": result.get("userId"),
-                "enrollment_id": result.get("enrollmentId"),
-                "status": result.get("status") or "submitted",
-            })
-        not_found = {(x or "").lower() for x in response.get("notFound") or []}
-        for email in batch:
-            if by_email[email]["status"] == "pending":
-                by_email[email]["status"] = "not_found" if email in not_found else "submitted"
-    users = list(by_email.values())
-
+def _user_item(email: str) -> SingleJson:
+    """Return a per-user result with the same keys in both modes (unused ones stay None)."""
     return {
-        "training_type": "learning_path",
-        "learning_path": {"id": learning_path.get("id"), "name": learning_path.get("name")},
-        "due_in_days": due_days,
-        "enrollment": totals,
-        "users": users,
+        "email": email,
+        "user_id": None,
+        "enrollment_id": None,
+        "assignment_id": None,
+        "status": "pending",
+        "created_at": None,
+        "error": None,
     }
 
 
-def _assign_exercise(
-    siemplify: SiemplifyAction,
-    manager: RansomLeakManager,
-    exercise_slug: str,
-    emails: list[str],
-) -> SingleJson:
-    case_id = str(getattr(siemplify, "case_id", "") or "")
-    users: list[SingleJson] = []
-    for email in emails:
-        entry: SingleJson = {"email": email, "assignment_id": None, "status": "not_found"}
-        users.append(entry)
-        # Stable per case + exercise + user, so playbook re-runs return the same assignment.
-        idempotency_key = f"secops:{case_id or 'manual'}:{exercise_slug}:{email.lower()}"
-        try:
-            assignment = manager.create_assignment(
-                exercise_slug=exercise_slug,
-                email=email,
-                idempotency_key=idempotency_key[:255],
-                reference=case_id or None,
-            )
-        except RansomLeakNotFoundError as error:
-            siemplify.LOGGER.info(f"Assignment for {email} not created: {error}")
-            entry["error"] = str(error)
-            continue
-        entry.update({
-            "assignment_id": assignment.get("assignmentId"),
-            "status": assignment.get("status"),
-            "created_at": assignment.get("createdAt"),
-        })
-    return {"training_type": "exercise", "exercise_slug": exercise_slug, "users": users}
-
-
-@output_handler
-def main() -> None:
+class AssignTrainingAction(BaseAction):
     """Assign a learning path or a single exercise to users."""
-    siemplify = SiemplifyAction()
-    siemplify.script_name = ASSIGN_TRAINING_SCRIPT_NAME
-    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
-    learning_path_ref = extract_action_param(siemplify, param_name="Learning Path", print_value=True) or ""
-    exercise_slug = extract_action_param(siemplify, param_name="Exercise Slug", print_value=True) or ""
-    emails_csv = extract_action_param(siemplify, param_name="Email Addresses", print_value=True)
-    due_days = extract_action_param(siemplify, param_name="Due In Days", input_type=int, print_value=True)
-    siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
-    result_value = False
-    status = EXECUTION_STATE_COMPLETED
-    try:
-        learning_path_ref, exercise_slug = learning_path_ref.strip(), exercise_slug.strip()
-        if bool(learning_path_ref) == bool(exercise_slug):
+    def __init__(self) -> None:
+        super().__init__(ASSIGN_TRAINING_SCRIPT_NAME, ASSIGN_TRAINING_ACTION_NAME)
+
+    def _extract_action_parameters(self) -> None:
+        learning_path: str | None = extract_action_param(
+            self.soar_action,
+            param_name="Learning Path",
+            print_value=True,
+        )
+        exercise_slug: str | None = extract_action_param(
+            self.soar_action,
+            param_name="Exercise Slug",
+            print_value=True,
+        )
+        emails_csv: str | None = extract_action_param(
+            self.soar_action,
+            param_name="Email Addresses",
+            print_value=True,
+        )
+        due_days: int | None = extract_action_param(
+            self.soar_action,
+            param_name="Due In Days",
+            input_type=int,
+            print_value=True,
+        )
+        self.params.learning_path = (learning_path or "").strip()
+        self.params.exercise_slug = (exercise_slug or "").strip()
+        self.params.emails_csv = emails_csv
+        self.params.due_days = due_days
+
+    def _validate_params(self) -> None:
+        if bool(self.params.learning_path) == bool(self.params.exercise_slug):
             msg = "Provide exactly one of 'Learning Path' or 'Exercise Slug'."
             raise RansomLeakValidationError(msg)
-        if exercise_slug and due_days is not None:
+        if self.params.exercise_slug and self.params.due_days is not None:
             msg = "'Due In Days' only applies to learning paths."
             raise RansomLeakValidationError(msg)
-
-        emails, skipped = collect_emails(siemplify, emails_csv)
+        emails, skipped = collect_emails(self.soar_action, self.params.emails_csv)
         if skipped:
-            siemplify.LOGGER.info(f"Skipped values that are not email addresses: {', '.join(skipped)}")
+            self.logger.info(f"Skipped values that are not email addresses: {', '.join(skipped)}")
         if not emails:
             msg = "No email addresses found in the User entities or the 'Email Addresses' parameter."
             raise RansomLeakValidationError(msg)
+        self.params.emails = emails
+        self.params.skipped = skipped
 
-        manager = build_manager(siemplify)
-        if learning_path_ref:
-            result = _enroll_learning_path(siemplify, manager, learning_path_ref, emails, due_days)
-            target = f"learning path '{result['learning_path']['name']}'"
-            done = [u["email"] for u in result["users"] if u["status"] in ENROLLED_STATUSES]
-        else:
-            result = _assign_exercise(siemplify, manager, exercise_slug, emails)
-            target = f"exercise '{exercise_slug}'"
-            done = [u["email"] for u in result["users"] if u.get("assignment_id")]
-        result["skipped_identifiers"] = skipped
-        siemplify.result.add_result_json(result)
+    def _find_learning_path(self) -> LearningPath:
+        learning_path = self.api_client.find_learning_path(self.params.learning_path)
+        if learning_path is None:
+            msg = (
+                f"Learning path '{self.params.learning_path}' was not found. "
+                "Use 'List Learning Paths' to find a valid ID."
+            )
+            raise RansomLeakNotFoundError(msg)
+        return learning_path
 
+    def _enroll_learning_path(self, emails: list[str]) -> SingleJson:
+        learning_path = self._find_learning_path()
+        by_email: dict[str, SingleJson] = {email.lower(): _user_item(email) for email in emails}
+        totals = EnrollmentCounts()
+        for start in range(0, len(emails), MAX_ENROLLMENT_BATCH):
+            batch = emails[start : start + MAX_ENROLLMENT_BATCH]
+            self.logger.info(f"Enrolling {len(batch)} user(s) in learning path {learning_path.id}")
+            response = self.api_client.enroll_learning_path(
+                learning_path.id,
+                emails=batch,
+                due_days=self.params.due_days,
+            )
+            totals += EnrollmentCounts.from_json(response)
+            for result in response.get("results") or []:
+                entry = by_email.get((result.get("email") or "").lower())
+                if entry is None:
+                    continue
+                entry.update({
+                    "user_id": result.get("userId"),
+                    "enrollment_id": result.get("enrollmentId"),
+                    "status": result.get("status") or "submitted",
+                })
+            not_found = {(x or "").lower() for x in response.get("notFound") or []}
+            for email in batch:
+                entry = by_email[email.lower()]
+                if entry["status"] == "pending":
+                    entry["status"] = "not_found" if email.lower() in not_found else "submitted"
+        return {
+            "training_type": "learning_path",
+            "learning_path": {"id": learning_path.id, "name": learning_path.name},
+            "exercise_slug": None,
+            "due_in_days": self.params.due_days,
+            "enrollment": totals.to_json(),
+            "users": list(by_email.values()),
+        }
+
+    def _assign_exercise(self, emails: list[str]) -> SingleJson:
+        exercise_slug: str = self.params.exercise_slug
+        case_id = str(getattr(self.soar_action, "case_id", "") or "")
+        users: list[SingleJson] = []
+        for email in emails:
+            entry = _user_item(email)
+            users.append(entry)
+            # Stable per case + exercise + user, so playbook re-runs return the same assignment.
+            idempotency_key = f"secops:{case_id or 'manual'}:{exercise_slug}:{email.lower()}"
+            request = AssignmentRequest(
+                exercise_slug=exercise_slug,
+                email=email,
+                idempotency_key=idempotency_key[:MAX_IDEMPOTENCY_KEY_LENGTH],
+                reference=case_id or None,
+            )
+            try:
+                assignment = self.api_client.create_assignment(request)
+            except RansomLeakNotFoundError as error:
+                self.logger.info(f"Assignment for {email} not created: {error}")
+                entry.update({"status": "not_found", "error": str(error)})
+                continue
+            entry.update({
+                "user_id": assignment.user_id,
+                "assignment_id": assignment.assignment_id,
+                "status": assignment.status,
+                "created_at": assignment.created_at,
+            })
+        return {
+            "training_type": "exercise",
+            "learning_path": None,
+            "exercise_slug": exercise_slug,
+            "due_in_days": None,
+            "enrollment": None,
+            "users": users,
+        }
+
+    def _build_output_message(self, result: SingleJson, target: str, done: list[str]) -> str:
         if done:
-            output_message = f"Successfully assigned {target} to the following users in RansomLeak:\n" + "\n".join(done)
+            message = f"Successfully assigned {target} to the following users in RansomLeak:\n" + "\n".join(done)
             if result["training_type"] == "learning_path":
                 enrollment = result["enrollment"]
-                output_message += (
+                message += (
                     f"\nNewly enrolled: {enrollment['assigned']}, already enrolled: "
                     f"{enrollment['already_enrolled']}, skipped for lack of a license: "
                     f"{enrollment['skipped_unlicensed']}."
                 )
         else:
-            output_message = f"No users were assigned {target}."
+            message = f"No users were assigned {target}."
         for label, state in (
             ("were not found in RansomLeak", "not_found"),
             ("were not enrolled for lack of a license", "skipped_unlicensed"),
         ):
-            output_message += section(
-                f"The following users {label}", [u["email"] for u in result["users"] if u["status"] == state]
+            message += section(
+                f"The following users {label}",
+                [u["email"] for u in result["users"] if u["status"] == state],
             )
-        output_message += section("The following values were skipped because they are not email addresses", skipped)
-        result_value = bool(done)
-    except Exception as error:
-        siemplify.LOGGER.exception(f'Error executing action "{ACTION_NAME}". Reason: {error}')
-        output_message = f'Error executing action "{ACTION_NAME}". Reason: {error}'
-        status = EXECUTION_STATE_FAILED
+        message += section(
+            "The following values were skipped because they are not email addresses",
+            self.params.skipped,
+        )
+        return message
 
-    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.end(output_message, result_value, status)
+    def _perform_action(self, _: object = None) -> None:
+        emails: list[str] = self.params.emails
+        if self.params.learning_path:
+            result = self._enroll_learning_path(emails)
+            target = f"learning path '{result['learning_path']['name']}'"
+            done = [u["email"] for u in result["users"] if u["status"] in ENROLLED_STATUSES]
+        else:
+            result = self._assign_exercise(emails)
+            target = f"exercise '{self.params.exercise_slug}'"
+            done = [u["email"] for u in result["users"] if u["assignment_id"]]
+        result["skipped_identifiers"] = self.params.skipped
+        self.json_results = result
+        self.output_message = self._build_output_message(result, target, done)
+        self.result_value = bool(done)
+
+
+def main() -> NoReturn:
+    AssignTrainingAction().run()
 
 
 if __name__ == "__main__":

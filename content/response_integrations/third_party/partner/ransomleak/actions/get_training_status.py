@@ -14,19 +14,21 @@
 
 from __future__ import annotations
 
-import re
+from typing import TYPE_CHECKING, NoReturn
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.base.action import DataTable
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import construct_csv
-from TIPCommon.types import SingleJson
 
-from ..core.constants import GET_TRAINING_STATUS_SCRIPT_NAME, SUMMARY_FIELDS
+from ..core.base_action import BaseAction
+from ..core.constants import (
+    GET_TRAINING_STATUS_ACTION_NAME,
+    GET_TRAINING_STATUS_SCRIPT_NAME,
+    SUMMARY_FIELDS,
+    UUID_PATTERN,
+)
 from ..core.exceptions import RansomLeakNotFoundError, RansomLeakValidationError
 from ..core.utils import (
-    build_manager,
     collect_emails,
     lookup_user_summary,
     map_concurrently,
@@ -34,97 +36,131 @@ from ..core.utils import (
     unique_values,
 )
 
-ACTION_NAME = "Get Training Status"
-UUID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
-@output_handler
-def main() -> None:
+class GetTrainingStatusAction(BaseAction):
     """Report training progress for users and/or remediation assignments."""
-    siemplify = SiemplifyAction()
-    siemplify.script_name = GET_TRAINING_STATUS_SCRIPT_NAME
-    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
-    emails_csv = extract_action_param(siemplify, param_name="Email Addresses", print_value=True)
-    assignment_ids_csv = extract_action_param(siemplify, param_name="Assignment IDs", print_value=True)
-    siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
-    result_value = False
-    status = EXECUTION_STATE_COMPLETED
-    try:
-        emails, skipped = collect_emails(siemplify, emails_csv)
-        assignment_ids = unique_values(assignment_ids_csv)
+    def __init__(self) -> None:
+        super().__init__(GET_TRAINING_STATUS_SCRIPT_NAME, GET_TRAINING_STATUS_ACTION_NAME)
+
+    def _extract_action_parameters(self) -> None:
+        emails_csv: str | None = extract_action_param(
+            self.soar_action,
+            param_name="Email Addresses",
+            print_value=True,
+        )
+        assignment_ids_csv: str | None = extract_action_param(
+            self.soar_action,
+            param_name="Assignment IDs",
+            print_value=True,
+        )
+        self.params.emails_csv = emails_csv
+        self.params.assignment_ids_csv = assignment_ids_csv
+
+    def _validate_params(self) -> None:
+        emails, skipped = collect_emails(self.soar_action, self.params.emails_csv)
+        assignment_ids = unique_values(self.params.assignment_ids_csv)
         if not emails and not assignment_ids:
             msg = "Provide User entities with email identifiers, 'Email Addresses' or 'Assignment IDs'."
             raise RansomLeakValidationError(msg)
+        self.params.emails = emails
+        self.params.skipped = skipped
+        self.params.assignment_ids = assignment_ids
 
-        manager = build_manager(siemplify)
-        # Fail fast on a bad key instead of fanning out N failing lookups.
-        manager.test_connectivity()
+    def _get_users(self, not_found: list[str]) -> list[SingleJson]:
         users: list[SingleJson] = []
-        not_found: list[str] = []
-        for email, summary, error in map_concurrently(lambda e: lookup_user_summary(manager, e), emails):
+        lookups = map_concurrently(
+            lambda email: lookup_user_summary(self.api_client, email),
+            self.params.emails,
+        )
+        for email, summary, error in lookups:
             if error is not None:
                 raise error
             if summary is None:
                 not_found.append(email)
             else:
                 users.append(summary)
+        return users
 
-        assignments: list[SingleJson] = []
+    def _get_assignments(self, not_found: list[str]) -> list[SingleJson]:
+        assignment_ids: list[str] = self.params.assignment_ids
         valid_ids = [a for a in assignment_ids if UUID_PATTERN.match(a)]
         not_found += [a for a in assignment_ids if not UUID_PATTERN.match(a)]
-        for assignment_id, assignment, error in map_concurrently(manager.get_assignment, valid_ids):
+        assignments: list[SingleJson] = []
+        for assignment_id, assignment, error in map_concurrently(self.api_client.get_assignment, valid_ids):
             if isinstance(error, RansomLeakNotFoundError):
                 not_found.append(assignment_id)
             elif error is not None:
                 raise error
-            else:
+            elif assignment is not None:
                 assignments.append(assignment)
+        return assignments
 
-        siemplify.result.add_result_json({
+    def _add_data_tables(self, users: list[SingleJson], assignments: list[SingleJson]) -> None:
+        if users:
+            self.data_tables.append(
+                DataTable(
+                    data_table=construct_csv([
+                        {"Email": u["email"], **{label: u[key] for key, label in SUMMARY_FIELDS}} for u in users
+                    ]),
+                    title="RansomLeak Training Status",
+                ),
+            )
+        if assignments:
+            self.data_tables.append(
+                DataTable(
+                    data_table=construct_csv([
+                        {
+                            "Assignment ID": a.get("assignmentId"),
+                            "Email": a.get("userEmail"),
+                            "Exercise": a.get("exerciseSlug"),
+                            "Status": a.get("status"),
+                            "Started At": a.get("startedAt"),
+                            "Completed At": a.get("completedAt"),
+                        }
+                        for a in assignments
+                    ]),
+                    title="RansomLeak Assignments",
+                ),
+            )
+
+    def _perform_action(self, _: object = None) -> None:
+        # Fail fast on a bad key instead of fanning out N failing lookups.
+        self.api_client.test_connectivity()
+        not_found: list[str] = []
+        users = self._get_users(not_found)
+        assignments = self._get_assignments(not_found)
+        skipped: list[str] = self.params.skipped
+
+        self.json_results = {
             "users": users,
             "assignments": assignments,
             "not_found": not_found,
             "skipped_identifiers": skipped,
-        })
-        if users:
-            siemplify.result.add_data_table(
-                "RansomLeak Training Status",
-                construct_csv([
-                    {"Email": u["email"], **{label: u[key] for key, label in SUMMARY_FIELDS}} for u in users
-                ]),
-            )
-        if assignments:
-            siemplify.result.add_data_table(
-                "RansomLeak Assignments",
-                construct_csv([
-                    {
-                        "Assignment ID": a.get("assignmentId"),
-                        "Email": a.get("userEmail"),
-                        "Exercise": a.get("exerciseSlug"),
-                        "Status": a.get("status"),
-                        "Started At": a.get("startedAt"),
-                        "Completed At": a.get("completedAt"),
-                    }
-                    for a in assignments
-                ]),
-            )
+        }
+        self._add_data_tables(users, assignments)
 
         found = [u["email"] for u in users] + [a.get("assignmentId") for a in assignments]
         if found:
-            output_message = "Successfully retrieved RansomLeak training status for:\n" + "\n".join(found)
+            self.output_message = "Successfully retrieved RansomLeak training status for:\n" + "\n".join(found)
         else:
-            output_message = "No training status was found in RansomLeak."
-        output_message += section("The following users or assignments were not found in RansomLeak", not_found)
-        output_message += section("The following values were skipped because they are not email addresses", skipped)
-        result_value = bool(found)
-    except Exception as error:
-        siemplify.LOGGER.exception(f'Error executing action "{ACTION_NAME}". Reason: {error}')
-        output_message = f'Error executing action "{ACTION_NAME}". Reason: {error}'
-        status = EXECUTION_STATE_FAILED
+            self.output_message = "No training status was found in RansomLeak."
+        self.output_message += section(
+            "The following users or assignments were not found in RansomLeak",
+            not_found,
+        )
+        self.output_message += section(
+            "The following values were skipped because they are not email addresses",
+            skipped,
+        )
+        self.result_value = bool(found)
 
-    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.end(output_message, result_value, status)
+
+def main() -> NoReturn:
+    GetTrainingStatusAction().run()
 
 
 if __name__ == "__main__":

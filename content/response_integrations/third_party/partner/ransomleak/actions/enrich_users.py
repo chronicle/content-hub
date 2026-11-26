@@ -14,116 +14,136 @@
 
 from __future__ import annotations
 
-import html
-from typing import Any
+from typing import TYPE_CHECKING, NoReturn
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.base.action import EntityInsight
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import convert_dict_to_json_result_dict
-from TIPCommon.types import SingleJson
 
-from ..core.constants import ENRICH_USERS_SCRIPT_NAME, SUMMARY_FIELDS
+from ..core.base_action import BaseAction
+from ..core.constants import (
+    ENRICH_USERS_ACTION_NAME,
+    ENRICH_USERS_SCRIPT_NAME,
+    INTEGRATION_NAME,
+)
 from ..core.exceptions import RansomLeakAuthError
-from ..core.ransomleak_manager import is_email
 from ..core.utils import (
-    build_manager,
     enrichment_properties,
+    entity_identifier,
+    insight_html,
+    is_email,
     lookup_user_summary,
     map_concurrently,
     section,
     user_entities,
 )
 
-
-def _insight_html(summary: SingleJson) -> str:
-    body = "".join(
-        f"<tr><td style='opacity:.65;padding-right:12px'>{html.escape(label)}</td>"
-        f"<td>{html.escape(str(summary[key]))}</td></tr>"
-        for key, label in SUMMARY_FIELDS
-        if summary.get(key) not in (None, "")
-    )
-    return f"<b>RansomLeak training status</b><table>{body}</table>"
+if TYPE_CHECKING:
+    from soar_sdk.SiemplifyDataModel import DomainEntityInfo
+    from TIPCommon.types import SingleJson
 
 
-@output_handler
-def main() -> None:
+class EnrichUsersAction(BaseAction):
     """Enrich USER entities with RansomLeak training status and Human Risk Score."""
-    siemplify = SiemplifyAction()
-    siemplify.script_name = ENRICH_USERS_SCRIPT_NAME
-    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
-    create_insight = extract_action_param(
-        siemplify,
-        param_name="Create Insight",
-        default_value=False,
-        input_type=bool,
-        print_value=True,
-    )
-    siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
-    json_results: SingleJson = {}
-    enriched: list[Any] = []
-    not_found: list[str] = []
-    unsupported: list[str] = []
-    failed: list[str] = []
-    status = EXECUTION_STATE_COMPLETED
+    def __init__(self) -> None:
+        super().__init__(ENRICH_USERS_SCRIPT_NAME, ENRICH_USERS_ACTION_NAME)
 
-    try:
-        manager = build_manager(siemplify)
-        entities: dict[str, list[Any]] = {}
-        for entity in user_entities(siemplify):
-            identifier = entity.identifier.strip()
+    def _extract_action_parameters(self) -> None:
+        create_insight: bool = extract_action_param(
+            self.soar_action,
+            param_name="Create Insight",
+            default_value=False,
+            input_type=bool,
+            print_value=True,
+        )
+        self.params.create_insight = create_insight
+
+    def _group_entities_by_email(self) -> tuple[dict[str, list[DomainEntityInfo]], list[str]]:
+        """Group USER entities by lower-cased email so case variants share one lookup.
+
+        Returns:
+            (entities by lower-cased email, identifiers that are not email addresses).
+
+        """
+        entities: dict[str, list[DomainEntityInfo]] = {}
+        unsupported: list[str] = []
+        for entity in user_entities(self.soar_action):
+            identifier = entity_identifier(entity)
             if is_email(identifier):
-                # Case variants of one address share a single lookup.
                 entities.setdefault(identifier.lower(), []).append(entity)
             else:
                 unsupported.append(identifier)
+        return entities, unsupported
+
+    def _enrich(self, entities: list[DomainEntityInfo], summary: SingleJson) -> None:
+        properties = enrichment_properties(summary)
+        for entity in entities:
+            entity.additional_properties.update(properties)
+            entity.is_enriched = True
+            if self.params.create_insight:
+                self.entity_insights.append(
+                    EntityInsight(
+                        entity=entity,
+                        message=insight_html(summary),
+                        triggered_by=INTEGRATION_NAME,
+                    ),
+                )
+
+    def _perform_action(self, _: object = None) -> None:
+        entities, unsupported = self._group_entities_by_email()
         if entities:
             # Fail fast on a bad key instead of fanning out N failing lookups.
-            manager.test_connectivity()
-        lookups = map_concurrently(lambda email: lookup_user_summary(manager, email), list(entities))
+            self.api_client.test_connectivity()
+
+        json_results: SingleJson = {}
+        enriched: list[DomainEntityInfo] = []
+        not_found: list[str] = []
+        failed: list[str] = []
+        lookups = map_concurrently(
+            lambda email: lookup_user_summary(self.api_client, email),
+            list(entities),
+        )
         for key, summary, error in lookups:
-            identifier = entities[key][0].identifier.strip()  # first-seen spelling, for messages/results
+            identifier = entity_identifier(entities[key][0])  # first-seen spelling, for messages/results
             if isinstance(error, RansomLeakAuthError):
                 raise error
             if error is not None:
-                siemplify.LOGGER.error(f"Failed to enrich {identifier}: {error}")
+                self.logger.error(f"Failed to enrich {identifier}: {error}")
                 failed.append(identifier)
                 continue
             if summary is None:
                 not_found.append(identifier)
                 continue
             json_results[identifier] = summary
-            for entity in entities[key]:
-                entity.additional_properties.update(enrichment_properties(summary))
-                entity.is_enriched = True
-                if create_insight:
-                    siemplify.add_entity_insight(entity, _insight_html(summary))
-                enriched.append(entity)
+            self._enrich(entities[key], summary)
+            enriched.extend(entities[key])
 
         if enriched:
-            siemplify.update_entities(enriched)
-            siemplify.result.add_result_json(convert_dict_to_json_result_dict(json_results))
-            output_message = "Successfully enriched the following users using RansomLeak:\n" + "\n".join(
-                e.identifier for e in enriched
+            self.soar_action.update_entities(enriched)
+            self.json_results = convert_dict_to_json_result_dict(json_results)
+            self.output_message = "Successfully enriched the following users using RansomLeak:\n" + "\n".join(
+                entity_identifier(e) for e in enriched
             )
         else:
-            output_message = "None of the provided users were enriched."
-        output_message += section("The following users were not found in RansomLeak", not_found)
-        output_message += section(
-            "The following entities were skipped because their identifier is not an email address", unsupported
+            self.output_message = "None of the provided users were enriched."
+        self.output_message += section(
+            "The following users were not found in RansomLeak",
+            not_found,
         )
-        output_message += section("Action wasn't able to enrich the following users", failed)
-        result_value = bool(enriched)
-    except Exception as error:
-        siemplify.LOGGER.exception(f'Error executing action "Enrich Users". Reason: {error}')
-        output_message = f'Error executing action "Enrich Users". Reason: {error}'
-        result_value = False
-        status = EXECUTION_STATE_FAILED
+        self.output_message += section(
+            "The following entities were skipped because their identifier is not an email address",
+            unsupported,
+        )
+        self.output_message += section(
+            "Action wasn't able to enrich the following users",
+            failed,
+        )
+        self.result_value = bool(enriched)
 
-    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.end(output_message, result_value, status)
+
+def main() -> NoReturn:
+    EnrichUsersAction().run()
 
 
 if __name__ == "__main__":

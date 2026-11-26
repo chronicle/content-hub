@@ -11,3 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Import soar_sdk before anything else so its bare module aliases (SiemplifyAction, SiemplifyBase, ...)
+# resolve to the same module objects TIPCommon's base Action uses; otherwise the test patches miss them.
+import soar_sdk  # noqa: F401

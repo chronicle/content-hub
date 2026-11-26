@@ -14,37 +14,32 @@
 
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from typing import NoReturn
 
+from ..core.base_action import BaseAction
 from ..core.constants import INTEGRATION_DISPLAY_NAME, PING_SCRIPT_NAME
-from ..core.utils import build_manager
+
+SUCCESS_MESSAGE: str = (
+    f"Successfully connected to the {INTEGRATION_DISPLAY_NAME} server with the provided connection parameters!"
+)
+ERROR_MESSAGE: str = f"Failed to connect to the {INTEGRATION_DISPLAY_NAME} server!"
 
 
-@output_handler
-def main() -> None:
+class PingAction(BaseAction):
     """Verify the API Root and API Key with an authenticated request."""
-    siemplify = SiemplifyAction()
-    siemplify.script_name = PING_SCRIPT_NAME
-    siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
-    try:
-        manager = build_manager(siemplify)
-        manager.test_connectivity()
-        output_message = (
-            f"Successfully connected to the {INTEGRATION_DISPLAY_NAME} server with the provided connection parameters!"
-        )
-        result_value = True
-        status = EXECUTION_STATE_COMPLETED
-    except Exception as error:
-        siemplify.LOGGER.exception(f"Ping failed: {error}")
-        output_message = f"Failed to connect to the {INTEGRATION_DISPLAY_NAME} server! Error is {error}"
-        result_value = False
-        status = EXECUTION_STATE_FAILED
+    def __init__(self) -> None:
+        super().__init__(PING_SCRIPT_NAME, "Ping")
+        self.error_output_message = ERROR_MESSAGE
 
-    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.end(output_message, result_value, status)
+    def _perform_action(self, _: object = None) -> None:
+        self.api_client.test_connectivity()
+        self.output_message = SUCCESS_MESSAGE
+        self.result_value = True
+
+
+def main() -> NoReturn:
+    PingAction().run()
 
 
 if __name__ == "__main__":
