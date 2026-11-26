@@ -52,7 +52,7 @@ def push_playbook(
     ] = False,
     keep_zip: Annotated[
         bool,
-        typer.Option("--keep-zip", help="Keep the integration zip file after pulling."),
+        typer.Option("--keep-zip", help="Keep the playbook zip file after pushing."),
     ] = False,
 ) -> None:
     """Build and push playbook to the SOAR environment.
@@ -61,7 +61,7 @@ def push_playbook(
         playbook: The playbook to build and push.
         src: Source folder, where the content will be pushed from.
         include_blocks: Push all playbook-dependent blocks.
-        keep_zip: Keep the integration zip file after pulling.
+        keep_zip: Keep the playbook zip file after pushing.
 
     Raises:
         typer.Exit: If the upload fails.

@@ -107,13 +107,16 @@ def check(  # ruff:ignore[too-many-arguments]
     unsafe_fixes: Annotated[
         bool,
         typer.Option(
-            help="Fix issues in the code that needs to be reviewed by the user.",
+            help="Fix issues in the code that need to be reviewed by the user.",
         ),
     ] = False,
     changed_files: Annotated[
         bool,
         typer.Option(
-            help=("Check all changed files based on a diff with the head commit instead of --file-paths"),
+            help=(
+                "Check all changed files based on a diff with the previous commit (HEAD^) "
+                "instead of providing FILE_PATHS."
+            ),
         ),
     ] = False,
     static_type_check: Annotated[

@@ -146,7 +146,7 @@ def build(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
             "-d",
             help=(
                 "Deconstruct built integrations or playbooks instead of building them."
-                " Does work only with --integration."
+                " Works only with --integration or --playbook."
             ),
         ),
     ] = False,

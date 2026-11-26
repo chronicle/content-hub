@@ -1,0 +1,1 @@
+../../../.agents/skills/mp/SKILL.md

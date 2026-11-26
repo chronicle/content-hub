@@ -49,7 +49,7 @@ def push_integration(
     *,
     is_staging: Annotated[
         bool,
-        typer.Option("--staging", help="Push integration in to staging mode."),
+        typer.Option("--staging", help="Push integration into staging mode."),
     ] = False,
     custom: Annotated[
         bool,
@@ -57,7 +57,7 @@ def push_integration(
     ] = False,
     keep_zip: Annotated[
         bool,
-        typer.Option("--keep-zip", help="Keep the integration zip file after pulling."),
+        typer.Option("--keep-zip", help="Keep the integration zip file after pushing."),
     ] = False,
 ) -> None:
     """Build and push an integration to the dev environment.
@@ -65,9 +65,9 @@ def push_integration(
     Args:
         integration: The integration to build and push.
         src: Source folder, where the content will be pushed from.
-        is_staging: Add this option to push integration in to staging mode.
+        is_staging: Add this option to push integration into staging mode.
         custom: Add this option to push integration from the custom repository.
-        keep_zip: Keep the integration zip file after pulling.
+        keep_zip: Keep the integration zip file after pushing.
 
     Raises:
         typer.Exit: If the upload fails.

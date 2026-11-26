@@ -35,14 +35,14 @@ def config(
     root_path: Annotated[
         str | None,
         typer.Option(
-            help="Configure the path to tip-marketplace repository root directory",
+            help="Configure the path to the content-hub repository root directory.",
             show_default=False,
         ),
     ] = None,
     processes: Annotated[
         int | None,
         typer.Option(
-            help="Configure the number of processes can be run in parallel",
+            help="Configure the number of processes that can run in parallel (1-10).",
             show_default=False,
         ),
     ] = None,

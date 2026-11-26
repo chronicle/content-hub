@@ -1,13 +1,16 @@
-# `mp` and development environment commands
+# `mp login`, `mp push`, and `mp pull`
 
-Commands for interacting with the development environment (playground). This suite of commands helps you manage your connection to the Google SecOps environment and deploy your integrations and playbooks for testing.
+Commands for authenticating to a Google SecOps development environment and pushing or pulling integrations, playbooks, Case/Alert views, custom fields, and alert grouping rules.
+
+> [!NOTE]
+> `mp dev-env` (and `mp dev-env deploy`) is deprecated. Use the top-level `mp login`, `mp push`, and `mp pull` commands directly. Saved session configuration is stored in `~/.mp_dev_env.json`.
 
 ## Authentication modes
 
 `mp login` supports two modes:
 
-- **Google Chronicle SOAR** — Chronicle REST API using Google Cloud IAM (Service Account JSON key file or Application Default Credentials). Provide the instance's `--api-root` (or `--credentials-file` / `--gcp`).
-- **Legacy SOAR** — an API root URL plus an API key (or username/password) for on-prem/legacy environments.
+- **Google Chronicle SOAR**: Chronicle REST API using Google Cloud IAM (Service Account JSON key file or Application Default Credentials). Provide the instance's `--api-root` (or `--credentials-file` / `--gcp`).
+- **Legacy SOAR**: An API root URL plus an API key (or username/password) for on-prem or legacy environments.
 
 > [!IMPORTANT]
 > Content pulled from a legacy SOAR instance should be pushed back to a legacy instance; content pulled over the Chronicle API should be pushed back over the Chronicle API.
@@ -44,7 +47,7 @@ When creating a Service Account for `mp`, assign the following:
 
 1. Open your SecOps environment in a web browser.
 2. Open the browser's Developer Console (F12) and execute: `localStorage['soar_server-addr']` to get your API Root.
-3. In SecOps, navigate to **Settings** → **SOAR Settings** → **Advanced** → **API Keys**, create an API key with `Admins` permissions, and copy it.
+3. In SecOps, navigate to **Settings > SOAR Settings > Advanced > API Keys**, create an API key with `Admins` permissions, and copy it.
 
 ## Subcommands
 
@@ -92,7 +95,7 @@ Build and push an integration to the dev environment.
 **Usage:**
 
 ```bash
-mp push integration [INTEGRATION] [OPTIONS]
+mp push integration <INTEGRATION> [OPTIONS]
 ```
 
 **Arguments:**
@@ -115,7 +118,7 @@ Build and push a playbook to the dev environment.
 **Usage:**
 
 ```bash
-mp push playbook [PLAYBOOK] [OPTIONS]
+mp push playbook <PLAYBOOK> [OPTIONS]
 ```
 
 **Arguments:**
@@ -193,7 +196,6 @@ mp push custom-field [FIELD] [OPTIONS]
 | Option     | Description                                                    | Type   | Default |
 |:-----------|:---------------------------------------------------------------|:-------|:--------|
 | `--all`    | Push all custom fields from the local repository.              | `bool` | `False` |
-| `--custom` | Path to custom source directory containing custom fields.      | `Path` | `None`  |
 | `--force`  | Force creating new custom fields if not present on server.     | `bool` | `False` |
 | `--scope`  | Filter custom fields to push by scope (e.g., `alert`, `case`, `alert,case` [OR filter], or `shared` [AND filter for both alert and case]). | `str`  | `None`  |
 
@@ -229,7 +231,6 @@ mp push alert-grouping-rule [RULE] [OPTIONS]
 | Option     | Description                                                        | Type   | Default |
 |:-----------|:-------------------------------------------------------------------|:-------|:--------|
 | `--all`    | Push all alert grouping rules from the local repository.           | `bool` | `False` |
-| `--custom` | Path to custom source directory containing alert grouping rules.   | `Path` | `None`  |
 | `--force`  | Force creating new alert grouping rules if not present on server.  | `bool` | `False` |
 
 **Examples:**
@@ -265,7 +266,7 @@ Pull and deconstruct an integration from the dev environment.
 **Usage:**
 
 ```bash
-mp pull integration [INTEGRATION] [OPTIONS]
+mp pull integration <INTEGRATION> [OPTIONS]
 ```
 
 **Arguments:**
@@ -274,10 +275,10 @@ mp pull integration [INTEGRATION] [OPTIONS]
 
 **Options:**
 
-| Option       | Description                                                             | Type   | Default |
-|:-------------|:------------------------------------------------------------------------|:-------|:--------|
-| `--dst`      | Destination folder. Defaults to the `.downloads` directory in the repo. | `Path` | `None`  |
-| `--keep-zip` | Keep the zip file after pulling.                                        | `bool` | `False` |
+| Option       | Description                                                            | Type   | Default |
+|:-------------|:-----------------------------------------------------------------------|:-------|:--------|
+| `--dst`      | Destination folder. Defaults to the `downloads` directory in the repo. | `Path` | `None`  |
+| `--keep-zip` | Keep the zip file after pulling.                                       | `bool` | `False` |
 
 ### `pull playbook`
 
@@ -286,7 +287,7 @@ Pull and deconstruct a playbook from the dev environment.
 **Usage:**
 
 ```bash
-mp pull playbook [PLAYBOOK] [OPTIONS]
+mp pull playbook <PLAYBOOK> [OPTIONS]
 ```
 
 **Arguments:**
@@ -295,11 +296,11 @@ mp pull playbook [PLAYBOOK] [OPTIONS]
 
 **Options:**
 
-| Option             | Description                                                             | Type   | Default |
-|:-------------------|:------------------------------------------------------------------------|:-------|:--------|
-| `--dst`            | Destination folder. Defaults to the `.downloads` directory in the repo. | `Path` | `None`  |
-| `--include-blocks` | Pull all playbook dependent blocks.                                     | `bool` | `False` |
-| `--keep-zip`       | Keep the zip file after pulling.                                        | `bool` | `False` |
+| Option             | Description                                                            | Type   | Default |
+|:-------------------|:-----------------------------------------------------------------------|:-------|:--------|
+| `--dst`            | Destination folder. Defaults to the `downloads` directory in the repo. | `Path` | `None`  |
+| `--include-blocks` | Pull all playbook dependent blocks.                                    | `bool` | `False` |
+| `--keep-zip`       | Keep the zip file after pulling.                                       | `bool` | `False` |
 
 ### `pull view`
 

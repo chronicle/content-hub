@@ -76,6 +76,7 @@ mp build repository [REPOSITORIES]... [OPTIONS]
     *   `third_party`: Community and partner integrations.
     *   `custom`: Custom integrations.
     *   `playbooks`: Playbooks.
+    *   `all_content`: Commercial integrations, third-party integrations, and playbooks.
 
 **Options:**
 
@@ -83,6 +84,13 @@ mp build repository [REPOSITORIES]... [OPTIONS]
 | :--- | :--- | :--- | :--- | :--- |
 | `--quiet` | `-q` | Log less on runtime. | `bool` | `False` |
 | `--verbose` | `-v` | Log more on runtime. | `bool` | `False` |
+
+## Output & Constraints
+
+- Built artifacts are written under `<marketplace_path>/out/content/` by default (`response_integrations/` and `Playbooks/playbook_definitions/`), or under `--dst` when specified.
+- `--src` and `--dst` on `mp build integration` and `mp build playbook` must point to existing directories.
+- `--custom-integration` cannot be combined with `--deconstruct`, `--src`, or `--dst`.
+- Building `google` or `third_party` writes `marketplace.json` for that repository; building both `google` and `third_party` together (`mp build repository google third_party`) also checks for duplicate integration identifiers across tiers.
 
 ## Examples
 

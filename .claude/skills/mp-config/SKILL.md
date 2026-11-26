@@ -1,0 +1,1 @@
+../../../.agents/skills/mp-config/SKILL.md

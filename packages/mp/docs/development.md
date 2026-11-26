@@ -2,135 +2,125 @@
 
 ## Project Structure
 
-The `mp` project follows this basic structure:
+The `packages/mp` package is organized by CLI domain under `src/mp/`:
 
+```text
+packages/mp/
+├── src/mp/
+│   ├── main.py                # CLI entry point (mounts all Typer sub-apps)
+│   ├── build_project/         # Integration, playbook, view, and repository build/deconstruct flows
+│   ├── check/                 # Ruff linting and ty static type checking command
+│   ├── config/                # Persistent .mp_config CLI settings command
+│   ├── core/                  # Config, constants, Pydantic/TypedDict data models, libcst, subprocess, Gemini SDK
+│   ├── describe/              # Gemini AI description generation, evaluation, regression testing, and accept flows
+│   ├── dev_env/               # SecOps login, push, and pull clients (Chronicle IAM/ADC and legacy SOAR API)
+│   ├── format/                # Ruff formatting command
+│   ├── pack/                  # SOAR-importable integration ZIP packaging and Git worktree checkout
+│   ├── run_pre_build_tests/   # Parallel per-integration pytest runner and JSON report processor
+│   ├── self_update/           # Self-upgrade command (mp self update)
+│   ├── telemetry/             # Opt-out sanitized command usage telemetry
+│   └── validate/              # Pre-build structural, metadata, and release-hygiene validators
+├── tests/                     # Unit and property-based test suite (pytest + hypothesis)
+├── docs/                      # Package and command documentation
+├── pyproject.toml             # Package metadata and dependencies (Python >=3.11,<3.12)
+├── ruff.toml                  # Ruff lint and format rules
+├── ty.toml                    # Astral ty static type-checker configuration
+└── pyrefly.toml               # Pyrefly type-checker configuration
 ```
-mp/
-├── src/mp/         # Source code
-│   ├── build_project/  # Integration building functionality
-│   ├── check/      # Code checking functionality
-│   ├── core/       # Core utilities and data models
-│   ├── format/     # Code formatting functionality
-│   └── __init__.py # Main entry point
-├── tests/          # Test suite
-├── docs/           # Documentation
-└── pyproject.toml  # Project configuration
-```
 
-## Setting Up Development Environment
+## Setting Up the Development Environment
 
-1. Clone the repository and install it in development mode:
+From the `content-hub` repository root:
 
 ```bash
-git clone <repository-url>
-cd mp
-python -m virtualenv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -e ".[dev]"
+cd packages/mp
+uv sync --dev
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
-2. Install pre-commit hooks (recommended):
+## Code Style and Quality Checks
+
+CI enforces the following checks on every change touching `packages/mp/` (see `.github/workflows/lint.yml` and `.github/workflows/mp_code_check.yml`):
 
 ```bash
-pre-commit install
+# Run from packages/mp/ with .venv activated
+ruff check --output-format grouped
+ty check --output-format concise
+pyrefly check --min-severity info
 ```
 
-## Code Style and Quality
-
-This project follows these standards:
-
-- PEP 8 for code style
-- Type hints on all functions and methods
-- Docstrings in Google style format
-- Ruff for linting and formatting
-- MyPy for static type checking
-
-You can automatically check and format your code using the tool itself:
+Format and lint only your modified files via `mp` (avoid running `ruff format .` across untouched files so pull requests remain free of unrelated reformat hunks):
 
 ```bash
-# Format code
-mp format
+mp format <modified_files>
+mp check src tests --static-type-check --raise-error-on-violations
+```
 
-# Check code
-mp check --static-type-check
+### Package Version & Lockfile Gate
+
+When a pull request modifies files under `packages/mp/src/` or `packages/mp/tests/`, `.github/workflows/package_version_check.yml` requires bumping the `version` in `packages/mp/pyproject.toml` and keeping `packages/mp/uv.lock` synchronized:
+
+```bash
+cd packages/mp
+uv version --bump patch
+uv lock --check
 ```
 
 ## Logging
 
-The `mp` tool uses an asynchronous logging setup with `QueueHandler` and a built-in `logging` module to ensure it works smoothly as a standalone CLI. 
+`mp` uses an asynchronous logging setup with `QueueHandler` and Python's standard `logging` module:
 
-To use the logger in your module:
-1. Import `logging`: `import logging`
-2. Create a logger using `__name__`: `logger = logging.getLogger(__name__)`
-3. Use the logger instead of `print`, `rich.print`, or `typer.echo`. For example: `logger.info("...")`, `logger.error("...")`, etc.
+1. Import `logging` and instantiate a module logger: `logger: logging.Logger = logging.getLogger(__name__)`.
+2. Emit output via `logger.info(...)`, `logger.warning(...)`, `logger.error(...)`, or `logger.exception(...)` rather than `print` or `rich.print`.
+3. Respect `--verbose` (`-v`) and `--quiet` (`-q`), which are wired through `mp.core.config.RuntimeParams`.
 
-The CLI supports global `--verbose` (`-v`) and `--quiet` (`-q`) flags to control output verbosity across all commands, similarly to `uv`. These are handled automatically by the root application callback and `RuntimeParams`.
+## Running Unit Tests
 
-## Testing
-
-Run the test suite using pytest:
+Run the `packages/mp` unit test suite from `packages/mp/`:
 
 ```bash
-python -m pytest
-```
-
-For coverage information:
-
-```bash
-python -m pytest --cov=mp
+pytest tests -n auto --cov
 ```
 
 ## Creating New Commands
 
-The project uses Typer for command-line interfaces. To add a new command:
+`mp` uses [Typer](https://typer.tiangolo.com/). To add a new top-level command:
 
-1. Create a new package in `src/mp/` or add to an existing one
-2. Define your command function with Typer decorators
-3. Add your command to the main app in `src/mp/__init__.py`
-
-Example:
+1. Create a subpackage under `src/mp/<command_module>/` with a `typer_app.py` defining a `typer.Typer` instance.
+2. Decorate command functions with `@track_command` from `mp.telemetry` when appropriate.
+3. Register the sub-application in `src/mp/main.py` inside `main()`:
 
 ```python
-# In src/mp/my_command/__init__.py
+# In src/mp/my_command/typer_app.py
+from __future__ import annotations
+
 import typer
 
-
-app = typer.Typer()
-
-
-@app.command(name="my-command")
-def my_command() -> None:
-    """My new command."""
-    # Command implementation here
-    ...
+my_command_app: typer.Typer = typer.Typer(name="my-command", help="Describe what my-command does.")
 
 
-# Then in src/mp/__init__.py
-from mp.my_command import app as my_command_app
+@my_command_app.command(name="run")
+def run_command() -> None:
+    """Execute the command."""
 
 
-# ...
-main_app.add_typer(my_command_app, name="my-command")
+# In src/mp/main.py
+from .my_command.typer_app import my_command_app
+
+# Inside main():
+app.add_typer(my_command_app, name="my-command")
 ```
+
+4. Add unit tests under `packages/mp/tests/test_mp/` and command documentation under `packages/mp/docs/commands/`.
 
 ## Data Models
 
-The project uses abstract base classes and TypedDict for data models. Key classes
-include:
+Core content schemas live under `src/mp/core/data_models/` and build on base abstractions in `src/mp/core/data_models/abc.py`:
 
-- `Buildable`: Abstract base class for objects that can be serialized to and from
-  different formats
-- `BuildableScript`: Similar to `Buildable` but specifically for script components
-- `ScriptMetadata`: For metadata associated with scripts
-- `SequentialMetadata`: For metadata that appears in sequences
-
-Extend these classes when adding new data models for integration components.
+- `Buildable`: Abstract base class for models converting between non-built (YAML/source) and built (JSON/SOAR) representations.
+- `BuildableComponent`: Base class for integration components backed by code and metadata.
+- `SingularComponentMetadata` / `ComponentMetadata` / `SequentialMetadata`: Structured Pydantic metadata models for single and sequential definitions.
 
 ## Contributing
 
-1. Create a feature branch from `main`
-2. Make your changes
-3. Run tests and ensure code quality
-4. Submit a pull request
-
-See [contributing.md](./contributing.md) for more details.
+See [contributing.md](./contributing.md) for pull request guidelines and CLA requirements.

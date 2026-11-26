@@ -54,7 +54,7 @@ def pull_integration(
     """Pull and deconstruct an integration from the dev environment.
 
     Args:
-        integration: The integration to build and deploy.
+        integration: The integration to pull and deconstruct.
         dst: Destination folder.
         keep_zip: Keep the integration zip file after pulling.
 
