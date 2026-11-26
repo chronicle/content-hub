@@ -57,7 +57,7 @@ def main() -> None:
         output_message += format_warnings(warnings)
 
     except Exception as e:
-        output_message = f"Error executing action {UPDATE_CASE_CARD_ACTION}. Reason: {e}"
+        output_message = f'Error executing action "{UPDATE_CASE_CARD_ACTION}". Reason: {e}'
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False

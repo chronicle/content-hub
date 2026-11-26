@@ -89,6 +89,9 @@ def escape_text(value: object, max_length: int = CASE_CARD_MAX_TEXT_LENGTH) -> s
         The single-line, escaped and truncated text.
 
     """
+    if value is None:
+        return ""
+
     text = " ".join(str(value).split())
     if len(text) > max_length:
         text = text[: max_length - len(ELLIPSIS)] + ELLIPSIS

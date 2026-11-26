@@ -163,6 +163,9 @@ class TestEscapeText:
         assert escape_text("a\n\nb   c") == "a b c"
         assert escape_text("x" * 500, max_length=20) == "x" * 17 + "..."
 
+    def test_none_is_rendered_as_empty_text(self) -> None:
+        assert escape_text(None) == ""
+
     def test_hostile_case_data_cannot_inject_card_content(self) -> None:
         data = CaseCardData(
             case_id=1,
