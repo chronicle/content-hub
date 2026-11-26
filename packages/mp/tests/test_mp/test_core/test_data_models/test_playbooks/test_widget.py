@@ -88,10 +88,7 @@ class TestPlaybookWidgetMetadataDataModel:
             **BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE,
             "ConditionsGroup": None,
         }
-        actual: PlaybookWidgetMetadata = PlaybookWidgetMetadata.from_built(
-            "",
-            built_with_null_cg,
-        )
+        actual: PlaybookWidgetMetadata = PlaybookWidgetMetadata.from_built("", built_with_null_cg)
         assert actual == PLAYBOOK_WIDGET_METADATA_WITH_NONE
 
     def test_from_non_built_with_null_conditions_group(self) -> None:
@@ -99,8 +96,5 @@ class TestPlaybookWidgetMetadataDataModel:
             **NON_BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE,
             "conditions_group": None,
         }
-        actual: PlaybookWidgetMetadata = PlaybookWidgetMetadata.from_non_built(
-            "",
-            non_built_with_null_cg,
-        )
+        actual: PlaybookWidgetMetadata = PlaybookWidgetMetadata.from_non_built("", non_built_with_null_cg)
         assert actual == PLAYBOOK_WIDGET_METADATA_WITH_NONE

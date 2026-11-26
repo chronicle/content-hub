@@ -408,10 +408,7 @@ def _normalize_action_param_type(
     return _normalize_param_type(raw_type, ActionParamType, default)
 
 
-def _normalize_connector_param_mode(
-    raw_mode: str | int | None,
-    default: int = ParamMode.REGULAR.value,
-) -> int:
+def _normalize_connector_param_mode(raw_mode: str | int | None, default: int = ParamMode.REGULAR.value) -> int:
     """Normalize a raw connector parameter mode to its integer enum value.
 
     Args:
@@ -422,7 +419,13 @@ def _normalize_connector_param_mode(
         The integer representation of the connector parameter mode.
 
     """
-    return _normalize_param_type(raw_mode, ParamMode, default)
+    if isinstance(raw_mode, bool):
+        return default
+    normalized: int = _normalize_param_type(raw_mode, ParamMode, default)
+    try:
+        return ParamMode(normalized).value
+    except ValueError:
+        return default
 
 
 def _normalize_integration_properties(def_data: SingleJson, identifier: str) -> None:

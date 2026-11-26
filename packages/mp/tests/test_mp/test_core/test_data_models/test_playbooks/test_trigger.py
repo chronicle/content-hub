@@ -38,6 +38,48 @@ from .constants import (
 
 FILE_NAME: str = ""
 
+BUILT_CASE_REACTION_TRIGGER: BuiltTrigger = {
+    "Identifier": "trig-1",
+    "IsEnabled": True,
+    "DefinitionIdentifier": "case-pb-1",
+    "Type": 18,
+    "WorkflowName": None,
+    "LogicalOperator": 0,
+    "Conditions": [
+        {
+            "FieldName": "[Case.Priority]",
+            "MatchType": 0,
+            "Value": "High",
+            "CustomOperatorName": None,
+        }
+    ],
+    "Environments": ["Default Environment"],
+    "ExecutionMode": 1,
+    "ReactionLogicalOperator": 1,
+    "ReactionConditions": [
+        {
+            "LogicalOperator": 0,
+            "Conditions": [
+                {
+                    "FieldName": "from",
+                    "MatchType": 10,
+                    "Value": "",
+                    "CustomOperatorName": None,
+                    "Enabled": True,
+                },
+                {
+                    "FieldName": "to",
+                    "MatchType": 0,
+                    "Value": "Critical",
+                    "CustomOperatorName": None,
+                    "Enabled": True,
+                },
+            ],
+        }
+    ],
+    "MaxReactionDepth": 5,
+}
+
 
 class TestTriggerDataModel:
     def test_from_built_with_valid_data(self) -> None:
@@ -79,58 +121,17 @@ class TestTriggerDataModel:
         assert Trigger.from_non_built(FILE_NAME, NON_BUILT_TRIGGER).to_non_built() == NON_BUILT_TRIGGER
 
     def test_case_reaction_trigger_round_trip(self) -> None:
-        built_reaction_trigger: BuiltTrigger = {
-            "Identifier": "trig-1",
-            "IsEnabled": True,
-            "DefinitionIdentifier": "case-pb-1",
-            "Type": 18,
-            "WorkflowName": None,
-            "LogicalOperator": 0,
-            "Conditions": [
-                {
-                    "FieldName": "[Case.Priority]",
-                    "MatchType": 0,
-                    "Value": "High",
-                    "CustomOperatorName": None,
-                }
-            ],
-            "Environments": ["Default Environment"],
-            "ExecutionMode": 1,
-            "ReactionLogicalOperator": 1,
-            "ReactionConditions": [
-                {
-                    "LogicalOperator": 0,
-                    "Conditions": [
-                        {
-                            "FieldName": "from",
-                            "MatchType": 10,
-                            "Value": "",
-                            "CustomOperatorName": None,
-                            "Enabled": True,
-                        },
-                        {
-                            "FieldName": "to",
-                            "MatchType": 0,
-                            "Value": "Critical",
-                            "CustomOperatorName": None,
-                            "Enabled": True,
-                        },
-                    ],
-                }
-            ],
-            "MaxReactionDepth": 5,
-        }
-        trig: Trigger = Trigger.from_built(FILE_NAME, built_reaction_trigger)
+        trig: Trigger = Trigger.from_built(FILE_NAME, BUILT_CASE_REACTION_TRIGGER)
         assert trig.type_ == TriggerType.CASE_PRIORITY_CHANGED
         assert trig.execution_mode == TriggerExecutionMode.RESTART
         assert trig.max_reaction_depth == 5
-        assert trig.to_built() == built_reaction_trigger
+        assert trig.to_built() == BUILT_CASE_REACTION_TRIGGER
 
         non_built: NonBuiltTrigger = trig.to_non_built()
         assert non_built["type_"] == "case_priority_changed"
         assert non_built["execution_mode"] == "restart"
         assert non_built["max_reaction_depth"] == 5
-        assert Trigger.from_non_built(FILE_NAME, non_built).to_built() == built_reaction_trigger
+        assert Trigger.from_non_built(FILE_NAME, non_built).to_built() == BUILT_CASE_REACTION_TRIGGER
 
     @pytest.mark.parametrize(
         ("type_id", "expected_enum"),
@@ -171,14 +172,12 @@ class TestTriggerDataModel:
         assert trig_unspec.execution_mode == TriggerExecutionMode.UNSPECIFIED
         assert trig_unspec.reaction_logical_operator == LogicalOperator.AND
 
-    def test_reaction_trigger_boolean_enums_raise_value_error(self) -> None:
+    def test_reaction_trigger_invalid_enums_raise_value_error(self) -> None:
         with pytest.raises(ValueError, match="Failed to load built"):
-            Trigger.from_built(
-                FILE_NAME,
-                cast("BuiltTrigger", {**BUILT_TRIGGER, "ExecutionMode": True}),
-            )
+            Trigger.from_built(FILE_NAME, cast("BuiltTrigger", {**BUILT_TRIGGER, "ExecutionMode": True}))
         with pytest.raises(ValueError, match="Failed to load built"):
-            Trigger.from_built(
-                FILE_NAME,
-                cast("BuiltTrigger", {**BUILT_TRIGGER, "ReactionLogicalOperator": False}),
-            )
+            Trigger.from_built(FILE_NAME, cast("BuiltTrigger", {**BUILT_TRIGGER, "ReactionLogicalOperator": False}))
+        with pytest.raises(ValueError, match="Invalid TriggerExecutionMode value"):
+            TriggerExecutionMode.parse_optional("UNKNOWN_MODE")
+        with pytest.raises(ValueError, match="Invalid LogicalOperator value"):
+            LogicalOperator.parse_optional("XOR")

@@ -142,7 +142,7 @@ class TestPlaybookMetadataDataModel:
             meta: PlaybookMetadata = PlaybookMetadata.from_built("", built_meta)
             assert meta.execution_scope == expected
 
-    def test_execution_scope_boolean_raises_value_error(self) -> None:
+    def test_execution_scope_invalid_values_raise_value_error(self) -> None:
         for invalid_bool in (True, False):
             built_meta: BuiltPlaybookMetadata = {
                 **BUILT_PLAYBOOK_METADATA,
@@ -150,3 +150,5 @@ class TestPlaybookMetadataDataModel:
             }
             with pytest.raises(ValueError, match="Failed to load built"):
                 PlaybookMetadata.from_built("", built_meta)
+        with pytest.raises(ValueError, match="Invalid PlaybookExecutionScope value"):
+            PlaybookExecutionScope.parse_optional("UNKNOWN_SCOPE")

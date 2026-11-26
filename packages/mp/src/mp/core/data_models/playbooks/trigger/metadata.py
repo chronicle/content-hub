@@ -169,10 +169,11 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
             identifier=built["Identifier"],
             is_enabled=built["IsEnabled"],
             type_=TriggerType(built["Type"]),
-            execution_mode=_parse_execution_mode(built.get("ExecutionMode")),
-            reaction_logical_operator=_parse_reaction_logical_operator(
-                built.get("ReactionLogicalOperator"),
+            execution_mode=TriggerExecutionMode.parse_optional(
+                built.get("ExecutionMode"),
+                aliases=_EXECUTION_MODE_ALIASES,
             ),
+            reaction_logical_operator=LogicalOperator.parse_optional(built.get("ReactionLogicalOperator")),
             reaction_conditions=(
                 [
                     ConditionGroup.from_built(condition_group)
@@ -286,31 +287,7 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
         return non_built
 
 
-def _parse_execution_mode(raw_mode: int | str | None) -> TriggerExecutionMode | None:
-    if raw_mode is None:
-        return None
-    if isinstance(raw_mode, str):
-        stripped: str = raw_mode.strip()
-        if stripped.isdigit():
-            return TriggerExecutionMode(int(stripped))
-        if stripped.casefold() in UNSPECIFIED_EXECUTION_MODE_API_VALUES:
-            return TriggerExecutionMode.UNSPECIFIED
-        return TriggerExecutionMode.from_string(stripped)
-    if isinstance(raw_mode, int) and not isinstance(raw_mode, bool):
-        return TriggerExecutionMode(raw_mode)
-    msg: str = f"Invalid ExecutionMode value: {raw_mode!r}"
-    raise ValueError(msg)
-
-
-def _parse_reaction_logical_operator(raw_operator: int | str | None) -> LogicalOperator | None:
-    if raw_operator is None:
-        return None
-    if isinstance(raw_operator, str):
-        stripped: str = raw_operator.strip()
-        if stripped.isdigit():
-            return LogicalOperator(int(stripped))
-        return LogicalOperator.from_string(stripped)
-    if isinstance(raw_operator, int) and not isinstance(raw_operator, bool):
-        return LogicalOperator(raw_operator)
-    msg: str = f"Invalid ReactionLogicalOperator value: {raw_operator!r}"
-    raise ValueError(msg)
+_EXECUTION_MODE_ALIASES: dict[str, TriggerExecutionMode] = dict.fromkeys(
+    UNSPECIFIED_EXECUTION_MODE_API_VALUES,
+    TriggerExecutionMode.UNSPECIFIED,
+)

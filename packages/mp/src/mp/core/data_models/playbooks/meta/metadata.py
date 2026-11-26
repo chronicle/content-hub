@@ -205,7 +205,10 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
             default_access_level=(PlaybookAccessLevel(int(access_level)) if access_level is not None else None),
             creation_source=(PlaybookCreationSource(int(creation_source)) if creation_source is not None else None),
             simulation_clone=built.get("SimulationClone"),
-            execution_scope=_parse_execution_scope(built.get("ExecutionScope")),
+            execution_scope=PlaybookExecutionScope.parse_optional(
+                built.get("ExecutionScope"),
+                aliases=_EXECUTION_SCOPE_ALIASES,
+            ),
             permissions=[AccessPermission.from_built(p) for p in built["Permissions"]],
             environments=built.get("Environments", []),
         )
@@ -239,7 +242,10 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
                 PlaybookCreationSource.from_string(creation_source) if creation_source is not None else None
             ),
             simulation_clone=non_built.get("simulation_clone"),
-            execution_scope=_parse_execution_scope(non_built.get("execution_scope")),
+            execution_scope=PlaybookExecutionScope.parse_optional(
+                non_built.get("execution_scope"),
+                aliases=_EXECUTION_SCOPE_ALIASES,
+            ),
             permissions=[AccessPermission.from_non_built(p) for p in non_built["permissions"]],
             environments=non_built.get("environments", []),
         )
@@ -321,17 +327,6 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
         return non_built
 
 
-def _parse_execution_scope(raw_scope: int | str | None) -> PlaybookExecutionScope | None:
-    if raw_scope is None:
-        return None
-    if isinstance(raw_scope, str):
-        stripped: str = raw_scope.strip()
-        if stripped.isdigit():
-            return PlaybookExecutionScope(int(stripped))
-        if stripped.casefold() == UNSPECIFIED_EXECUTION_SCOPE_API_VALUE:
-            return PlaybookExecutionScope.UNSPECIFIED
-        return PlaybookExecutionScope.from_string(stripped)
-    if isinstance(raw_scope, int) and not isinstance(raw_scope, bool):
-        return PlaybookExecutionScope(raw_scope)
-    msg: str = f"Invalid ExecutionScope value: {raw_scope!r}"
-    raise ValueError(msg)
+_EXECUTION_SCOPE_ALIASES: dict[str, PlaybookExecutionScope] = {
+    UNSPECIFIED_EXECUTION_SCOPE_API_VALUE: PlaybookExecutionScope.UNSPECIFIED,
+}
