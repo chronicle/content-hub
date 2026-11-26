@@ -300,6 +300,59 @@ def test_get_sample_http_error_xml_and_plain(mocker):
         mgr.get_sample(SAMPLE_MD5)
     assert "\n" not in str(exc_info.value)
 
+    mock_root_xml = mocker.Mock()
+    mock_root_xml.ok = False
+    mock_root_xml.status_code = 401
+    mock_root_xml.content = (
+        b'<?xml version="1.0" encoding="UTF-8"?>\n'
+        b"<error>\n  <error-message>'Invalid apikey or expired apikey'</error-message>\n</error>"
+    )
+    mock_root_xml.text = "raw xml body"
+    mocker.patch.object(mgr.session, "request", return_value=mock_root_xml)
+
+    with pytest.raises(
+        WildfireManagerError,
+        match=(
+            f"Unable to get sample of {SAMPLE_MD5}: "
+            "Palo Alto Wildfire request failed with status code 401: 'Invalid apikey or expired apikey'"
+        ),
+    ) as exc_info:
+        mgr.get_sample(SAMPLE_MD5)
+    assert "\n" not in str(exc_info.value)
+
+    mock_attr_xml = mocker.Mock()
+    mock_attr_xml.ok = False
+    mock_attr_xml.status_code = 401
+    mock_attr_xml.content = b'<error><error-message code="401">\n  Token\n  expired\n</error-message></error>'
+    mock_attr_xml.text = "raw attr fallback"
+    mocker.patch.object(mgr.session, "request", return_value=mock_attr_xml)
+
+    with pytest.raises(
+        WildfireManagerError,
+        match=(
+            f"Unable to get sample of {SAMPLE_MD5}: "
+            "Palo Alto Wildfire request failed with status code 401: Token expired"
+        ),
+    ) as exc_info:
+        mgr.get_sample(SAMPLE_MD5)
+    assert "\n" not in str(exc_info.value)
+
+    mock_empty_xml = mocker.Mock()
+    mock_empty_xml.ok = False
+    mock_empty_xml.status_code = 400
+    mock_empty_xml.content = b"<error><error-message/></error>"
+    mock_empty_xml.text = "raw fallback"
+    mocker.patch.object(mgr.session, "request", return_value=mock_empty_xml)
+
+    with pytest.raises(
+        WildfireManagerError,
+        match=(
+            f"Unable to get sample of {SAMPLE_MD5}: "
+            "Palo Alto Wildfire request failed with status code 400: raw fallback"
+        ),
+    ):
+        mgr.get_sample(SAMPLE_MD5)
+
     mock_plain = mocker.Mock()
     mock_plain.ok = False
     mock_plain.status_code = 502

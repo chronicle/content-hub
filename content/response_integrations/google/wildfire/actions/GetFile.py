@@ -15,6 +15,11 @@
 from __future__ import annotations
 
 import base64
+import contextlib
+import os
+import re
+import tempfile
+from pathlib import Path
 from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
@@ -28,6 +33,58 @@ from ..core.WildfireManager import WildfireManager, WildfireNotFoundError
 INTEGRATION_NAME = "Wildfire"
 INTEGRATION_DISPLAY_NAME = "Palo Alto Wildfire"
 ACTION_NAME = "Get File"
+SAFE_SUFFIX_PATTERN = re.compile(r"^\.[A-Za-z0-9]{1,10}$")
+SAFE_PREFIX_PATTERN = re.compile(r"[^A-Za-z0-9_-]")
+
+
+def _get_download_dir(siemplify: SiemplifyAction) -> Path:
+    """Return a writable directory for saved sample files."""
+    try:
+        candidate = getattr(siemplify, "run_folder", None)
+    except OSError:
+        candidate = None
+    if isinstance(candidate, str) and candidate:
+        download_dir = Path(candidate)
+        if download_dir.is_dir() and os.access(download_dir, os.W_OK):
+            return download_dir
+    return Path(tempfile.gettempdir())
+
+
+def _safe_suffix(filename: str) -> str:
+    """Return a sanitized ASCII file extension for the temporary sample file."""
+    suffix = Path(filename).suffix
+    if SAFE_SUFFIX_PATTERN.fullmatch(suffix):
+        return suffix
+    return ".dat"
+
+
+def _save_sample_to_disk(
+    siemplify: SiemplifyAction,
+    file_hash: str,
+    filename: str,
+    content: bytes,
+) -> str:
+    """Save downloaded sample bytes to a temporary file and return its path."""
+    download_dir = _get_download_dir(siemplify)
+    safe_hash = SAFE_PREFIX_PATTERN.sub("_", file_hash)
+    suffix = _safe_suffix(filename)
+    download_path = ""
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=f"{safe_hash}_",
+            suffix=suffix,
+            dir=download_dir,
+            delete=False,
+        ) as tmp_file:
+            download_path = tmp_file.name
+            tmp_file.write(content)
+    except OSError:
+        if download_path:
+            with contextlib.suppress(OSError):
+                Path(download_path).unlink(missing_ok=True)
+        raise
+    return download_path
 
 
 def _process_file_hash(
@@ -48,6 +105,17 @@ def _process_file_hash(
         siemplify.LOGGER.exception(f"Failed to download sample for hash {file_hash}")
         return f'Error executing action "{ACTION_NAME}". Reason: {e}', False, EXECUTION_STATE_FAILED
 
+    try:
+        download_path = _save_sample_to_disk(siemplify, file_hash, sample["filename"], sample["content"])
+    except OSError as e:
+        siemplify.LOGGER.exception(f"Failed to save sample for hash {file_hash} to disk")
+        return (
+            f'Error executing action "{ACTION_NAME}". Reason: Failed to save sample for hash {file_hash} to disk: {e}',
+            False,
+            EXECUTION_STATE_FAILED,
+        )
+
+    siemplify.LOGGER.info(f"Saved sample for hash {file_hash} to {download_path}")
     b64_content = base64.b64encode(sample["content"]).decode("utf-8")
     siemplify.result.add_attachment(f"WildFire sample {file_hash}", sample["filename"], b64_content)
 
@@ -59,6 +127,7 @@ def _process_file_hash(
         {
             "file_hash": file_hash,
             "filename": sample["filename"],
+            "download_path": download_path,
             "downloaded": True,
         }
     ]
@@ -116,24 +185,38 @@ def _process_entities(
     json_results: list[dict[str, Any]] = []
 
     for entity in siemplify.target_entities:
-        if entity.entity_type == EntityTypes.FILEHASH and len(entity.identifier) in {32, 64}:
-            try:
-                sample = wildfire_manager.get_sample(entity.identifier)
-                b64_content = base64.b64encode(sample["content"]).decode("utf-8")
-                siemplify.result.add_entity_attachment(entity.identifier, sample["filename"], b64_content)
-                enriched_entities.append(entity)
-                json_results.append({
-                    "file_hash": entity.identifier,
-                    "filename": sample["filename"],
-                    "downloaded": True,
-                })
-            except WildfireNotFoundError:
-                siemplify.LOGGER.info(f"Sample not found for entity {entity.identifier}")
-                not_found_entities.append(entity.identifier)
-            except Exception as e:
-                siemplify.LOGGER.exception(f"Failed to download sample for entity {entity.identifier}")
-                failed_entities.append(entity.identifier)
-                errors.append(f"{entity.identifier}: {e}")
+        if entity.entity_type != EntityTypes.FILEHASH or len(entity.identifier) not in {32, 64}:
+            continue
+        try:
+            sample = wildfire_manager.get_sample(entity.identifier)
+        except WildfireNotFoundError:
+            siemplify.LOGGER.info(f"Sample not found for entity {entity.identifier}")
+            not_found_entities.append(entity.identifier)
+            continue
+        except Exception as e:
+            siemplify.LOGGER.exception(f"Failed to download sample for entity {entity.identifier}")
+            failed_entities.append(entity.identifier)
+            errors.append(f"{entity.identifier}: {e}")
+            continue
+
+        try:
+            download_path = _save_sample_to_disk(siemplify, entity.identifier, sample["filename"], sample["content"])
+        except OSError as e:
+            siemplify.LOGGER.exception(f"Failed to save sample for entity {entity.identifier} to disk")
+            failed_entities.append(entity.identifier)
+            errors.append(f"{entity.identifier}: Failed to save sample to disk: {e}")
+            continue
+
+        siemplify.LOGGER.info(f"Saved sample for entity {entity.identifier} to {download_path}")
+        b64_content = base64.b64encode(sample["content"]).decode("utf-8")
+        siemplify.result.add_entity_attachment(entity.identifier, sample["filename"], b64_content)
+        enriched_entities.append(entity)
+        json_results.append({
+            "file_hash": entity.identifier,
+            "filename": sample["filename"],
+            "download_path": download_path,
+            "downloaded": True,
+        })
 
     if json_results:
         siemplify.result.add_result_json(json_results)
