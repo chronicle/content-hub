@@ -1,0 +1,72 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+"""
+Tests configuration file
+"""
+import sys
+import os
+import pkgutil
+import importlib
+import soar_sdk
+sdk_dir = soar_sdk.__path__[0]
+if sdk_dir not in sys.path:
+    sys.path.insert(0, sdk_dir)
+original_stdout = sys.stdout
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    try:
+        flat_mod = importlib.import_module(name)
+        sys.modules[f'soar_sdk.{name}'] = flat_mod
+        setattr(soar_sdk, name, flat_mod)
+    except Exception:
+        pass
+sys.stdout = original_stdout
+import pytest
+from _pytest.monkeypatch import MonkeyPatch
+from google_cloud_policy_intelligence.core.GoogleCloudPolicyIntelligenceManager import (
+    GoogleCloudPolicyIntelligenceManager,
+)
+from google_cloud_policy_intelligence.core.exceptions import (
+    GoogleCloudPolicyIntelligenceError,
+)
+
+
+@pytest.fixture
+def mock_test_connectivity_to_raise_manager_error(monkeypatch: MonkeyPatch) -> None:
+    """
+    Mock the test connectivity function to raise
+    google cloud policy intelligence exception
+    """
+    def mock_raise_manager_error(*args: list, **kwargs: dict) -> None:
+        raise GoogleCloudPolicyIntelligenceError("Connectivity error")
+    monkeypatch.setattr(
+        GoogleCloudPolicyIntelligenceManager,
+        "test_connectivity",
+        mock_raise_manager_error,
+    )
+
+@pytest.fixture
+def mock_account_activity_to_raise_manager_error(monkeypatch: MonkeyPatch) -> None:
+    """
+    Mock the test search service account activity function to raise
+    google cloud policy intelligence exception
+    """
+    def mock_raise_manager_error(*args: list, **kwargs: dict) -> None:
+        raise GoogleCloudPolicyIntelligenceError("Hash data error")
+    monkeypatch.setattr(
+        GoogleCloudPolicyIntelligenceManager,
+        "search_service_account_activity",
+        mock_raise_manager_error,
+    )

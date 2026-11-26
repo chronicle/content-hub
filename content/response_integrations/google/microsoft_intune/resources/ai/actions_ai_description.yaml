@@ -1,0 +1,1302 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Get Managed Device:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves detailed managed device information from the Microsoft Intune
+    service. It allows security analysts to gather context about a device's compliance
+    state, operating system version, enrollment details, and recent management actions.
+    The action can target devices using specific Host IDs, Host Names, or by processing
+    Hostname entities within the Google SecOps environment.
+
+
+    ### Flow Description
+
+    1. **Authentication:** The action authenticates with the Microsoft Graph API using
+    the provided Azure AD credentials.
+
+    2. **Target Identification:** It determines the list of target devices based on
+    the priority of input parameters (Host Id, then Host Name) and available Hostname
+    entities.
+
+    3. **Inventory Retrieval:** It fetches the current list of all managed devices
+    from Intune to verify the existence of the requested targets.
+
+    4. **Detail Enrichment:** For every validated device, the action performs a GET
+    request to the Microsoft Graph API (`/v1.0/deviceManagement/managedDevices/{host_id}`)
+    to retrieve comprehensive metadata.
+
+    5. **Result Processing:** The retrieved data is formatted into a JSON result and
+    attached to the action output.
+
+
+    ### Additional Notes
+
+    - **Priority Logic:** The action follows a specific hierarchy for identifying
+    targets: Host Id (Parameter) > Host Name (Parameter) > Hostname (Entities).
+
+    - **Conflict Resolution:** If multiple managed devices are found in Intune for
+    a single hostname, the action automatically selects the record with the most recent
+    `lastSyncDateTime`.
+
+    - **Validation:** The action validates that the provided identifiers exist within
+    the Intune environment before attempting to fetch full details.
+  ai_short_description: >-
+    Retrieves detailed managed device information from the Microsoft Intune service
+    based on Host IDs, Host Names, or Hostname entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the Microsoft Graph API to fetch managed device
+      information. It does not mutate any external data, nor does it update internal
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.HOSTNAME`. It then extracts the original identifier using `get_entity_original_identifier(entity)`.
+      Therefore, it filters by entity type and identifier, specifically targeting
+      HOSTNAME entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches detailed information about a managed device (hostname or
+      host ID) from Microsoft Intune, returning contextual metadata such as OS version,
+      compliance state, and enrollment details. This aligns with the 'Enrich Asset'
+      expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Host Name | String | No | Specify the host name to run the action on. Host name
+    is case insensitive. If the action does not run on a hostname entity, it can run
+    either on Host Name or Host ID. Multiple values can be as a comma-separated string.
+    |
+
+    | Host Id | String | No | Specify the host id to run the action on. If the action
+    does not run on a hostname entity, it can run either on Host Name or Host ID.
+    Multiple values can be as a comma-separated string. |
+List Managed Devices:
+  ai_description: >-
+    ### General Description
+
+    The **List Managed Devices** action retrieves a list of devices managed within
+    a Microsoft Intune instance based on specified filter criteria. It allows users
+    to query the Intune environment for device details such as names, operating systems,
+    compliance status, and enrollment dates. This action is designed for broad visibility
+    and does not target specific entities within the SOAR case.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the Microsoft Graph API using
+    the configured integration credentials.
+
+    2. **Data Retrieval**: It sends a GET request to the `/v1.0/deviceManagement/managedDevices`
+    endpoint to fetch managed devices.
+
+    3. **Pagination and Filtering**: The action handles API pagination and applies
+    the specified filter criteria (Filter Key, Filter Logic, Filter Value) locally
+    to the retrieved device list until the `Max Records To Return` limit is reached.
+
+    4. **Output Generation**: The filtered results are formatted into a data table
+    named "Available Managed Devices" and attached to the case as a JSON result.
+
+
+    ### Additional Notes
+
+    - This action does not run on SOAR entities. It performs a general query against
+    the Microsoft Intune API.
+
+    - If a **Filter Key** is selected, the **Filter Logic** must be set to `Equal`
+    or `Contains` for the filter to be effective.
+
+    - If **Filter Value** is empty, the filtering logic is skipped entirely, even
+    if a key and logic are provided.
+  ai_short_description: >-
+    Retrieves a list of managed devices from Microsoft Intune based on specified filter
+    criteria, returning the results as a data table and JSON object.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Microsoft Graph API to retrieve a list
+      of managed devices (fetches_data=true). It does not mutate any external data,
+      nor does it update internal SOAR entities, alerts, or cases.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over `siemplify.target_entities`. It
+      operates independently of case entities, using only the provided action parameters
+      to filter the results.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a general list of managed devices from Microsoft Intune
+      based on arbitrary filter criteria. It does not enrich specific case entities,
+      modify alerts, manage tickets, or perform containment/remediation actions. Therefore,
+      it does not match any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Filter Key | String | No | Specify the key that needs to\
+    \ be used to filter managed devices. |\n| Filter Logic | String | No | Specify\
+    \ what filter logic should be applied. Filtering logic is working based on the\
+    \ value provided in the \u201CFilter Key\u201D parameter. |\n| Filter Value |\
+    \ String | No | Specify what value should be used in the filter. If \u201CEqual\u201C\
+    \ is selected, action will try to find the exact match among results and if \u201C\
+    Contains\u201C is selected, action will try to find results that contain that\
+    \ substring. If nothing is provided in this parameter, the filter will not be\
+    \ applied. |\n| Max Records To Return | Integer | No | Specify how many records\
+    \ to return. If nothing is provided, action will return 50 records. Maximum: 100.\
+    \ |"
+Locate Managed Device:
+  ai_description: >-
+    ### General Description
+
+    The **Locate Managed Device** action triggers a remote 'Locate Device' task within
+    Microsoft Intune for specified managed devices. This action is used to initiate
+    a request for a device's current location. It is important to note that this action
+    only starts the task; to check the status or results of the location request,
+    users should subsequently run the 'Get Managed Device' action and inspect the
+    'deviceActionResults' section.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves action parameters (Host Name,
+    Host Id) and configuration settings.
+
+    2. **Target Identification**: It identifies target hosts by checking the 'Host
+    Id' parameter first, then the 'Host Name' parameter, and finally falling back
+    to `HOSTNAME` entities if no parameters are supplied.
+
+    3. **Device Verification**: The action fetches a list of managed devices from
+    Microsoft Intune via the Microsoft Graph API to verify that the provided identifiers
+    correspond to existing managed assets.
+
+    4. **Task Initiation**: For each valid device found, the action sends a POST request
+    to the Microsoft Graph API's `locateDevice` endpoint to trigger the remote location
+    task.
+
+    5. **Result Aggregation**: The action tracks successful initiations, missing hosts,
+    and API errors, providing a summary message of the execution status for all targeted
+    devices.
+
+
+    ### Additional Notes
+
+    - **Priority Logic**: If both 'Host Id' and 'Host Name' are provided, 'Host Id'
+    takes priority.
+
+    - **Conflict Resolution**: If a hostname matches multiple Intune agents, the action
+    automatically selects the device with the most recent `lastSyncDateTime`.
+
+    - **Entity Support**: This action specifically targets `HOSTNAME` entities when
+    parameters are not explicitly defined.
+  ai_short_description: >-
+    Triggers a remote 'Locate Device' task within Microsoft Intune for specified managed
+    devices to initiate a request for a device's current location.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers a remote 'Locate Device' task on the specified managed devices in Microsoft
+      Intune.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches a list of managed devices from Microsoft Intune to verify
+      the hosts (fetches_data=true). It then sends a POST request to the 'locateDevice'
+      endpoint to trigger a remote location task on the external system (can_mutate_external_data=true).
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.HOSTNAME`. Therefore, it targets HOSTNAME
+      entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action triggers a remote 'Locate Device' task on managed devices in Microsoft
+      Intune. This does not match any of the predefined outcome categories such as
+      Contain Host, Execute Command on the Host, or Enrich Asset.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Host Name | String | No | Specify a comma-separated list of host names to run
+    the action on. Host name is case insensitive. If the action does not run on a
+    hostname entity, it can run either on Host Name or Host ID. Note: if both "Host
+    Name" and "Host Id" are provided, then "Host Id" value will have priority. Multiple
+    values can be as a comma-separated string. |
+
+    | Host Id | String | No | Specify a comma-separated list of host ids to run the
+    action on. If the action does not run on a hostname entity, it can run either
+    on Host Name or Host ID. Note: if both "Host Name" and "Host Id" are provided,
+    then "Host Id" value will have priority. Multiple values can be as a comma-separated
+    string. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    and authentication configuration between Google SecOps and the Microsoft Intune
+    service. Its primary purpose is to ensure that the integration can successfully
+    communicate with the Microsoft Graph API using the provided credentials.
+
+
+    ### Flow Description
+
+
+    1. **Configuration Retrieval**: The action extracts the necessary connection details
+    (endpoints, IDs, and secrets) from the integration's configuration.
+
+    2. **Manager Initialization**: It attempts to instantiate the `MicrosoftIntuneManager`.
+
+    3. **Authentication Check**: As part of the initialization, the manager performs
+    a POST request to the Azure AD token endpoint to request an OAuth2 access token.
+
+    4. **Result Reporting**: If the token is successfully retrieved, the action completes
+    with a success message. If the request fails (e.g., due to invalid credentials
+    or network issues), the action reports a failure with the specific error message.
+
+
+    ### Additional Notes
+
+
+    This action is typically used during the initial setup of the integration or for
+    troubleshooting connectivity issues. It does not interact with any entities or
+    modify any data.
+  ai_short_description: >-
+    The Ping action is a diagnostic utility designed to verify the connectivity and
+    authentication configuration between Google SecOps and the Microsoft Intune service
+    by ensuring successful communication with the Microsoft Graph API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only performs a POST request to authenticate and verify connectivity.
+      It does not fetch contextual data for alerts/entities, mutate external data,
+      mutate internal data, update entities, create insights, modify alert data, or
+      create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities. It only tests connectivity to the
+      Microsoft Intune service using integration-level configuration parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple ping/connectivity test. It does not enrich IOCs or assets,
+      update alerts, create tickets, block/allow IOCs, disable/enable identities,
+      contain hosts, search events, or perform any other operations that match the
+      expected outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Remote Lock Managed Device:
+  ai_description: >-
+    ### General Description
+
+    The **Remote Lock Managed Device** action allows security administrators to remotely
+    lock devices managed by Microsoft Intune. This action is used to secure potentially
+    compromised or lost devices by triggering the native remote lock functionality
+    of the operating system via the Microsoft Graph API. The action can target devices
+    using Host IDs, Host Names, or Hostname entities.
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: The action retrieves integration configuration
+    (API endpoints, credentials) and user-provided parameters (Host Name and Host
+    Id).
+
+    2. **Device Discovery**: It fetches the list of managed devices from Microsoft
+    Intune via a GET request to validate the existence of the targets and resolve
+    names to IDs.
+
+    3. **Target Identification**:
+        - If **Host IDs** are provided, it validates them against the fetched list.
+        - If **Host Names** are provided (or derived from `HOSTNAME` entities), it
+    resolves them to the corresponding Intune Device IDs.
+    4. **Execution**: For every successfully identified device, the action sends a
+    POST request to the Microsoft Graph `remoteLock` endpoint to initiate the lock
+    command.
+
+    5. **Result Aggregation**: The action tracks successes and failures (e.g., device
+    not found, API errors) and provides a consolidated status message to the user.
+
+
+    ### Additional Notes
+
+    - The action requires at least one identifier (Host Name parameter, Host ID parameter,
+    or Hostname entity) to execute. If none are provided, the action will fail.
+
+    - If a Host Name matches multiple devices in Intune, the action automatically
+    selects the device with the most recent `lastSyncDateTime` to ensure the most
+    active agent is targeted.
+
+    - Host name matching is case-insensitive.
+  ai_short_description: >-
+    Remotely locks devices managed by Microsoft Intune using Host IDs, Host Names,
+    or Hostname entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a remote lock command on the specified managed devices in Microsoft
+      Intune.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Microsoft Graph API to initiate a remote
+      lock command on a device, which mutates external data. It does not fetch contextual
+      enrichment data to return to the user, nor does it update internal entities,
+      create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.HOSTNAME`. Therefore, it targets HOSTNAME entities and filters
+      strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action remotely locks a managed device via Microsoft Intune. This does not
+      strictly match 'Contain Host' (which expects network isolation via EDR) or 'Execute
+      Command on the Host' (which expects arbitrary script execution and STDOUT).
+      Therefore, it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Host Name | String | No | Specify a comma-separated list of host names to run
+    the action on. Host name is case insensitive. If the action does not run on a
+    hostname entity, it can run either on Host Name or Host ID. Note: if both "Host
+    Name" and "Host Id" are provided, then "Host Id" value will have priority. Multiple
+    values can be as a comma-separated string. |
+
+    | Host Id | String | No | Specify a comma-separated list of host ids to run the
+    action on. If the action does not run on a hostname entity, it can run either
+    on Host Name or Host ID. Note: if both "Host Name" and "Host Id" are provided,
+    then "Host Id" value will have priority. Multiple values can be as a comma-separated
+    string. |
+
+
+    **Parameter Notes:**
+
+    At least one of the following must be provided: the `Host Name` parameter, the
+    `Host Id` parameter, or a valid `HOSTNAME` entity in the case context. If none
+    are provided, the action will fail to execute.
+Reset Managed Device Passcode:
+  ai_description: >-
+    ### General Description
+
+    The **Reset Managed Device Passcode** action initiates a remote task in Microsoft
+    Intune to reset the passcode of one or more managed devices. This action is typically
+    used when a device's security is compromised or a user is locked out of their
+    device.
+
+
+    ### Flow Description
+
+    1. Extracts the target identifiers from the action parameters (Host Name, Host
+    Id) or from HOSTNAME entities.
+
+    2. Fetches the full list of managed devices from Microsoft Intune to verify the
+    existence of the targets and retrieve the internal device IDs for name-based targets.
+
+    3. Sends a POST request to the Microsoft Graph API endpoint `/resetPasscode` for
+    each valid target device to trigger the remote command.
+
+    4. Aggregates the results for all targets and provides a summary of successful
+    task initiations and any failures.
+
+
+    ### Additional Notes
+
+    - The action determines the target device using the following priority: `Host
+    Id` parameter > `Host Name` parameter > `HOSTNAME` entities.
+
+    - This action only triggers the start of the reset task. To verify if the reset
+    was successfully completed on the physical device, run the "Get Managed Device"
+    action and check the `deviceActionResults` section.
+
+    - If a host name matches multiple records in Intune, the action automatically
+    selects the managed device with the most recent `lastSyncDateTime`.
+  ai_short_description: >-
+    Initiates a remote task in Microsoft Intune to reset the passcode of one or more
+    managed devices.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a remote task in Microsoft Intune to reset the passcode of the specified
+      managed devices.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the list of managed devices to map hostnames to IDs (fetches_data=true).
+      It then makes a POST request to the Microsoft Graph API to reset the passcode
+      of the specified devices (can_mutate_external_data=true). It does not mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.HOSTNAME`. This means it targets HOSTNAME entities, filtering
+      strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action resets a device passcode in Microsoft Intune. This does not match
+      'Reset Identity Password' which is for users/accounts, nor does it match 'Contain
+      Host' which is for network isolation. Therefore, it does not fit into any of
+      the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Host Name | String | No | Specify a comma-separated list of host names to run
+    the action on. Host name is case insensitive. If the action does not run on a
+    hostname entity, it can run either on Host Name or Host ID. Note: if both "Host
+    Name" and "Host Id" are provided, then "Host Id" value will have priority. Multiple
+    values can be as a comma-separated string. |
+
+    | Host Id | String | No | Specify a comma-separated list of host ids to run the
+    action on. If the action does not run on a hostname entity, it can run either
+    on Host Name or Host ID. Note: if both "Host Name" and "Host Id" are provided,
+    then "Host Id" value will have priority. Multiple values can be as a comma-separated
+    string. |
+Sync Managed Device:
+  ai_description: >-
+    ### General Description
+
+    This action initiates a synchronization task for managed devices within the Microsoft
+    Intune service. It allows security analysts to force a device to check in with
+    the Intune service to receive pending policies, updates, or configurations. The
+    action can target devices based on their Host Name or a specific Host ID. It supports
+    processing multiple devices in a single execution.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves configuration details for Azure AD
+    and Microsoft Graph, including authentication credentials.
+
+    2. **Target Resolution**: It identifies the target hosts by checking the `Host
+    Id` parameter, then the `Host Name` parameter, and finally any `HOSTNAME` entities
+    present in the case context.
+
+    3. **Device Discovery**: The action fetches a list of managed devices from Microsoft
+    Intune to validate the existence of the provided host identifiers.
+
+    4. **Sync Execution**: For every validated device, the action sends a POST request
+    to the Microsoft Graph API's `syncDevice` endpoint to trigger the remote synchronization.
+
+    5. **Outcome Summary**: It compiles a report detailing which devices successfully
+    started the sync process and which identifiers were not found in the Intune environment.
+
+
+    ### Additional Notes
+
+    * **Priority Logic**: The action follows a specific hierarchy to determine the
+    target: `Host Id` (highest priority) > `Host Name` > `HOSTNAME Entities`.
+
+    * **Requirement**: At least one Host Name, Host ID, or HOSTNAME entity must be
+    available for the action to proceed.
+
+    * **Multiple Agents**: If a Host Name is provided and multiple Intune agents are
+    found for that name, the action will automatically select the device with the
+    most recent `lastSyncDateTime`.
+  ai_short_description: >-
+    Initiates a synchronization task for managed devices within the Microsoft Intune
+    service to force a device to check in and receive pending policies or updates.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a synchronization task for managed devices in Microsoft Intune.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the list of managed devices from Microsoft Intune to validate
+      the host identifiers (fetches_data=true). It then sends a POST request to the
+      `syncDevice` endpoint to trigger a synchronization task on the external system
+      (can_mutate_external_data=true). It does not update entities, create insights,
+      or modify internal case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: true
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.HOSTNAME`. It extracts the original identifier
+      using `get_entity_original_identifier(entity)`, which checks `entity.additional_properties.get("OriginalIdentifier",
+      entity.identifier)`. Therefore, it filters by entity type, identifier, and additional
+      properties.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action triggers a synchronization task for a managed device in Microsoft
+      Intune. This does not match any of the predefined outcome categories such as
+      Contain Host, Execute Command, or Enrich Asset.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Host Name | String | No | Specify a comma-separated list of host names to run
+    the action on. Host name is case insensitive. If the action does not run on a
+    hostname entity, it can run either on Host Name or Host ID. Note: if both "Host
+    Name" and "Host Id" are provided, then "Host Id" value will have priority. Multiple
+    values can be as a comma-separated string. |
+
+    | Host Id | String | No | Specify a comma-separated list of host ids to run the
+    action on. If the action does not run on a hostname entity, it can run either
+    on Host Name or Host ID. Note: if both "Host Name" and "Host Id" are provided,
+    then "Host Id" value will have priority. Multiple values can be as a comma-separated
+    string. |
+Wipe Managed Device:
+  ai_description: >-
+    ### General Description
+
+    The **Wipe Managed Device** action initiates a remote wipe command for devices
+    managed within Microsoft Intune. This is a critical response action used to secure
+    data on lost, stolen, or compromised devices. The action can target devices using
+    Hostname entities or specific Host Names/IDs provided as input parameters.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves integration configuration and action-specific
+    parameters.
+
+    2. **Target Identification:** Determines the list of target devices from input
+    parameters or Hostname entities found in the current context.
+
+    3. **Device Validation:** Queries Microsoft Intune to verify the existence of
+    the devices and retrieve their unique internal Intune IDs.
+
+    4. **Wipe Execution:** Sends a POST request to the Microsoft Graph API's `wipe`
+    endpoint for each validated device, applying the specified data retention flags
+    (Enrollment, User Data, eSIM).
+
+    5. **Result Reporting:** Summarizes which devices were successfully queued for
+    wiping and which could not be found or processed.
+
+
+    ### Additional Notes
+
+    - Either a Hostname entity or one of the manual input parameters (**Host Name**
+    or **Host Id**) must be provided for the action to run.
+
+    - If both **Host Id** and **Host Name** are provided, **Host Id** takes precedence.
+
+    - If multiple devices are found for a single Host Name, the action selects the
+    one with the most recent `lastSyncDateTime` to perform the wipe.
+  ai_short_description: >-
+    Initiates a remote wipe command for devices managed within Microsoft Intune.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a remote wipe command on the specified managed devices in Microsoft
+      Intune.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by calling `list_all_managed_devices` to validate the
+      hosts. It mutates external data by sending a POST request to the Microsoft Graph
+      API's `wipe` endpoint to wipe the managed devices. It does not mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.HOSTNAME`. Therefore, it targets HOSTNAME entities and filters
+      by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a remote wipe command on managed devices via Microsoft
+      Intune. This is a destructive MDM action that does not align with any of the
+      available outcome categories such as Contain Host, Execute Command, or Blocklist.
+      Therefore, all outcome category flags are set to false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Host Name | String | No | Specify a comma-separated list of host names to run
+    the action on. Host name is case insensitive. If the action does not run on a
+    hostname entity, it can run either on Host Name or Host ID. Note: if both "Host
+    Name" and "Host Id" are provided, then "Host Id" value will have priority. Multiple
+    values can be as a comma-separated string. |
+
+    | Host Id | String | No | Specify a comma-separated list of host ids to run the
+    action on. If the action does not run on a hostname entity, it can run either
+    on Host Name or Host ID. Note: if both "Host Name" and "Host Id" are provided,
+    then "Host Id" value will have priority. Multiple values can be as a comma-separated
+    string. |
+
+    | Keep Enrollment Data | Boolean | No | If enabled, keep enrollment data on the
+    device. |
+
+    | Keep User Data | Boolean | No | If enabled, keep user data on the device. |
+
+    | Persist Esim Data Plan | Boolean | No | If enabled, persist esim data plan for
+    the device. |
+
+    | Mac OS Unlock Code | String | No | Specify if applicable Mac OS unlock code.
+    |

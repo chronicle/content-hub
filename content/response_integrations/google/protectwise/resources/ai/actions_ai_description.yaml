@@ -1,0 +1,441 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Get Events:
+  ai_description: >-
+    ### General Description
+
+    Retrieves historical event data for IP Address entities from Protectwise. This
+    action queries the Protectwise API to find events associated with specific IP
+    addresses within a user-defined timeframe. It is primarily used to gather context
+    about network activity related to an IP during an investigation.
+
+
+    ### Flow Description
+
+    1. Calculates the start and end timestamps in Unix time based on the current UTC
+    time and the provided `Timeframe (hours)` parameter.
+
+    2. Iterates through the target entities in the case and filters for those of type
+    `ADDRESS` (IP addresses).
+
+    3. For each valid IP address, calls the Protectwise API's reputation endpoint
+    (`GET /reputations/ips/{ip}`), specifically requesting threat and event details
+    for the calculated timeframe.
+
+    4. If events are found, flattens the nested event data and converts it into a
+    CSV-formatted string.
+
+    5. Attaches the CSV data as an entity table to the corresponding IP address entity
+    within the Google SecOps case.
+
+    6. Returns a summary message listing the entities for which events were found
+    and provides a JSON blob containing the raw event data for further processing.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Retrieves historical event data for IP Address entities from Protectwise within
+    a specified timeframe and attaches the results as an entity table.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds an entity table containing the event data to the case.
+    reasoning: >-
+      The action fetches data from the Protectwise API using a GET request. It does
+      not mutate external data. It mutates internal data by adding an entity table
+      (`siemplify.result.add_entity_table`). It does not update entities (`siemplify.update_entities`
+      is not called), nor does it create insights (`siemplify.add_entity_insight`
+      is not called). It does not modify alert data or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == EntityTypes.ADDRESS:`. Therefore, it targets ADDRESS entities
+      and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches historical event data (threats/events) related to an IP address
+      from Protectwise. This aligns with the 'Search Events' category as it returns
+      a collection of historical logs/telemetry data matching specific search parameters
+      (IP and timeframe). It also enriches the IOC by providing threat intelligence/events,
+      so 'Enrich IOC' is also applicable.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Timeframe (hours) | String | Yes | Fetch events in time frame of hours, e.g:
+    1 |
+Get Pcap:
+  ai_description: >-
+    ### General Description
+
+    The **Get Pcap** action retrieves and downloads packet capture (PCAP) files from
+    Protectwise for events associated with a specific alert in Google SecOps. It identifies
+    relevant network traffic by matching the timeframe of security events within the
+    alert to events stored in Protectwise, then attaches the resulting PCAP files
+    directly to the case for forensic analysis.
+
+
+    ### Flow Description
+
+    1. Validates the execution scope (Alert or Case) to determine the target alerts.
+
+    2. Iterates over the security events associated with the target alerts.
+
+    3. Queries the Protectwise API (`/events`) to find matching events based on the
+    start and end timestamps of each security event.
+
+    4. For every matching event found in Protectwise, requests the raw PCAP content
+    via the Protectwise API (`/pcaps/events/{event_id}`).
+
+    5. Base64 encodes the downloaded PCAP data and attaches it to the Google SecOps
+    case as a `.pcap` file.
+
+    6. Returns a summary message of the events for which PCAPs were successfully downloaded.
+
+
+    ### Additional Notes
+
+    * This action supports both Alert and Case scopes. When running in Case scope,
+    it iterates over all alerts associated with the case.
+
+    * It specifically targets the `security_events` collection within the Google SecOps
+    alert to determine the search window for Protectwise.
+  ai_short_description: >-
+    Retrieves and downloads packet capture (PCAP) files from Protectwise based on
+    the timeframe of security events within an alert, attaching them to the case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Attaches downloaded PCAP files to the case.
+    reasoning: >-
+      The action fetches event data and PCAP files from Protectwise via GET requests
+      (`fetches_data` = true). It does not mutate external data. It mutates internal
+      data by attaching the downloaded PCAP files to the case (`can_mutate_internal_data`
+      = true). It does not update entities, create insights, modify alert data, or
+      create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over alerts and their associated security events, not over
+      `siemplify.target_entities`. Therefore, it does not use or filter any specific
+      entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action downloads PCAP files from Protectwise and attaches them to the case.
+      This aligns with the 'Download File' expected outcome, which involves retrieving
+      a specific file for local forensic analysis.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a utility designed to verify the connectivity between Google
+    SecOps and the Protectwise platform. Its primary purpose is to ensure that the
+    provided credentials (Email and Password) are valid and that the Protectwise API
+    is reachable.
+
+
+    ### Flow Description
+
+    1. **Retrieve Configuration**: The action fetches the 'Email' and 'Password' from
+    the Protectwise integration settings.
+
+    2. **Initialize Manager**: It initializes the `ProtectwiseManager` using the retrieved
+    credentials.
+
+    3. **Authentication Check**: During initialization, the manager performs a POST
+    request to the Protectwise `/token` endpoint to authenticate.
+
+    4. **Finalize**: If the authentication is successful and no exceptions are raised,
+    the action returns a success message indicating a successful connection.
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the Protectwise integration
+    or for troubleshooting connection issues.
+
+    - It relies on the integration's global configuration for authentication.
+  ai_short_description: >-
+    Verifies connectivity between Google SecOps and the Protectwise platform using
+    the configured credentials.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only performs an authentication request to verify connectivity. It
+      does not fetch contextual data, mutate external data (other than generating
+      a temporary token), mutate internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any entities. It solely tests connectivity
+      using integration configurations.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

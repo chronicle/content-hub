@@ -1,0 +1,1481 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Add Entities to URL List:
+  ai_description: >-
+    ### General Description
+
+    Appends new URLs, domains, or IP addresses to an existing Netskope URL list. This
+    action can process both manually provided entries and supported entities attached
+    to the case, and it provides an option to deploy the pending changes across the
+    Netskope environment.
+
+
+    ### Flow Description
+
+    1. Extracts the target URL list name, manual entries, and deployment preference
+    from the action parameters.
+
+    2. Collects the entities to add by combining the manual entries and the identifiers
+    of supported target entities (URL, Address, Domain).
+
+    3. Makes a GET request to the Netskope API to retrieve the specified URL list
+    and obtain its internal ID and type.
+
+    4. Iterates over the collected entities and makes PATCH requests to the Netskope
+    API to append them to the URL list.
+
+    5. If the deployment parameter is enabled, makes a POST request to deploy all
+    pending URL list changes in Netskope.
+
+    6. Returns a summary message and attaches a JSON result containing the successfully
+    added entities, failed entities, and modification details.
+
+
+    ### Additional Notes
+
+    - Supported entity types for automatic processing are URL, Domain, and IP Address.
+
+    - Deploying changes will apply all pending modifications across all URL lists
+    in Netskope, not just the one modified by this action.
+  ai_short_description: >-
+    Appends new URLs, domains, or IP addresses to an existing Netskope URL list, processing
+    both manually provided entries and supported case entities, with an option to
+    deploy the changes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds URLs, domains, or IP addresses to a specified Netskope URL list and optionally
+      deploys the changes.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action mutates external data by making PATCH requests to append entities
+      to a Netskope URL list and optionally making a POST request to deploy the changes.
+      It does not fetch contextual data for enrichment, nor does it mutate internal
+      SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: true
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks if
+      `entity.entity_type` is in `[EntityTypes.URL, EntityTypes.ADDRESS, EntityTypes.DOMAIN]`.
+      Therefore, it targets URL, Address, and Domain entities and filters them by
+      entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds entities to a generic URL list in Netskope. Depending on how
+      the list is configured in Netskope, this could result in blocking or allowing
+      the IOCs. However, the action itself does not explicitly enforce a block or
+      allow outcome, it merely updates a list. Therefore, it does not strictly match
+      the 'Add IOC To Blocklist' or 'Add IOC To Allowlist' expected outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | URL List Name | String | Yes | The name of the existing Netskope URL list to
+    update (such as Allowed URLs). |
+
+    | Entries | String | No | A comma-separated list of URLs, domains, or IP addresses
+    to add to the list. The action also automatically processes URL, Domain, and IP
+    Address entities attached to the case. |
+
+    | Deploy URL List Changes | Boolean | No | If selected, the action deploys all
+    pending changes to all URL lists. Note: All changes across all URL lists are deployed.
+    |
+Allow File:
+  ai_description: >-
+    ### General Description
+
+    Allows a quarantined file within the Netskope platform. This action interacts
+    with the Netskope API to change the status of a specific file from quarantined
+    to allowed, effectively releasing it based on the provided identifiers.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Netskope manager using the provided
+    API credentials and version preference.
+
+    2. **Parameter Extraction**: It retrieves the 'File ID', 'Quarantine Profile ID',
+    and 'Use V2 API' parameters.
+
+    3. **Execution**: It calls the Netskope API (V1 or V2) to restore or allow the
+    specified quarantined file.
+
+    4. **Finalization**: Returns a success message if the file is successfully allowed
+    or if it was already processed.
+
+
+    ### Additional Notes
+
+    If using the V1 API, the 'Quarantine Profile ID' parameter is mandatory.
+  ai_short_description: >-
+    Allows a quarantined file within the Netskope platform by changing its status
+    from quarantined to allowed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Changes the status of a quarantined file to allowed/restored in the Netskope
+      platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST or GET request to the Netskope API to change the state
+      of a quarantined file to allowed. It mutates external data but does not fetch
+      contextual data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or filter any entities. It operates solely on the
+      provided File ID and Quarantine Profile ID parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action restores a quarantined file in Netskope. This does not match any
+      of the predefined outcome categories such as enriching IOCs, managing blocklists/allowlists
+      for indicators, or updating alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File ID | String | Yes | ID of a file, needed to identify a file. |
+
+    | Quarantine Profile ID | String | No | ID of a quarantine profile. This parameter
+    is mandatory for V1 API. |
+
+    | Use V2 API | Boolean | No | If enabled, the action will use the V2 API endpoint
+    (requires credentials). |
+Block File:
+  ai_description: >-
+    ### General Description
+
+    This action blocks a quarantined file within the Netskope platform. It is used
+    to transition a file from a quarantined state to a blocked state, preventing further
+    access or interaction with the file based on the specified quarantine profile.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the specific action parameters
+    (`File ID`, `Quarantine Profile ID`, and `Use V2 API`).
+
+    2. **Manager Initialization**: It initializes the `NetskopeManager` (V1 or V2)
+    using the provided credentials.
+
+    3. **API Interaction**: The action calls the Netskope API's quarantine endpoint
+    to block the specified file. For V1, it sends a GET request with the operation
+    `take-action` and action `block`. For V2, it sends a POST request to the specific
+    file's block endpoint.
+
+    4. **Status Reporting**: If the API call is successful or if the file was already
+    processed, the action completes with a success message. If an error occurs, it
+    logs the exception and fails.
+
+
+    ### Additional Notes
+
+    - The `Quarantine Profile ID` parameter is mandatory when using the V1 API.
+  ai_short_description: >-
+    Blocks a specific quarantined file within the Netskope platform to prevent further
+    access or interaction.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Changes the state of a quarantined file to 'blocked' within the Netskope platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST/GET request to the Netskope API to block a specific
+      file, which mutates external data. It does not fetch contextual data, update
+      internal entities, create insights, or modify internal case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not use or iterate over any entities. It operates exclusively
+      based on the provided 'File ID' parameter.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action changes the state of a specific quarantined file to 'blocked' in
+      Netskope. This does not align with adding a global IOC to a blocklist, nor does
+      it match any other specific outcome category like enriching data, updating alerts,
+      or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File ID | String | Yes | ID of a file, needed to identify a file. |
+
+    | Quarantine Profile ID | String | No | ID of a quarantine profile. This parameter
+    is mandatory for V1 API. |
+
+    | Use V2 API | Boolean | No | If enabled, the action will use the V2 API endpoint
+    (requires credentials). |
+Deploy URL List Changes:
+  ai_description: >-
+    ### General Description
+
+    The "Deploy URL List Changes" action pushes pending configurations to the active
+    Netskope policy engine, ensuring that any staged updates are applied and enforced
+    for URL Lists.
+
+
+    ### Flow Description
+
+    1. Initializes the Netskope API client (v2).
+
+    2. Makes a POST request to the Netskope API to deploy pending URL list changes.
+
+    3. Returns a success message if the deployment completes without errors.
+
+
+    ### Additional Notes
+
+    This action does not require any specific entities or parameters to run.
+  ai_short_description: >-
+    Pushes pending URL list configurations to the active Netskope policy engine to
+    enforce staged updates.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Pushes pending URL list configurations to the active Netskope policy engine.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Netskope API to deploy URL list changes,
+      which mutates external data by applying staged configurations. It does not fetch
+      contextual data, mutate internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use any entity-specific
+      identifiers. It performs a global configuration deployment on the external system.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deploys pending URL list changes to the Netskope policy engine. This
+      is a configuration management operation and does not directly match any of the
+      specific outcome categories such as enriching IOCs, blocking/allowing specific
+      IOCs, or managing tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Download File:
+  ai_description: >-
+    ### General Description
+
+    Downloads a file that has been quarantined by Netskope and attaches it to the
+    Google SecOps case. This action is used to retrieve suspicious or malicious files
+    for further analysis without needing to log into the Netskope console. It requires
+    specific identifiers for both the file and the quarantine profile.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the Netskope API configuration and
+    the specific File and Quarantine Profile IDs provided as input.
+
+    2. **Metadata Retrieval**: It fetches the list of all quarantined files from Netskope
+    to identify the original filename corresponding to the provided File ID.
+
+    3. **File Download**: It requests a download URL from the Netskope API for the
+    specified file and profile, then retrieves the raw file content.
+
+    4. **Attachment**: If the file is successfully retrieved, the content is base64-encoded
+    and added as an attachment to the current Google SecOps case using the original
+    filename.
+
+
+    ### Additional Notes
+
+    This action does not run on entities. It relies entirely on the manual input of
+    the File ID and Quarantine Profile ID. Note that according to security best practices,
+    downloading files is not categorized as an enrichment action.
+  ai_short_description: >-
+    Downloads a file that has been quarantined by Netskope and attaches it to the
+    Google SecOps case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Attaches the downloaded file to the Google SecOps case.
+    reasoning: >-
+      The action fetches data by retrieving the quarantined file content from Netskope.
+      It does not mutate external data. It mutates internal data by attaching the
+      downloaded file to the Google SecOps case. It does not update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the provided File ID parameter. Therefore,
+      all entity type and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a specific file from Netskope's quarantine and attaches
+      it to the case for local forensic analysis. This directly aligns with the 'Download
+      File' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File ID | String | Yes | ID of a file, needed to identify a file. |
+
+    | Quarantine Profile ID | String | No | ID of a quarantine profile. This parameter
+    is mandatory for V1 API. |
+
+    | Use V2 API | Boolean | No | If enabled, the action will use the V2 API endpoint
+    (requires credentials). |
+List Alerts:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a list of alerts from the Netskope platform based on user-defined
+    filters such as query, alert type, time period, and acknowledgment status. The
+    retrieved alerts are returned as a JSON result and formatted into a data table
+    within the Google SecOps case for analyst review.
+
+
+    ### Flow Description
+
+    1. **Parameter Validation**: The action validates the provided 'Type' parameter
+    against a list of supported Netskope alert types and ensures the 'Limit' is a
+    positive integer.
+
+    2. **API Connection**: It initializes the Netskope V2 API manager using the integration
+    configuration.
+
+    3. **Data Retrieval**: The action sends a GET request to the Netskope `api/v2/events/data/alert`
+    endpoint, applying the specified filters (query, type, time range, and acknowledgment
+    status).
+
+    4. **Pagination**: If the requested limit exceeds the single-page response size,
+    the action handles pagination to fetch the required number of alerts.
+
+    5. **Output Generation**: The retrieved alerts are processed into a flat format
+    to create a CSV data table and are also attached as a raw JSON result to the action
+    execution.
+
+
+    ### Additional Notes
+
+    - Either the 'Time Period' parameter or the 'Start Time'/'End Time' pair should
+    be configured to define the search window effectively.
+
+    - The action utilizes the Netskope V2 API.
+  ai_short_description: >-
+    Retrieves a list of alerts from the Netskope platform based on specified filters
+    and time ranges, returning the results as a data table and JSON.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches alert data from the Netskope API using a GET request (fetches_data
+      is true). It does not perform any state-changing operations on external systems
+      (can_mutate_external_data is false). It also does not update internal entities,
+      create insights, or modify case data (can_mutate_internal_data, can_update_entities,
+      can_create_insight, can_modify_alert_data, can_create_case_comments are all
+      false).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity
+      information. It operates independently of entities to fetch alerts based on
+      input parameters. Therefore, all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries the Netskope API to retrieve a list of alerts based on search
+      parameters like query, type, and time period. This matches the 'Search Events'
+      category, as it returns a collection of historical alert logs matching specific
+      search parameters. It does not enrich specific IOCs or assets, nor does it mutate
+      any external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query | String | No | This acts as a filter for all the cloud app events in
+    the alerts database. |
+
+    | Type | String | No | The type of the alert to filter by. Valid values: anomaly
+    \| 'Compromised Credential' \| policy \| 'Legal Hold' \| malsite \| Malware \|
+    DLP \| watchlist \| quarantine \| Remediation. |
+
+    | Time Period | String | No | Time period to search alerts at (milliseconds backwards).
+    Valid Values: 3600 \| 86400 \| 604800 \| 2592000. |
+
+    | Start Time | String | No | Restrict alerts to those that have timestamps greater
+    than this (unixtime). Needed only if time period is not passed. |
+
+    | End Time | String | No | Restrict alerts to those that have timestamps less
+    than this (unixtime). Needed only if time period is not passed. |
+
+    | Is Acknowledged | Boolean | No | Whether to get only acknowledged alerts. |
+
+    | Limit | Integer | No | Number of results to return. Default: 100. |
+List Clients:
+  ai_description: >-
+    ### General Description
+
+    The **List Clients** action retrieves a list of client devices from the Netskope
+    platform. It allows users to search for specific clients using a query and limit
+    the number of results returned. The retrieved information includes device IDs,
+    operating systems, and associated users.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the API configuration and action
+    parameters (Query, Limit, Use V2 API).
+
+    2. **API Interaction**: It connects to the Netskope API endpoint (V1 or V2 depending
+    on the parameter) using the provided credentials.
+
+    3. **Data Retrieval**: The action fetches client data, applying the query filter
+    and limit. It handles pagination internally.
+
+    4. **Data Transformation**: The raw JSON response is parsed into structured `Client`
+    objects.
+
+    5. **Result Output**: The action generates a data table named "Netskope - Clients"
+    and attaches the full JSON results to the action output.
+
+
+    ### Additional Notes
+
+    - This action does not require or process any input entities.
+
+    - If the **Limit** parameter is set to 0 or a negative number, the action automatically
+    reverts to the default limit of 25.
+  ai_short_description: >-
+    Retrieves a list of client devices from the Netskope platform based on a specified
+    query and limit.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Netskope API (clients list). It does not mutate
+      external data, update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It simply queries the Netskope
+      API for a list of clients based on the provided parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of clients from Netskope. It does not enrich specific
+      IOCs or assets, update alerts, mutate external state, or match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query | String | No | This acts as a filter on all the entries in the database.
+    |
+
+    | Limit | Integer | No | Number of results to return. Default: 25. |
+
+    | Use V2 API | Boolean | No | If enabled, the action will use the V2 API endpoint
+    (requires credentials). |
+List Events:
+  ai_description: "### General Description\nLists events from the Netskope events\
+    \ database. This action allows users to retrieve and filter cloud application\
+    \ events, page events, audit events, or infrastructure events based on specific\
+    \ queries and time-based constraints. It is primarily used for log retrieval and\
+    \ auditing within the Netskope environment.\n\n### Flow Description\n1. **Initialization**:\
+    \ Extracts the user-defined search parameters such as query, type, time period,\
+    \ and limit.\n2. **Validation**: If a specific `Type` is provided, the action\
+    \ validates it against the allowed Netskope event categories (`page`, `application`,\
+    \ `audit`, `infrastructure`).\n3. **Data Retrieval**: \n    - If a `Type` is specified,\
+    \ it makes a GET request to the corresponding Netskope V2 endpoint for that category.\n\
+    \    - If no `Type` is specified, it sequentially queries all four event categories\
+    \ and combines the results.\n4. **Pagination**: The action handles API pagination\
+    \ internally to ensure the requested `Limit` of results is met.\n5. **Output Generation**:\
+    \ The retrieved events are flattened and presented in a data table named \"Netskope\
+    \ - Events\". The raw event data is also returned as a JSON result for downstream\
+    \ processing.\n\n### Additional Notes\n- If the `Type` parameter is omitted, the\
+    \ action will iterate through all supported event types and aggregate the results\
+    \ up to the specified limit.\n- The action uses the Netskope V2 API for event\
+    \ retrieval."
+  ai_short_description: >-
+    Retrieves and filters events from the Netskope events database based on specific
+    queries and time constraints.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches event data from Netskope using GET requests. It does not
+      mutate any external data, nor does it update internal entities, create insights,
+      modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates purely on the provided action parameters to search
+      for events in Netskope.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for and retrieves historical events/logs from the Netskope
+      platform based on specific search parameters. This directly aligns with the
+      'Search Events' outcome category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query | String | No | This acts as a filter for all the cloud app events in
+    the events database. |
+
+    | Type | String | No | The type of the alert to filter by. Valid values: page
+    \| application \| audit \| infrastructure. |
+
+    | Time Period | String | No | Time period to search events at (milliseconds backwards).
+    Valid Values: 3600 \| 86400 \| 604800 \| 2592000. |
+
+    | Start Time | String | No | Restrict events to those that have timestamps greater
+    than this (unixtime). Needed only if time period is not passed. |
+
+    | End Time | String | No | Restrict events to those that have timestamps less
+    than this (unixtime). Needed only if time period is not passed. |
+
+    | Limit | Integer | No | Number of results to return. Default: 100. |
+List Quarantined Files:
+  ai_description: >-
+    ### General Description
+
+    The **List Quarantined Files** action retrieves a list of files currently held
+    in quarantine by Netskope. This action provides visibility into isolated files,
+    allowing security teams to audit and review items that have been moved to quarantine
+    based on organizational policies.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action extracts the API version preference, time
+    range filters (Start Time and End Time), and the maximum number of items to return.
+
+    2. **API Initialization**: It initializes the Netskope API client (V1 or V2) based
+    on the configuration.
+
+    3. **API Request**: It makes a GET request to the Netskope quarantine endpoint
+    (`/api/v1/quarantine` or `/api/v2/casbapi/incidents/quarantine`) to fetch the
+    list of quarantined files.
+
+    4. **Data Processing**: The response is parsed to extract individual file details,
+    and the data is formatted into a CSV table.
+
+    5. **Output Generation**: A data table named 'Netskope - Quarantined Files' is
+    attached to the case wall, and the raw file list is returned as a JSON result
+    for downstream use.
+
+
+    ### Additional Notes
+
+    - If no time parameters are provided, the action retrieves all available quarantined
+    files up to the specified limit.
+  ai_short_description: >-
+    Retrieves a list of files currently held in quarantine by Netskope.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Netskope API to fetch a list of quarantined
+      files. It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It retrieves a general list of quarantined files from Netskope,
+      so all entity type flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of quarantined files from Netskope. This does not
+      match any of the predefined outcome categories such as enriching IOCs, updating
+      alerts, or searching events.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Start Time | String | No | Restrict events to those that have timestamps greater
+    than this (unixtime). Needed only if time period is not passed. |
+
+    | End Time | String | No | Restrict events to those that have timestamps less
+    than this (unixtime). Needed only if time period is not passed. |
+
+    | Max Items To Return | Integer | No | Maximum number of items to retrieve. If
+    unspecified, the maximum (100) is used. |
+
+    | Use V2 API | Boolean | No | If enabled, the action will use the V2 API endpoint
+    (requires credentials). |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Verifies connectivity to the Netskope platform using the configured API credentials.
+    This action ensures that the SOAR platform can successfully communicate with the
+    Netskope API endpoints by performing a lightweight request to the service.
+
+
+    ### Flow Description
+
+    1. Retrieves the API Root, API Keys, and SSL verification settings from the integration
+    configuration.
+
+    2. Checks if at least one API key (V1 or V2) is provided. If both are missing,
+    the action fails immediately.
+
+    3. Attempts to fetch a single client record from the `/api/v1/clients` endpoint
+    (if V1 API Key is provided) or a single alert record from the `/api/v2/events/data/alert`
+    endpoint (if V2 API Key is provided) to test connectivity.
+
+    4. Reports a successful connection if the API call succeeds, or captures the exception
+    and returns a failure status with error details.
+
+
+    ### Additional Notes
+
+    At least one API key (either V1 or V2) must be configured in the integration settings
+    for this action to execute successfully.
+  ai_short_description: >-
+    Verifies connectivity to the Netskope platform using the configured API credentials.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a lightweight GET request to test connectivity. It does
+      not fetch contextual data for entities, mutate external or internal data, update
+      entities, create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It only tests connectivity to the
+      Netskope API without referencing or iterating over target entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticket management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

@@ -1,0 +1,629 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Enrich Resource:
+  ai_description: >-
+    ### General Description
+
+    Enriches information about Google Cloud resources using the Google Cloud Asset
+    Inventory service. This action allows users to retrieve detailed metadata for
+    a specific list of GCP resources by querying the Asset Inventory API. It supports
+    granular control over the returned data through field inclusion and exclusion
+    masks.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction & Validation**: The action retrieves configuration settings
+    and validates the input CSVs for resource names and field masks.
+
+    2. **Field Mask Logic**: It parses the `Fields To Return` parameter to build internal
+    lists of fields to be requested from the API and fields to be filtered out of
+    the final JSON result.
+
+    3. **Connectivity Verification**: It performs a connectivity test to ensure the
+    service account has the necessary permissions to access the Google Cloud Asset
+    Inventory.
+
+    4. **Resource Querying**: It sends a GET request to the `searchAllResources` endpoint,
+    batching resource names into a single query where possible to optimize API usage.
+
+    5. **Data Pruning**: The raw API response is processed through a transformation
+    layer that applies the inclusion/exclusion logic defined by the user.
+
+    6. **Final Output**: The action populates the JSON results with the enriched resource
+    data and generates a summary message indicating which resources were successfully
+    found.
+
+
+    ### Additional Notes
+
+    - This action does not automatically process entities from the SOAR scope; it
+    relies entirely on the `Resource Names` parameter.
+
+    - The `name` field is always returned in the results, even if excluded in the
+    parameters.
+  ai_short_description: >-
+    Enriches information about Google Cloud resources using the Google Cloud Asset
+    Inventory service by querying the Asset Inventory API for specific resource names.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Google Cloud Asset Inventory API to fetch
+      resource details (`fetches_data` = true). It does not perform any state-changing
+      operations on external systems (`can_mutate_external_data` = false). It also
+      does not update entities, create insights, or modify internal case data (`can_mutate_internal_data`
+      = false).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or process any
+      entities from the SOAR scope. It relies entirely on the `Resource Names` action
+      parameter to fetch data. Thus, all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches detailed metadata about specific Google Cloud resources (assets)
+      from the Google Cloud Asset Inventory API. This aligns with the 'Enrich Asset'
+      category, as it returns contextual metadata for a resource. It does not mutate
+      data or interact with IOCs.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Resource Names | String | Yes | Specify a comma-separated list of resources
+    for which you want to fetch details. |
+
+    | Fields To Return | String | No | Specify a comma-separated list of fields to
+    return. Example of values: assetType, project, folders, organization, displayName,
+    description, location, labels, networkTags, kmsKeys, createTime, updateTime, state,
+    additionalAttributes, parentFullResourceName, parentAssetType. Note: name will
+    always be returned. There is also an option to provide more advanced filters.
+    For example, if you want to return a specific key from the "additionalAttributes"
+    you can provide "additionalAttributes.{key}". Also, if you want to exclude a specific
+    key from "additionalAttributes", then you can provide "-additionalAttributes.{key}".
+    |
+Get Resource Snapshot:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed configuration snapshots for specific Google Cloud resources
+    using the Google Cloud Asset Inventory API. This action allows security analysts
+    to fetch the state of resources (such as Compute Engine instances, IAM service
+    accounts, or Cloud Storage buckets) at the current point in time. It is primarily
+    used to gather deep technical metadata about cloud assets for investigation and
+    compliance auditing.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a connection to the Google Cloud
+    Asset Inventory service using the configured API Root and credentials.
+
+    2. **Connectivity Test**: It performs a connectivity check to ensure the project
+    or organization ID is accessible.
+
+    3. **Parameter Validation**: The action parses the input CSV of resource names
+    and validates the field mask provided in the parameters.
+
+    4. **Data Retrieval**: It calls the `batchGetAssetsHistory` endpoint, requesting
+    the `RESOURCE` content type for the specified asset names.
+
+    5. **Result Processing**: The action identifies which resources were successfully
+    retrieved and which were not found. It then formats the raw API response into
+    a structured JSON result for use in the playbook.
+
+
+    ### Additional Notes
+
+    - This action does not automatically process entities from the Google SecOps case;
+    it requires explicit resource names to be provided via the action parameters.
+
+    - The action supports batching and can handle up to 100 resource names per request.
+  ai_short_description: >-
+    Retrieves detailed configuration snapshots for specific Google Cloud resources
+    using the Google Cloud Asset Inventory API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Google Cloud Asset Inventory API using a GET
+      request. It does not mutate external data, update internal entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the 'Resource Names' parameter provided by the user. Therefore,
+      it does not use any entity types or apply any entity filters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches configuration snapshots for Google Cloud resources based
+      on provided resource names. It does not enrich SecOps entities, mutate external
+      systems, or interact with alerts, tickets, or emails. Thus, it does not match
+      any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Resource Names | String | Yes | Specify a comma-separated list of resources
+    for which you want to fetch details. |
+
+    | Fields To Return | String | No | Specify a comma-separated list of fields to
+    return. Note: every field should be in format with "assets.{field}" Example of
+    values: assets.asset.name, assets.asset.assetType,assets.asset.resource.data.
+    Note: assets.asset.name will always be returned. |
+List Service Account Roles:
+  ai_description: >-
+    ### General Description
+
+    This action lists the IAM roles and unique permissions associated with specific
+    Google Cloud service accounts using the Google Cloud Asset Inventory API. It allows
+    security analysts to audit the privileges of service accounts within a project
+    or organization, providing visibility into what actions those accounts are authorized
+    to perform.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters and action-specific parameters (Service Accounts,
+    filters, and limits).
+
+    2. Verifies the connection to the Google Cloud Asset Inventory service.
+
+    3. For each service account provided in the input list, the action executes an
+    `analyzeIamPolicy` request via the Google Cloud Asset Inventory API. This request
+    can be filtered by specific roles or permissions if the optional parameters are
+    provided.
+
+    4. Parses the API response to extract the list of roles and, if requested, the
+    unique permissions granted to the service account.
+
+    5. Aggregates the results into a JSON object mapping each service account to its
+    discovered roles and permissions, which is then returned as the action output.
+
+
+    ### Additional Notes
+
+    - The action performs a read-only analysis and does not modify any IAM policies
+    or service account settings.
+  ai_short_description: >-
+    Lists the IAM roles and unique permissions associated with specific Google Cloud
+    service accounts using the Google Cloud Asset Inventory API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Google Cloud Asset Inventory API (analyzeIamPolicy).
+      It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on SOAR entities. It retrieves the list of service
+      accounts to analyze directly from the 'Service Accounts' action parameter.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves IAM roles and permissions for service accounts provided
+      as parameters. It does not enrich SOAR entities, mutate external state, or match
+      any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Service Accounts | String | Yes | Specify a comma-separated list of service
+    accounts for which you want to fetch details. |
+
+    | Check Roles | String | No | Specify a comma-separated list of roles that you
+    want to check in relation to the service account. Example: roles/cloudasset.owner
+    |
+
+    | Check Permissions | String | No | Specify a comma-separated list of permission
+    that you want to check in relation to the service account. Example: cloudasset.assets.listResource.
+    |
+
+    | Expand Permissions | Boolean | No | If enabled, action will return information
+    about all of the unique permissions related to the resource. |
+
+    | Max Roles To Return | Integer | Yes | Specify how many roles related to the
+    service account to return. |
+
+    | Max Permissions To Return | Integer | Yes | Specify how many permissions related
+    to the service account to return. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is designed to verify the connectivity between Google SecOps and
+    the Google Cloud Asset Inventory service. It ensures that the provided integration
+    configuration parameters, such as API Root and authentication credentials, are
+    correct and that the service is reachable.
+
+
+    ### Flow Description
+
+    1. Extracts connection details and authentication parameters from the integration
+    configuration.
+
+    2. Validates the format of the Service Account JSON and the Workload Identity
+    Email.
+
+    3. Initializes the Google Cloud Asset Inventory Manager with the provided credentials
+    and settings.
+
+    4. Executes a `GET` request to the `searchAllResources` endpoint with a minimal
+    page size (`pageSize=1`) to verify access to the specified Project or Organization.
+
+    5. Logs the success or failure of the connection attempt.
+
+
+    ### Additional Notes
+
+    - Either a Project ID or an Organization ID must be provided (or discoverable
+    via the service account) for the connectivity test to proceed.
+
+    - This action does not process any entities.
+  ai_short_description: >-
+    Verifies the connectivity between Google SecOps and the Google Cloud Asset Inventory
+    service using the provided integration configuration parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action is a Ping script that tests connectivity to the Google Cloud Asset
+      Inventory API. It does not fetch contextual data for entities, mutate external
+      data, mutate internal data, update entities, create insights, modify alert data,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It is a simple connectivity
+      test, so all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) and does not match any of the specific
+      outcome categories such as enriching IOCs, updating alerts, or mutating external
+      systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
