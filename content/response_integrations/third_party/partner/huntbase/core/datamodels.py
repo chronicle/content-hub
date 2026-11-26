@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
-from typing import Any
-
-from TIPCommon.types import SingleJson
+from typing import TYPE_CHECKING
 
 from . import constants
 
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
-def parse_timestamp(value: Any) -> datetime.datetime | None:  # noqa: ANN401
+
+def parse_timestamp(value: object) -> datetime.datetime | None:
     """Parse an ISO 8601 string (or epoch seconds/ms) into an aware UTC datetime."""
-    if value in (None, ""):
+    if value in (None, "") or isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
         seconds = value / 1000 if value > 10**11 else value
@@ -28,7 +29,7 @@ def parse_timestamp(value: Any) -> datetime.datetime | None:  # noqa: ANN401
     return parsed.astimezone(datetime.UTC)
 
 
-def to_unix_ms(value: Any) -> int | None:  # noqa: ANN401
+def to_unix_ms(value: object) -> int | None:
     parsed = parse_timestamp(value)
     return int(parsed.timestamp() * 1000) if parsed else None
 
@@ -37,11 +38,11 @@ def to_iso(value: datetime.datetime) -> str:
     return value.astimezone(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 
-def severity_to_priority(severity: Any) -> int:  # noqa: ANN401
+def severity_to_priority(severity: object) -> int:
     return constants.SEVERITY_TO_PRIORITY.get(str(severity or "").lower(), constants.PRIORITY_MEDIUM)
 
 
-def severity_rank(severity: Any) -> int:  # noqa: ANN401
+def severity_rank(severity: object) -> int:
     value = str(severity or "").lower()
     if value == "info":
         value = "informational"
@@ -51,7 +52,7 @@ def severity_rank(severity: Any) -> int:  # noqa: ANN401
         return -1
 
 
-def _count(value: Any) -> int | None:  # noqa: ANN401
+def _count(value: object) -> int | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, int):
@@ -60,13 +61,74 @@ def _count(value: Any) -> int | None:  # noqa: ANN401
         return len(value)
     if isinstance(value, dict):
         for key in ("count", "total"):
-            if isinstance(value.get(key), int):
-                return value[key]
+            count = value.get(key)
+            if isinstance(count, int) and not isinstance(count, bool):
+                return count
     return None
 
 
-def _clean(values: dict[str, Any]) -> dict[str, Any]:
+def _source_name(source: object) -> str | None:
+    """The indicator source as text: the API returns an object (id, slug, name)."""
+    if isinstance(source, dict):
+        name = source.get("name") or source.get("slug") or source.get("id")
+        return str(name) if name else None
+    return str(source) if source not in (None, "") else None
+
+
+def _clean(values: SingleJson) -> SingleJson:
     return {key: value for key, value in values.items() if value not in (None, "", [], {})}
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class HuntbaseConfig:
+    """Connection settings shared by the actions and the connector."""
+
+    api_root: str
+    api_key: str
+    verify_ssl: bool = True
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class StartHuntRequest:
+    """Body options for POST /hunts/auto."""
+
+    seed_values: list[SingleJson]
+    title: str | None = None
+    hypothesis: str | None = None
+    session_mode: str = constants.DEFAULT_HUNT_SESSION_MODE
+    severity: str | None = None
+    external_ref: SingleJson | None = None
+    reuse_open: bool = False
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class ScoutQuestionRequest:
+    """Body options for POST /agents/scout/jobs."""
+
+    question: str
+    hunt_id: str | None = None
+    external_ref: SingleJson | None = None
+    initiative: str | None = None
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class FindingsQuery:
+    """Filters and paging for GET /findings."""
+
+    since: str
+    dispositions: tuple[str, ...] = constants.DEFAULT_FINDING_DISPOSITIONS
+    limit: int | None = None
+    offset: int = 0
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class InsightsQuery:
+    """Filters and paging for GET /insights."""
+
+    since: str
+    severity: str | None = None
+    limit: int | None = None
+    offset: int = 0
 
 
 @dataclasses.dataclass(slots=True)
@@ -108,8 +170,8 @@ class IndicatorResult:
     @property
     def score(self) -> float | None:
         for key in ("effective_confidence", "score", "confidence"):
-            value = self.best.get(key)
-            if isinstance(value, (int, float)):
+            value: object = self.best.get(key)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
                 return float(value)
         return None
 
@@ -119,7 +181,7 @@ class IndicatorResult:
         score = self.score
         return score is not None and score >= threshold
 
-    def enrichment(self) -> dict[str, Any]:
+    def enrichment(self) -> SingleJson:
         best = self.best
         return _clean({
             "status": self.status,
@@ -127,7 +189,7 @@ class IndicatorResult:
             "confidence": best.get("effective_confidence", best.get("confidence")),
             "score": best.get("score"),
             "tlp": best.get("tlp"),
-            "source": best.get("source"),
+            "source": _source_name(best.get("source")),
             "state": best.get("state"),
             "first_seen": best.get("first_seen"),
             "last_seen": best.get("last_seen"),
@@ -173,7 +235,7 @@ class EntityMatch:
             attributes=attributes,
         )
 
-    def enrichment(self) -> dict[str, Any]:
+    def enrichment(self) -> SingleJson:
         summary = self.attributes.get("summary") if isinstance(self.attributes.get("summary"), dict) else {}
         return _clean({
             "status": "known",
@@ -240,7 +302,7 @@ class Hunt:
         return bool(verdict.get("disposition")) and verdict.get("kind", "recorded") == "recorded"
 
     def to_json(self, findings: list[Finding] | None = None) -> SingleJson:
-        result = {
+        result: SingleJson = {
             "id": self.hunt_id,
             "title": self.title,
             "status": self.status,
@@ -313,8 +375,8 @@ class Insight:
     title: str
     severity: str | None
     status: str | None
-    time: Any
-    created_at: Any
+    time: str | int | float | None
+    created_at: str | int | float | None
     source_product: str | None
     watcher_name: str | None
     url: str | None = None

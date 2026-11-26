@@ -74,3 +74,29 @@ def test_external_ref_trims_title_and_url_check() -> None:
     assert is_http_url("https://secops.example/cases/1")
     assert not is_http_url("secops.example/cases/1")
     assert not is_http_url(None)
+
+
+@pytest.mark.parametrize(
+    "link",
+    ["javascript:alert(1)", "data:text/html,<script>alert(1)</script>", "  JavaScript:alert(1)", "//evil.example", 7],
+)
+def test_insight_drops_unsafe_links(link: object) -> None:
+    html = indicator_insight("1.2.3.4", {"status": "known", "link": link})
+    assert "<a " not in html
+    assert "javascript" not in html.lower()
+
+
+def test_insight_link_opens_safely() -> None:
+    html = indicator_insight("1.2.3.4", {"status": "known", "link": "https://hb.example/i/1"})
+    assert '<a href="https://hb.example/i/1" target="_blank" rel="noopener noreferrer">' in html
+
+
+def test_prefixed_keeps_scalars_and_flattens_objects() -> None:
+    props = prefixed({"status": "known", "score": 96, "sighted": False, "extra": {"b": 1, "a": 2}, "tags": ["x"]})
+    assert props == {
+        "HB_status": "known",
+        "HB_score": 96,
+        "HB_sighted": False,
+        "HB_extra": '{"a": 2, "b": 1}',
+        "HB_tags": '["x"]',
+    }

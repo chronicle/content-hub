@@ -4,10 +4,12 @@ import json
 import time
 from typing import TYPE_CHECKING
 
+from integration_testing.common import set_is_first_run_to_true
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from huntbase.actions import ask_scout
+from huntbase.core import constants
 
 from .. import common
 from ..conftest import MockEntity
@@ -17,6 +19,7 @@ if TYPE_CHECKING:
     from integration_testing.platform.script_output import MockActionOutput
 
     from ..core.product import Huntbase
+    from ..core.session import HuntbaseSession
 
 
 def deadline() -> dict:
@@ -47,6 +50,7 @@ DONE = {
 )
 def test_ask_scout_first_run_in_progress(huntbase: Huntbase, action_output: MockActionOutput) -> None:
     huntbase.add_scout_job("job_1", {"state": "queued"})
+    set_is_first_run_to_true()
 
     ask_scout.main()
 
@@ -88,6 +92,7 @@ def test_ask_scout_poll_completes(huntbase: Huntbase, action_output: MockActionO
 )
 def test_ask_scout_answers_immediately(huntbase: Huntbase, action_output: MockActionOutput) -> None:
     huntbase.add_scout_job("job_1", DONE)
+    set_is_first_run_to_true()
 
     ask_scout.main()
 
@@ -141,3 +146,58 @@ def test_ask_scout_bad_initiative(action_output: MockActionOutput) -> None:
 
     assert action_output.results.execution_state == ExecutionState.FAILED
     assert "Initiative must be one of" in action_output.results.output_message
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters={"Question": QUESTION, "additional_data": ""},
+    input_context=deadline(),
+)
+def test_ask_scout_poll_without_state_does_not_ask_again(huntbase: Huntbase, action_output: MockActionOutput) -> None:
+    huntbase.add_scout_job("job_1", {"state": "queued"})
+
+    ask_scout.main()
+
+    results = action_output.results
+    assert results.execution_state == ExecutionState.FAILED
+    assert "lost track of its Scout job" in results.output_message
+    assert huntbase.scout_questions == []
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters={"Question": QUESTION, "additional_data": "{not json"},
+    input_context=deadline(),
+)
+def test_ask_scout_poll_with_corrupt_state_does_not_ask_again(
+    huntbase: Huntbase,
+    action_output: MockActionOutput,
+) -> None:
+    huntbase.add_scout_job("job_1", {"state": "queued"})
+
+    ask_scout.main()
+
+    assert action_output.results.execution_state == ExecutionState.FAILED
+    assert "lost track of its Scout job" in action_output.results.output_message
+    assert huntbase.scout_questions == []
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters={"Question": QUESTION, "Include Case Context": "false"},
+    input_context=deadline(),
+)
+def test_ask_scout_sends_idempotency_key(
+    huntbase: Huntbase,
+    script_session: HuntbaseSession,
+    action_output: MockActionOutput,
+) -> None:
+    huntbase.add_scout_job("job_1", {"state": "queued"})
+    set_is_first_run_to_true()
+
+    ask_scout.main()
+
+    assert action_output.results.execution_state == ExecutionState.IN_PROGRESS
+    request = script_session.request_history[0].request
+    assert request.url.path == "/api/v1/agents/scout/jobs"
+    assert request.kwargs["headers"][constants.IDEMPOTENCY_KEY_HEADER]

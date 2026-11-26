@@ -23,7 +23,10 @@ class GetHunt(HuntbaseAction):
 
     def _extract_action_parameters(self) -> None:
         self.params.hunt_id = extract_action_param(
-            self.soar_action, param_name="Hunt ID", is_mandatory=True, print_value=True
+            self.soar_action,
+            param_name="Hunt ID",
+            is_mandatory=True,
+            print_value=True,
         ).strip()
         self.params.include_findings = extract_action_param(
             self.soar_action,
@@ -41,7 +44,7 @@ class GetHunt(HuntbaseAction):
         )
 
     def _approaching_async_timeout(self) -> bool:
-        deadline = getattr(self.soar_action, "async_total_duration_deadline", None)
+        deadline: int | None = getattr(self.soar_action, "async_total_duration_deadline", None)
         return bool(deadline) and is_approaching_action_timeout(deadline)
 
     def _perform_action(self, _: object) -> None:

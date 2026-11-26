@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
 import time
 import urllib.parse
-from typing import TYPE_CHECKING, Any
+import uuid
+from typing import TYPE_CHECKING
 
 import requests
 from TIPCommon.base.utils import CreateSession
@@ -29,9 +31,20 @@ from .huntbase_exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
-    SingleJson = dict[str, Any]
+    from TIPCommon.base.interfaces.logger import Logger
+    from TIPCommon.types import JSON, SingleJson
+
+    from .datamodels import (
+        FindingsQuery,
+        HuntbaseConfig,
+        InsightsQuery,
+        ScoutQuestionRequest,
+        StartHuntRequest,
+    )
+
+    QueryParams = SingleJson | list[tuple[str, str | int]]
 
 
 def _sleep(seconds: float) -> None:
@@ -40,18 +53,32 @@ def _sleep(seconds: float) -> None:
 
 
 def normalize_api_root(api_root: str) -> str:
-    """Return the API root without a trailing slash, adding /api/v1 when missing."""
+    """Return the HTTPS API root without a trailing slash, adding /api/v1 when missing."""
     root = (api_root or "").strip().rstrip("/")
     if not root:
         msg = "The API Root is empty. Set it to https://<your Huntbase host>/api/v1."
         raise HuntbaseConfigurationError(msg)
     parsed = urllib.parse.urlparse(root)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        msg = f"The API Root '{root}' is not a valid http(s) URL."
+    try:
+        hostname = (parsed.hostname or "").lower()
+        has_credentials = bool(parsed.username or parsed.password)
+    except ValueError:
+        hostname, has_credentials = "", False
+    if parsed.scheme.lower() != "https" or not hostname or has_credentials:
+        msg = f"The API Root '{_redact(parsed)}' must be a valid https:// URL without embedded credentials."
+        raise HuntbaseConfigurationError(msg)
+    if hostname in constants.BLOCKED_API_HOSTS or hostname.startswith(constants.LINK_LOCAL_PREFIX):
+        msg = f"The API Root host '{hostname}' is not permitted."
         raise HuntbaseConfigurationError(msg)
     if not parsed.path or parsed.path == "/":
         root = f"{root}/api/v1"
     return root
+
+
+def _redact(parsed: urllib.parse.ParseResult) -> str:
+    """The URL for error messages, without any user:password@ part."""
+    netloc = parsed.netloc.rsplit("@", 1)[-1]
+    return urllib.parse.urlunparse(parsed._replace(netloc=netloc))
 
 
 def app_root_from_api_root(api_root: str) -> str:
@@ -63,10 +90,21 @@ def app_root_from_api_root(api_root: str) -> str:
     return root
 
 
+def _clean_api_key(api_key: str) -> str:
+    key = (api_key or "").strip()
+    if not key:
+        msg = "The API Key is empty. Create a personal API key in Huntbase under Settings > API keys."
+        raise HuntbaseConfigurationError(msg)
+    if "\r" in key or "\n" in key:
+        msg = "The API Key must not contain line breaks. Paste the key again as a single line."
+        raise HuntbaseConfigurationError(msg)
+    return key
+
+
 def _error_detail(response: requests.Response) -> str:
     """Extract a readable message from an RFC 9457 problem or FastAPI error body."""
     try:
-        body = response.json()
+        body: object = response.json()
     except ValueError:
         text = (response.text or "").strip()
         return text[:300]
@@ -83,34 +121,117 @@ def _error_detail(response: requests.Response) -> str:
     return str(body)[:300]
 
 
+def _items(data: JSON, key: str = "items") -> list[SingleJson]:
+    """The list of items from a paged {"items": [...]} body or a bare list."""
+    items = data.get(key) if isinstance(data, dict) else data
+    return [item for item in items or [] if isinstance(item, dict)]
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class _RequestSpec:
+    """One logical API call; its attempts share every field, including the headers."""
+
+    method: str
+    endpoint: str
+    path_params: Mapping[str, str] = dataclasses.field(default_factory=dict)
+    params: QueryParams | None = None
+    json_body: SingleJson | None = None
+    headers: Mapping[str, str] = dataclasses.field(default_factory=dict)
+    idempotent: bool = True
+
+    @property
+    def where(self) -> str:
+        return f"{self.method} {constants.ENDPOINTS[self.endpoint]}"
+
+
+def _should_retry(status_code: int, spec: _RequestSpec) -> bool:
+    """GETs and idempotent POSTs retry on 429/5xx; other POSTs only when rate limited (never processed)."""
+    if spec.idempotent:
+        return status_code in constants.RETRYABLE_STATUS_CODES
+    return status_code == constants.RATE_LIMIT_STATUS_CODE
+
+
+def _retry_wait(response: requests.Response, attempt: int) -> float:
+    retry_after = response.headers.get("Retry-After") if response.headers else None
+    if retry_after:
+        try:
+            return min(float(retry_after), constants.MAX_RETRY_AFTER_SECONDS)
+        except ValueError:
+            pass
+    return constants.RETRY_BACKOFF_SECONDS * attempt
+
+
+def _raise_for_status(response: requests.Response, spec: _RequestSpec) -> None:
+    status = response.status_code
+    if status < 400:
+        return
+    detail = _error_detail(response)
+    where = spec.where
+    if status == 401:
+        msg = "Huntbase rejected the API key (401). Check that the key is valid, not expired and not revoked."
+        raise HuntbaseAuthError(msg, status)
+    if status == 403:
+        msg = (
+            f"The API key is not allowed to call {where} (403): {detail}. "
+            "Use a personal API key with the scopes listed in the integration documentation."
+        )
+        raise HuntbasePermissionError(msg, status)
+    if status == 402:
+        msg = f"Your Huntbase plan does not include this feature ({where}): {detail}"
+        raise HuntbasePermissionError(msg, status)
+    if status == 404:
+        msg = f"Not found in Huntbase ({where}): {detail}"
+        raise HuntbaseNotFoundError(msg, status)
+    if status == constants.RATE_LIMIT_STATUS_CODE:
+        msg = f"Huntbase rate limit reached on {where}. Try again later."
+        raise HuntbaseRateLimitError(msg, status)
+    msg = f"Huntbase returned {status} for {where}: {detail}"
+    raise HuntbaseApiError(msg, status)
+
+
+def _parse_body(response: requests.Response, spec: _RequestSpec) -> JSON:
+    if response.status_code == 204 or not response.content:
+        return {}
+    try:
+        body: JSON = response.json()
+    except ValueError as error:
+        msg = f"Huntbase returned a non-JSON response for {spec.where}"
+        raise HuntbaseApiError(msg, response.status_code) from error
+    return body
+
+
 class HuntbaseManager:
     """Thin client for the Huntbase REST API, authenticated with a personal API key."""
 
     def __init__(
         self,
-        api_root: str,
-        api_key: str,
-        verify_ssl: bool = True,
-        logger: Any = None,  # noqa: ANN401
+        config: HuntbaseConfig,
+        logger: Logger | None = None,
         session: requests.Session | None = None,
     ) -> None:
-        if not api_key or not api_key.strip():
-            msg = "The API Key is empty. Create a personal API key in Huntbase under Settings > API keys."
-            raise HuntbaseConfigurationError(msg)
-        self.api_root = normalize_api_root(api_root)
+        api_key = _clean_api_key(config.api_key)
+        self.api_root = normalize_api_root(config.api_root)
         self.app_root = app_root_from_api_root(self.api_root)
         self.logger = logger
         self.session = session or CreateSession.create_session()
-        self.session.verify = verify_ssl
+        self.session.verify = config.verify_ssl
         self.session.headers.update({
-            "Authorization": f"Bearer {api_key.strip()}",
+            "Authorization": f"Bearer {api_key}",
             "Accept": "application/json",
             "User-Agent": constants.USER_AGENT,
         })
 
-    # ------------------------------------------------------------------ HTTP
+    def close(self) -> None:
+        """Close the pooled connections of the HTTP session."""
+        self.session.close()
 
-    def _url(self, endpoint: str, **path_params: str) -> str:
+    def __enter__(self) -> HuntbaseManager:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+    def _url(self, endpoint: str, path_params: Mapping[str, str]) -> str:
         path = constants.ENDPOINTS[endpoint].format(**{
             key: urllib.parse.quote(str(value), safe="") for key, value in path_params.items()
         })
@@ -120,107 +241,91 @@ class HuntbaseManager:
         if self.logger is not None:
             self.logger.info(message)
 
-    def _request(
+    def _get(
         self,
-        method: str,
         endpoint: str,
-        path_params: dict[str, str] | None = None,
-        params: Any = None,  # noqa: ANN401
-        json_body: Any = None,  # noqa: ANN401
-    ) -> Any:  # noqa: ANN401
-        url = self._url(endpoint, **(path_params or {}))
-        attempt = 0
-        while True:
-            attempt += 1
+        params: QueryParams | None = None,
+        path_params: Mapping[str, str] | None = None,
+    ) -> JSON:
+        return self._send(_RequestSpec("GET", endpoint, path_params=path_params or {}, params=params))
+
+    def _post(
+        self,
+        endpoint: str,
+        body: SingleJson,
+        path_params: Mapping[str, str] | None = None,
+    ) -> JSON:
+        headers: dict[str, str] = {}
+        if endpoint in constants.IDEMPOTENCY_KEY_ENDPOINTS:
+            # One key per logical call, reused by every retry of it
+            headers[constants.IDEMPOTENCY_KEY_HEADER] = str(uuid.uuid4())
+        spec = _RequestSpec(
+            "POST",
+            endpoint,
+            path_params=path_params or {},
+            json_body=body,
+            headers=headers,
+            idempotent=endpoint in constants.IDEMPOTENT_POST_ENDPOINTS,
+        )
+        return self._send(spec)
+
+    def _send(self, spec: _RequestSpec) -> JSON:
+        url = self._url(spec.endpoint, spec.path_params)
+        max_attempts = constants.MAX_RETRIES + 1
+        for attempt in range(1, max_attempts + 1):
+            can_retry = attempt < max_attempts
             try:
                 response = self.session.request(
-                    method,
+                    spec.method,
                     url,
-                    params=params,
-                    json=json_body,
+                    params=spec.params,
+                    json=spec.json_body,
+                    headers=dict(spec.headers) or None,
                     timeout=constants.REQUEST_TIMEOUT_SECONDS,
                 )
             except (requests.ConnectionError, requests.Timeout) as error:
-                if attempt <= constants.MAX_RETRIES:
+                if spec.idempotent and can_retry:
                     self._log(f"Huntbase unreachable ({type(error).__name__}); retry {attempt}")
                     _sleep(constants.RETRY_BACKOFF_SECONDS * attempt)
                     continue
-                msg = f"Could not reach Huntbase at {self.api_root}: {type(error).__name__}"
-                raise HuntbaseConnectionError(msg) from error
+                raise self._connection_error(spec, error) from error
 
-            if response.status_code in constants.RETRYABLE_STATUS_CODES and attempt <= constants.MAX_RETRIES:
-                wait = self._retry_wait(response, attempt)
-                self._log(f"Huntbase answered {response.status_code} on {method} {endpoint}; retrying in {wait}s")
+            if can_retry and _should_retry(response.status_code, spec):
+                wait = _retry_wait(response, attempt)
+                self._log(f"Huntbase answered {response.status_code} on {spec.where}; retrying in {wait}s")
                 _sleep(wait)
                 continue
 
-            self._raise_for_status(response, method, endpoint)
-            if response.status_code == 204 or not response.content:
-                return {}
-            try:
-                return response.json()
-            except ValueError as error:
-                msg = f"Huntbase returned a non-JSON response for {method} {endpoint}"
-                raise HuntbaseApiError(msg, response.status_code) from error
+            _raise_for_status(response, spec)
+            return _parse_body(response, spec)
 
-    @staticmethod
-    def _retry_wait(response: requests.Response, attempt: int) -> float:
-        retry_after = response.headers.get("Retry-After") if response.headers else None
-        if retry_after:
-            try:
-                return min(float(retry_after), constants.MAX_RETRY_AFTER_SECONDS)
-            except ValueError:
-                pass
-        return constants.RETRY_BACKOFF_SECONDS * attempt
+        msg = f"Huntbase did not answer {spec.where} after {max_attempts} attempts."
+        raise HuntbaseConnectionError(msg)
 
-    @staticmethod
-    def _raise_for_status(response: requests.Response, method: str, endpoint: str) -> None:
-        status = response.status_code
-        if status < 400:
-            return
-        detail = _error_detail(response)
-        where = f"{method} {constants.ENDPOINTS[endpoint]}"
-        if status == 401:
-            msg = "Huntbase rejected the API key (401). Check that the key is valid, not expired and not revoked."
-            raise HuntbaseAuthError(msg, status)
-        if status == 403:
-            msg = (
-                f"The API key is not allowed to call {where} (403): {detail}. "
-                "Use a personal API key with the scopes listed in the integration documentation."
+    def _connection_error(self, spec: _RequestSpec, error: Exception) -> HuntbaseConnectionError:
+        msg = f"Could not reach Huntbase at {self.api_root}: {type(error).__name__}"
+        if not spec.idempotent:
+            msg += (
+                f". {spec.where} was not retried because Huntbase may already have accepted it; "
+                "check Huntbase before running the action again."
             )
-            raise HuntbasePermissionError(msg, status)
-        if status == 402:
-            msg = f"Your Huntbase plan does not include this feature ({where}): {detail}"
-            raise HuntbasePermissionError(msg, status)
-        if status == 404:
-            msg = f"Not found in Huntbase ({where}): {detail}"
-            raise HuntbaseNotFoundError(msg, status)
-        if status == 429:
-            msg = f"Huntbase rate limit reached on {where}. Try again later."
-            raise HuntbaseRateLimitError(msg, status)
-        msg = f"Huntbase returned {status} for {where}: {detail}"
-        raise HuntbaseApiError(msg, status)
-
-    # ---------------------------------------------------------------- links
+        return HuntbaseConnectionError(msg)
 
     def app_link(self, kind: str, **values: str) -> str:
         path = constants.APP_PATHS[kind].format(**{k: urllib.parse.quote(str(v), safe="") for k, v in values.items()})
         separator = "&" if "?" in path else "?"
         return f"{self.app_root}{path}{separator}src={constants.LINK_SOURCE}"
 
-    # ------------------------------------------------------------- actions
-
     def ping(self) -> None:
-        self._request("GET", "ping")
+        self._get("ping")
 
     def lookup_indicators(self, values: Iterable[str]) -> list[IndicatorResult]:
-        unique = list(dict.fromkeys(v for v in values if v))
+        unique: list[str] = list(dict.fromkeys(v for v in values if v))
         results: list[IndicatorResult] = []
         for start in range(0, len(unique), constants.INTEL_LOOKUP_BATCH_SIZE):
             batch = unique[start : start + constants.INTEL_LOOKUP_BATCH_SIZE]
-            data = self._request("POST", "intel_lookup", json_body={"values": batch, "include_unknown": True})
-            items = data.get("results") if isinstance(data, dict) else None
-            for item in items or []:
+            data = self._post("intel_lookup", {"values": batch, "include_unknown": True})
+            for item in _items(data, "results") if isinstance(data, dict) else []:
                 result = IndicatorResult.from_json(item)
                 if not result.url and result.indicator_id:
                     result.url = self.app_link("indicator", indicator_id=result.indicator_id)
@@ -229,12 +334,12 @@ class HuntbaseManager:
 
     def find_entities(self, value: str, entity_type: str | None = None) -> list[EntityMatch]:
         """Exact-value entity lookup (GET /entities/by-value), newest first."""
-        params: dict[str, Any] = {"value": value, "include": "summary", "limit": constants.ENTITY_SEARCH_LIMIT}
+        params: SingleJson = {"value": value, "include": "summary", "limit": constants.ENTITY_SEARCH_LIMIT}
         if entity_type:
             params["entity_type"] = entity_type
-        data = self._request("GET", "entity_by_value", params=params)
+        data = self._get("entity_by_value", params=params)
         items = (data.get("entities") or data.get("items")) if isinstance(data, dict) else data
-        matches = []
+        matches: list[EntityMatch] = []
         for item in items or []:
             match = EntityMatch.from_json(item)
             if not match.url and match.entity_id:
@@ -242,54 +347,43 @@ class HuntbaseManager:
             matches.append(match)
         return matches
 
-    def start_hunt(
-        self,
-        seed_values: list[SingleJson],
-        title: str | None = None,
-        hypothesis: str | None = None,
-        session_mode: str = constants.DEFAULT_HUNT_SESSION_MODE,
-        severity: str | None = None,
-        external_ref: SingleJson | None = None,
-        reuse_open: bool = False,
-    ) -> Hunt:
-        if not seed_values:
+    def start_hunt(self, request: StartHuntRequest) -> Hunt:
+        if not request.seed_values:
             msg = "A hunt needs at least one seed value."
             raise HuntbaseConfigurationError(msg)
         body: SingleJson = {
-            "seed_values": seed_values[: constants.MAX_HUNT_SEED_VALUES],
-            "session_mode": session_mode,
+            "seed_values": request.seed_values[: constants.MAX_HUNT_SEED_VALUES],
+            "session_mode": request.session_mode,
         }
-        if title:
-            body["title"] = title
-        if hypothesis:
-            body["hypothesis"] = hypothesis
-        if severity:
-            body["severity"] = severity
-        if external_ref:
-            body["external_ref"] = external_ref
+        if request.title:
+            body["title"] = request.title
+        if request.hypothesis:
+            body["hypothesis"] = request.hypothesis
+        if request.severity:
+            body["severity"] = request.severity
+        if request.external_ref:
+            body["external_ref"] = request.external_ref
         # Huntbase matches an open hunt for the same case by external_ref.url
-        if reuse_open and (external_ref or {}).get("url"):
+        if request.reuse_open and (request.external_ref or {}).get("url"):
             body["reuse_open"] = True
-        data = self._request("POST", "start_hunt", json_body=body)
-        hunt = Hunt.from_json(data)
+        hunt = Hunt.from_json(self._post("start_hunt", body))
         if not hunt.hunt_id:
             msg = "Huntbase accepted the hunt but returned no hunt id."
             raise HuntbaseApiError(msg)
         hunt.url = hunt.url or self.app_link("hunt", hunt_id=hunt.hunt_id)
-        if title and not hunt.title:
-            hunt.title = title
+        if request.title and not hunt.title:
+            hunt.title = request.title
         return hunt
 
     def get_hunt(self, hunt_id: str) -> Hunt:
-        hunt = Hunt.from_json(self._request("GET", "hunt", path_params={"hunt_id": hunt_id}))
+        hunt = Hunt.from_json(self._get("hunt", path_params={"hunt_id": hunt_id}))
         hunt.hunt_id = hunt.hunt_id or hunt_id
         hunt.url = hunt.url or self.app_link("hunt", hunt_id=hunt.hunt_id)
         return hunt
 
     def get_hunt_findings(self, hunt_id: str) -> list[Finding]:
-        data = self._request("GET", "hunt_findings", path_params={"hunt_id": hunt_id})
-        items = data.get("items") if isinstance(data, dict) else data
-        return [self._finding(item) for item in items or []]
+        data = self._get("hunt_findings", path_params={"hunt_id": hunt_id})
+        return [self._finding(item) for item in _items(data)]
 
     def _finding(self, item: SingleJson) -> Finding:
         finding = Finding.from_json(item)
@@ -303,73 +397,51 @@ class HuntbaseManager:
             insight.url = self.app_link("insight", insight_id=insight.insight_id)
         return insight
 
-    def list_findings(
-        self,
-        since: str,
-        dispositions: Iterable[str],
-        limit: int | None = None,
-        offset: int = 0,
-    ) -> list[Finding]:
-        params: list[tuple[str, Any]] = [
-            ("since", since),
-            ("limit", limit or constants.CONNECTOR_PAGE_SIZE),
-            ("offset", offset),
+    def list_findings(self, query: FindingsQuery) -> list[Finding]:
+        params: list[tuple[str, str | int]] = [
+            ("since", query.since),
+            ("limit", query.limit or constants.CONNECTOR_PAGE_SIZE),
+            ("offset", query.offset),
             ("order", "asc"),
         ]
-        params.extend(("disposition", d) for d in dispositions)
-        data = self._request("GET", "findings", params=params)
-        items = data.get("items") if isinstance(data, dict) else data
-        return [self._finding(item) for item in items or []]
+        params.extend(("disposition", d) for d in query.dispositions)
+        data = self._get("findings", params=params)
+        return [self._finding(item) for item in _items(data)]
 
-    def list_insights(
-        self,
-        since: str,
-        severity: str | None = None,
-        limit: int | None = None,
-        offset: int = 0,
-    ) -> list[Insight]:
-        params: list[tuple[str, Any]] = [
-            ("from", since),
-            ("limit", limit or constants.CONNECTOR_PAGE_SIZE),
-            ("offset", offset),
+    def list_insights(self, query: InsightsQuery) -> list[Insight]:
+        params: list[tuple[str, str | int]] = [
+            ("from", query.since),
+            ("limit", query.limit or constants.CONNECTOR_PAGE_SIZE),
+            ("offset", query.offset),
             ("sort", "time"),
             ("order", "asc"),
         ]
-        if severity:
-            params.append(("severity", severity.capitalize()))
-        data = self._request("GET", "insights", params=params)
-        items = data.get("items") if isinstance(data, dict) else data
-        return [self._insight(item) for item in items or []]
+        if query.severity:
+            params.append(("severity", query.severity.capitalize()))
+        data = self._get("insights", params=params)
+        return [self._insight(item) for item in _items(data)]
 
-    def ask_scout(
-        self,
-        question: str,
-        hunt_id: str | None = None,
-        external_ref: SingleJson | None = None,
-        initiative: str | None = None,
-    ) -> ScoutJob:
-        body: SingleJson = {"question": question}
-        if hunt_id:
-            body["hunt_id"] = hunt_id
-        if initiative:
-            body["initiative"] = initiative
-        if external_ref:
-            body["external_ref"] = external_ref
-        job = ScoutJob.from_json(self._request("POST", "scout_jobs", json_body=body))
+    def ask_scout(self, request: ScoutQuestionRequest) -> ScoutJob:
+        body: SingleJson = {"question": request.question}
+        if request.hunt_id:
+            body["hunt_id"] = request.hunt_id
+        if request.initiative:
+            body["initiative"] = request.initiative
+        if request.external_ref:
+            body["external_ref"] = request.external_ref
+        job = ScoutJob.from_json(self._post("scout_jobs", body))
         if not job.job_id:
             msg = "Huntbase accepted the question but returned no job id."
             raise HuntbaseApiError(msg)
         return job
 
     def get_scout_job(self, job_id: str) -> ScoutJob:
-        job = ScoutJob.from_json(self._request("GET", "scout_job", path_params={"job_id": job_id}))
+        job = ScoutJob.from_json(self._get("scout_job", path_params={"job_id": job_id}))
         job.job_id = job.job_id or job_id
         return job
 
     def list_watchlists(self) -> list[Watchlist]:
-        data = self._request("GET", "watchlists")
-        items = data.get("items") if isinstance(data, dict) else data
-        return [Watchlist.from_json(item) for item in items or []]
+        return [Watchlist.from_json(item) for item in _items(self._get("watchlists"))]
 
     def find_watchlist(self, name_or_id: str) -> Watchlist:
         wanted = name_or_id.strip()
@@ -385,18 +457,17 @@ class HuntbaseManager:
         raise HuntbaseNotFoundError(msg, 404)
 
     def add_watchlist_values(self, watchlist_id: str, values: list[str]) -> SingleJson:
-        return self._request(
-            "POST",
+        data = self._post(
             "watchlist_values",
+            {"values": values},
             path_params={"watchlist_id": watchlist_id},
-            json_body={"values": values},
         )
+        return data if isinstance(data, dict) else {}
 
-    def list_pending_approvals(self, limit: int = 50) -> list[Proposal]:
-        data = self._request("GET", "proposals", params={"limit": limit})
-        items = data.get("items") if isinstance(data, dict) else data
-        proposals = []
-        for item in items or []:
+    def list_pending_approvals(self, limit: int) -> list[Proposal]:
+        data = self._get("proposals", params={"limit": limit})
+        proposals: list[Proposal] = []
+        for item in _items(data):
             proposal = Proposal.from_json(item)
             if not proposal.url and proposal.proposal_id:
                 proposal.url = self.app_link("approval", proposal_id=proposal.proposal_id)

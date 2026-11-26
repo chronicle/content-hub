@@ -8,7 +8,14 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core import constants
 from ..core.base_action import HuntbaseAction
-from ..core.utils import entity_value, external_ref, guess_value_type, is_http_url, seed_values_from_entities
+from ..core.datamodels import StartHuntRequest
+from ..core.utils import (
+    entity_value,
+    external_ref,
+    guess_value_type,
+    is_http_url,
+    seed_values_from_entities,
+)
 
 if TYPE_CHECKING:
     from typing import NoReturn
@@ -59,7 +66,7 @@ class StartHunt(HuntbaseAction):
             raise ValueError(msg)
 
     def _perform_action(self, _: object) -> None:
-        seeds = seed_values_from_entities(self.soar_action.target_entities)
+        seeds: list[dict[str, str]] = seed_values_from_entities(self.soar_action.target_entities)
         for value in string_to_multi_value(self.params.additional_values):
             if all(seed["value"].lower() != value.lower() for seed in seeds):
                 seeds.append({"type": guess_value_type(value), "value": value})
@@ -76,7 +83,7 @@ class StartHunt(HuntbaseAction):
             seeds = seeds[: constants.MAX_HUNT_SEED_VALUES]
 
         title = self.params.title or self._default_title()
-        hunt = self.manager.start_hunt(
+        request = StartHuntRequest(
             seed_values=seeds,
             title=title,
             hypothesis=self.params.hypothesis,
@@ -85,6 +92,7 @@ class StartHunt(HuntbaseAction):
             external_ref=external_ref(self.soar_action, self.params.case_link, title),
             reuse_open=self.params.reuse_open,
         )
+        hunt = self.manager.start_hunt(request)
         self.json_results = {
             "hunt_id": hunt.hunt_id,
             "title": hunt.title,
@@ -103,7 +111,7 @@ class StartHunt(HuntbaseAction):
         )
 
     def _default_title(self) -> str:
-        case_id = getattr(self.soar_action, "case_id", None)
+        case_id: int | str | None = getattr(self.soar_action, "case_id", None)
         first = next(iter(self.soar_action.target_entities), None)
         subject = entity_value(first) if first is not None else "case entities"
         return f"Google SecOps case {case_id}: {subject}" if case_id else f"Google SecOps: {subject}"

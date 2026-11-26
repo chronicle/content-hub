@@ -5,7 +5,7 @@ from __future__ import annotations
 # framework patches those names. Importing it first keeps one copy of every SDK class.
 import soar_sdk  # noqa: F401  # isort: skip
 
-from typing import Any
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,11 +15,15 @@ from SiemplifyBase import SiemplifyBase
 from TIPCommon.base.utils import CreateSession
 
 from huntbase.core import huntbase_manager
+from huntbase.core.datamodels import HuntbaseConfig
 from huntbase.core.huntbase_manager import HuntbaseManager
 
 from .common import CONFIG
 from .core.product import Huntbase
 from .core.session import HuntbaseSession, SoarSdkSession
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 pytest_plugins = ("integration_testing.conftest",)
 
@@ -41,7 +45,7 @@ class MockEntity:
     def _update_internal_properties(self) -> None:
         pass
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> SingleJson:
         return {
             "identifier": self.identifier,
             "entity_type": self.entity_type,
@@ -83,7 +87,8 @@ def no_retry_sleep(monkeypatch: pytest.MonkeyPatch) -> list[float]:
 
 @pytest.fixture(name="manager")
 def huntbase_manager_fixture(script_session: HuntbaseSession) -> HuntbaseManager:
-    return HuntbaseManager(CONFIG["API Root"], CONFIG["API Key"], True, logger=Logger(), session=script_session)
+    config = HuntbaseConfig(api_root=CONFIG["API Root"], api_key=CONFIG["API Key"])
+    return HuntbaseManager(config, logger=Logger(), session=script_session)
 
 
 @pytest.fixture(name="entity_calls")

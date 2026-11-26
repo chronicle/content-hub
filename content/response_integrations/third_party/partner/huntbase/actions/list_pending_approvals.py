@@ -11,8 +11,6 @@ from ..core.base_action import HuntbaseAction
 if TYPE_CHECKING:
     from typing import NoReturn
 
-MAX_LIMIT = 100
-
 
 class ListPendingApprovals(HuntbaseAction):
     """List Scout proposals waiting for a person to approve them in Huntbase."""
@@ -23,12 +21,16 @@ class ListPendingApprovals(HuntbaseAction):
 
     def _extract_action_parameters(self) -> None:
         self.params.limit = extract_action_param(
-            self.soar_action, param_name="Max Results", input_type=int, default_value=20, print_value=True
+            self.soar_action,
+            param_name="Max Results",
+            input_type=int,
+            default_value=constants.DEFAULT_PENDING_APPROVALS_LIMIT,
+            print_value=True,
         )
 
     def _validate_params(self) -> None:
-        if not 1 <= self.params.limit <= MAX_LIMIT:
-            msg = f"Max Results must be between 1 and {MAX_LIMIT}."
+        if not 1 <= self.params.limit <= constants.MAX_PENDING_APPROVALS_LIMIT:
+            msg = f"Max Results must be between 1 and {constants.MAX_PENDING_APPROVALS_LIMIT}."
             raise ValueError(msg)
 
     def _perform_action(self, _: object) -> None:

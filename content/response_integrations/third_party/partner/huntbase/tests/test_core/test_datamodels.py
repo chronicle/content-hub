@@ -90,3 +90,12 @@ def test_scout_job_states() -> None:
     assert ScoutJob.from_json({"job_id": "j", "status": "failed"}).is_failed
     for status in constants.SCOUT_TERMINAL_OK:
         assert ScoutJob.from_json({"status": status}).is_done
+
+
+@pytest.mark.parametrize("value", [True, False])
+def test_bool_is_not_a_timestamp_or_score(value: bool) -> None:
+    assert parse_timestamp(value) is None
+    assert to_unix_ms(value) is None
+    result = IndicatorResult.from_json({"input": "x", "status": "known", "best": {"effective_confidence": value}})
+    assert result.score is None
+    assert not result.is_suspicious(0)

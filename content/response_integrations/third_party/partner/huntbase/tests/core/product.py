@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-from typing import Any
+from typing import TYPE_CHECKING
 
-SingleJson = dict[str, Any]
+if TYPE_CHECKING:
+    from TIPCommon.types import JSON, SingleJson
 
 
 @dataclasses.dataclass
 class Failure:
     status: int
-    body: Any = None  # noqa: ANN401
+    body: JSON | None = None
     times: int = 1
     headers: dict[str, str] | None = None
 
@@ -35,13 +36,11 @@ class Huntbase:
         self.scout_questions: list[SingleJson] = []
         self._failures: dict[str, Failure] = {}
 
-    # failure injection --------------------------------------------------
-
     def fail(
         self,
         route: str,
         status: int,
-        body: Any = None,  # noqa: ANN401
+        body: JSON | None = None,
         times: int = 1,
         headers: dict[str, str] | None = None,
     ) -> None:
@@ -54,14 +53,12 @@ class Huntbase:
         failure.times -= 1
         return failure
 
-    # data helpers --------------------------------------------------------
-
-    def add_indicator(self, value: str, **best: Any) -> None:  # noqa: ANN401
+    def add_indicator(self, value: str, **best: object) -> None:
         self.indicators[value.lower()] = {
             "id": best.pop("id", f"ind-{value}"),
             "type": best.pop("type", "ip"),
             "value": value,
-            "source": "Huntbase Intel",
+            "source": {"id": "src-1", "slug": "huntbase-intel", "name": "Huntbase Intel"},
             "confidence": 85,
             "effective_confidence": best.pop("effective_confidence", 80),
             "score": 80,
@@ -89,7 +86,7 @@ class Huntbase:
             })
         return {"summary": {"submitted": len(values)}, "results": results}
 
-    def add_hunt(self, hunt_id: str, status: str = "active", **fields: Any) -> SingleJson:  # noqa: ANN401
+    def add_hunt(self, hunt_id: str, status: str = "active", **fields: object) -> SingleJson:
         hunt = {
             "id": hunt_id,
             "title": fields.pop("title", f"Hunt {hunt_id}"),

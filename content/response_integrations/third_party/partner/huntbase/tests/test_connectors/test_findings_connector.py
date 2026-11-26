@@ -3,8 +3,10 @@ from __future__ import annotations
 import datetime
 import json
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 import pytest
+from integration_testing.logger import Logger
 from integration_testing.platform.external_context import MockExternalContext
 from integration_testing.set_meta import set_metadata
 
@@ -99,7 +101,9 @@ def _context(ec: MockExternalContext, key: str) -> object:
 
 
 @set_metadata(
-    connector_def_file_path=common.CONNECTOR_DEF_PATH, parameters=_params(), external_context=MockExternalContext()
+    connector_def_file_path=common.CONNECTOR_DEF_PATH,
+    parameters=_params(),
+    external_context=MockExternalContext(),
 )
 def test_findings_become_alerts(
     huntbase: Huntbase,
@@ -136,10 +140,14 @@ def test_findings_become_alerts(
 
 
 @set_metadata(
-    connector_def_file_path=common.CONNECTOR_DEF_PATH, parameters=_params(), external_context=MockExternalContext()
+    connector_def_file_path=common.CONNECTOR_DEF_PATH,
+    parameters=_params(),
+    external_context=MockExternalContext(),
 )
 def test_second_run_dedupes(
-    huntbase: Huntbase, connector_output: MockConnectorOutput, external_context: MockExternalContext
+    huntbase: Huntbase,
+    connector_output: MockConnectorOutput,
+    external_context: MockExternalContext,
 ) -> None:
     huntbase.findings = [_finding("f1", 30)]
     connector.main(is_test_run=False)
@@ -199,10 +207,14 @@ def test_findings_and_insights(huntbase: Huntbase, connector_output: MockConnect
 
 
 @set_metadata(
-    connector_def_file_path=common.CONNECTOR_DEF_PATH, parameters=_params(), external_context=MockExternalContext()
+    connector_def_file_path=common.CONNECTOR_DEF_PATH,
+    parameters=_params(),
+    external_context=MockExternalContext(),
 )
 def test_overflow_is_skipped_but_remembered(
-    huntbase: Huntbase, connector_output: MockConnectorOutput, external_context: MockExternalContext
+    huntbase: Huntbase,
+    connector_output: MockConnectorOutput,
+    external_context: MockExternalContext,
 ) -> None:
     huntbase.findings = [_finding("overflow", 30), _finding("f2", 20)]
 
@@ -213,10 +225,14 @@ def test_overflow_is_skipped_but_remembered(
 
 
 @set_metadata(
-    connector_def_file_path=common.CONNECTOR_DEF_PATH, parameters=_params(), external_context=MockExternalContext()
+    connector_def_file_path=common.CONNECTOR_DEF_PATH,
+    parameters=_params(),
+    external_context=MockExternalContext(),
 )
 def test_test_run_does_not_save_state(
-    huntbase: Huntbase, connector_output: MockConnectorOutput, external_context: MockExternalContext
+    huntbase: Huntbase,
+    connector_output: MockConnectorOutput,
+    external_context: MockExternalContext,
 ) -> None:
     huntbase.findings = [_finding(f"f{i}", 60 - i) for i in range(8)]
 
@@ -227,10 +243,14 @@ def test_test_run_does_not_save_state(
 
 
 @set_metadata(
-    connector_def_file_path=common.CONNECTOR_DEF_PATH, parameters=_params(), external_context=MockExternalContext()
+    connector_def_file_path=common.CONNECTOR_DEF_PATH,
+    parameters=_params(),
+    external_context=MockExternalContext(),
 )
 def test_api_error_returns_empty_package(
-    huntbase: Huntbase, connector_output: MockConnectorOutput, external_context: MockExternalContext
+    huntbase: Huntbase,
+    connector_output: MockConnectorOutput,
+    external_context: MockExternalContext,
 ) -> None:
     huntbase.fail("findings", 401)
 
@@ -241,7 +261,9 @@ def test_api_error_returns_empty_package(
 
 
 @set_metadata(
-    connector_def_file_path=common.CONNECTOR_DEF_PATH, parameters=_params(), external_context=MockExternalContext()
+    connector_def_file_path=common.CONNECTOR_DEF_PATH,
+    parameters=_params(),
+    external_context=MockExternalContext(),
 )
 def test_api_error_raises_in_test_run(huntbase: Huntbase, connector_output: MockConnectorOutput) -> None:
     huntbase.fail("findings", 401)
@@ -264,7 +286,7 @@ def test_invalid_source(script_session: HuntbaseSession, connector_output: MockC
 
 def test_insight_overlap_moves_since_back() -> None:
     saved = _iso(30)
-    since = connector.initial_watermark({"insight": saved}, "insight", 24, overlap_minutes=60)
+    since = connector.initial_watermark(saved, 24, overlap_minutes=60)
     assert since < saved
 
 
@@ -287,6 +309,62 @@ def test_insights_second_run_dedupes_overlap(huntbase: Huntbase, connector_outpu
 def test_initial_watermark_respects_floor() -> None:
     old = "2020-01-01T00:00:00Z"
     recent = _iso(5)
-    floor = connector.initial_watermark({"finding": old}, "finding", 1)
+    floor = connector.initial_watermark(old, 1)
     assert floor > old
-    assert connector.initial_watermark({"finding": recent}, "finding", 1).startswith(recent[:19])
+    assert connector.initial_watermark(recent, 1).startswith(recent[:19])
+
+
+@pytest.mark.parametrize("fail", [False, True])
+@set_metadata(
+    connector_def_file_path=common.CONNECTOR_DEF_PATH,
+    parameters=_params(),
+    external_context=MockExternalContext(),
+)
+def test_connector_closes_session(
+    huntbase: Huntbase,
+    script_session: HuntbaseSession,
+    connector_output: MockConnectorOutput,
+    monkeypatch: pytest.MonkeyPatch,
+    fail: bool,
+) -> None:
+    huntbase.findings = [_finding("f1", 30)]
+    if fail:
+        huntbase.fail("findings", 401)
+    closed = MagicMock()
+    monkeypatch.setattr(script_session, "close", closed)
+
+    connector.main(is_test_run=False)
+
+    assert [a.ticket_id for a in _alerts(connector_output)] == ([] if fail else ["f1"])
+    closed.assert_called_once()
+
+
+@set_metadata(
+    connector_def_file_path=common.CONNECTOR_DEF_PATH,
+    parameters=_params(),
+    external_context=MockExternalContext(),
+)
+def test_connector_logs_build_failure_once(
+    huntbase: Huntbase,
+    connector_output: MockConnectorOutput,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    huntbase.findings = [_finding("f1", 30), _finding("f2", 20)]
+    real_build = connector.build_alert
+    logged: list[str] = []
+
+    def flaky_build(item: object, context: object) -> object:
+        if getattr(item, "finding_id", "") == "f1":
+            msg = "bad item"
+            raise ValueError(msg)
+        return real_build(item, context)
+
+    monkeypatch.setattr(connector, "build_alert", flaky_build)
+    monkeypatch.setattr(Logger, "error", lambda _self, msg, *_, **__: logged.append(f"error:{msg}"))
+    monkeypatch.setattr(Logger, "exception", lambda _self, msg, *_, **__: logged.append(f"exception:{msg}"))
+
+    connector.main(is_test_run=False)
+
+    assert [a.ticket_id for a in _alerts(connector_output)] == ["f2"]
+    failures = [line for line in logged if "finding:f1" in line]
+    assert failures == ["exception:Failed to build an alert from Huntbase finding:f1: bad item"]

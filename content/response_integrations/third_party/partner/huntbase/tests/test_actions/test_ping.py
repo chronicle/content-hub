@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
+import pytest
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
@@ -47,4 +49,36 @@ def test_ping_invalid_api_root(action_output: MockActionOutput) -> None:
     ping.main()
 
     assert action_output.results.execution_state == ExecutionState.FAILED
-    assert "not a valid http(s) URL" in action_output.results.output_message
+    assert "must be a valid https:// URL" in action_output.results.output_message
+
+
+@set_metadata(integration_config=common.CONFIG)
+def test_ping_closes_session(
+    script_session: HuntbaseSession,
+    action_output: MockActionOutput,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    closed = MagicMock()
+    monkeypatch.setattr(script_session, "close", closed)
+
+    ping.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    closed.assert_called_once()
+
+
+@set_metadata(integration_config=common.CONFIG)
+def test_ping_closes_session_on_failure(
+    huntbase: Huntbase,
+    script_session: HuntbaseSession,
+    action_output: MockActionOutput,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    huntbase.fail("ping", 401)
+    closed = MagicMock()
+    monkeypatch.setattr(script_session, "close", closed)
+
+    ping.main()
+
+    assert action_output.results.execution_state == ExecutionState.FAILED
+    closed.assert_called_once()

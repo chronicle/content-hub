@@ -12,6 +12,8 @@ from ..core.utils import WATCHLIST_ENTITY_TYPES, entity_value
 if TYPE_CHECKING:
     from typing import NoReturn
 
+    from TIPCommon.types import SingleJson
+
 
 class AddToWatchlist(HuntbaseAction):
     """Add the case's IOC entities to a Huntbase watch list."""
@@ -22,14 +24,19 @@ class AddToWatchlist(HuntbaseAction):
 
     def _extract_action_parameters(self) -> None:
         self.params.watchlist = extract_action_param(
-            self.soar_action, param_name="Watchlist", is_mandatory=True, print_value=True
+            self.soar_action,
+            param_name="Watchlist",
+            is_mandatory=True,
+            print_value=True,
         )
         self.params.additional_values = extract_action_param(
-            self.soar_action, param_name="Additional Values", print_value=True
+            self.soar_action,
+            param_name="Additional Values",
+            print_value=True,
         )
 
     def _perform_action(self, _: object) -> None:
-        values = [
+        values: list[str] = [
             entity_value(entity)
             for entity in self.soar_action.target_entities
             if entity.entity_type in WATCHLIST_ENTITY_TYPES
@@ -42,9 +49,9 @@ class AddToWatchlist(HuntbaseAction):
 
         watchlist = self.manager.find_watchlist(self.params.watchlist)
         response = self.manager.add_watchlist_values(watchlist.watchlist_id, values)
-        added = response.get("added", 0)
-        existing = response.get("existing", 0)
-        rejected = response.get("rejected") or []
+        added: int = response.get("added") or 0
+        existing: int = response.get("existing") or 0
+        rejected: list[SingleJson] = response.get("rejected") or []
         self.json_results = {
             "watchlist_id": watchlist.watchlist_id,
             "watchlist_name": watchlist.name,
@@ -53,7 +60,7 @@ class AddToWatchlist(HuntbaseAction):
             "existing": existing,
             "rejected": rejected,
         }
-        lines = [
+        lines: list[str] = [
             f"Successfully submitted {len(values)} value(s) to the Huntbase watch list '{watchlist.name}': "
             f"{added} added, {existing} already present."
         ]

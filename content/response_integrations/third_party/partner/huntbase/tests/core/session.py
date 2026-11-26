@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from integration_testing import router
 from integration_testing.request import MockRequest
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from integration_testing.requests.session import RouteFunction
+    from TIPCommon.types import SingleJson
 
 PREFIX = r"/api/v1"
 
@@ -27,7 +28,7 @@ def _params(request: MockRequest) -> dict[str, list[str]]:
     return params
 
 
-def _json(request: MockRequest) -> dict[str, Any]:
+def _json(request: MockRequest) -> SingleJson:
     return request.kwargs.get("json") or {}
 
 

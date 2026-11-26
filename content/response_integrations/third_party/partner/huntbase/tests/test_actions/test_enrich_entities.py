@@ -77,6 +77,7 @@ def test_enrich_mixed_entities(
     ip, domain, host, user, cve = ENTITIES
     assert ip.additional_properties["HB_status"] == "known"
     assert ip.additional_properties["HB_tlp"] == "amber"
+    assert ip.additional_properties["HB_source"] == "Huntbase Intel"
     assert ip.additional_properties["HB_link"].endswith("/intelligence/indicators/ind-1?src=google_secops")
     assert ip.is_suspicious is True
     assert domain.additional_properties["HB_status"] == "unknown"
@@ -141,7 +142,9 @@ def test_enrich_bad_threshold(action_output: MockActionOutput) -> None:
 
 @set_metadata(integration_config=common.CONFIG, entities=_fresh(HOST))
 def test_enrich_entity_search_failure_is_partial(
-    huntbase: Huntbase, action_output: MockActionOutput, entity_calls: dict[str, MagicMock]
+    huntbase: Huntbase,
+    action_output: MockActionOutput,
+    entity_calls: dict[str, MagicMock],
 ) -> None:
     huntbase.fail("entity_by_value", 500, times=10)
 
@@ -151,3 +154,20 @@ def test_enrich_entity_search_failure_is_partial(
     assert results.execution_state == ExecutionState.COMPLETED
     assert results.result_value is False
     assert "Could not enrich: WS-0142" in results.output_message
+
+
+@set_metadata(integration_config=common.CONFIG, entities=_fresh(IP))
+def test_enrich_entity_update_failure_fails_cleanly(
+    huntbase: Huntbase,
+    action_output: MockActionOutput,
+    entity_calls: dict[str, MagicMock],
+) -> None:
+    huntbase.add_indicator("203.0.113.10", id="ind-1", effective_confidence=90)
+    entity_calls["update_entities"].side_effect = RuntimeError("platform unavailable")
+
+    enrich_entities.main()
+
+    results = action_output.results
+    assert results.execution_state == ExecutionState.FAILED
+    assert results.result_value is False
+    assert "platform unavailable" in results.output_message
