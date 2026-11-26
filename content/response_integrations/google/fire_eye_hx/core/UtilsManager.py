@@ -13,12 +13,18 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import datetime
+from typing import Any
+
 import requests
 
 UNIX_FORMAT = 1
 DATETIME_FORMAT = 2
 STORED_IDS_LIMIT = 3000
+GLOBAL_TIMEOUT_THRESHOLD_IN_MIN = 1
+NUM_OF_MILLI_IN_SEC = 1000
+NUM_OF_SEC_IN_MIN = 60
 
 
 def validate_response(response, error_msg="An error occurred"):
@@ -93,3 +99,36 @@ def parse_bulk_acquisition_id(bulk_id: str | int | None) -> int:
         return int(str(bulk_id).strip())
     except ValueError as value_error:
         raise ValueError(f"Bulk Acquisition ID must be a number, got: {bulk_id}.") from value_error
+
+
+def _get_positive_deadline_ms(value: Any) -> int | None:
+    """Return a positive integer deadline in milliseconds, or None if unset/invalid."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    deadline = int(value)
+    return deadline if deadline > 0 else None
+
+
+def is_async_action_global_timeout_approaching(
+    siemplify: Any,
+    start_time: int,
+    threshold_in_min: int = GLOBAL_TIMEOUT_THRESHOLD_IN_MIN,
+) -> bool:
+    """Check whether an asynchronous action is approaching its global execution deadline.
+
+    Args:
+        siemplify: Active SiemplifyAction instance.
+        start_time: Current or action start Unix timestamp in milliseconds.
+        threshold_in_min: Buffer before the deadline, in minutes.
+
+    Returns:
+        True if remaining time before the deadline is less than the threshold, else False.
+    """
+    deadline_ms = _get_positive_deadline_ms(getattr(siemplify, "async_total_duration_deadline", None))
+    if deadline_ms is None:
+        deadline_ms = _get_positive_deadline_ms(getattr(siemplify, "execution_deadline_unix_time_ms", None))
+    if deadline_ms is None:
+        return False
+
+    threshold_ms = threshold_in_min * NUM_OF_SEC_IN_MIN * NUM_OF_MILLI_IN_SEC
+    return (deadline_ms - start_time) < threshold_ms
