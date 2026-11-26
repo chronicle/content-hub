@@ -24,7 +24,7 @@ def get_integration_params(siemplify: ChronicleSOAR) -> IntegrationParams:
     Retrieve the integration parameters from Siemplify configuration.
 
     Args:
-        siemplify (SiemplifyAction): SiemplifyAction instance
+        siemplify: SOAR object used to read the integration configuration.
 
     Returns:
         The integration configuration (authentication settings, organization ID,
