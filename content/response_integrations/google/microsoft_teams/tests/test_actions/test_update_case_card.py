@@ -44,7 +44,10 @@ CHANNEL = {
 }
 
 
-@pytest.fixture(autouse=True)
+pytestmark = pytest.mark.usefixtures("case_data")
+
+
+@pytest.fixture
 def case_data(mocker: MockerFixture) -> None:
     details = CaseDetails.from_json(json.loads(DETAILS_PATH.read_text(encoding="utf-8")))
     mocker.patch(f"{BUILDER}.get_case_overview_details", return_value=details)

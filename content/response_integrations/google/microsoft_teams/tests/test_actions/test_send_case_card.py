@@ -40,7 +40,10 @@ CHAT = {"Destination Type": "Chat", "Chat ID": "chat1", "Case ID": "1234"}
 CHANNEL = {"Destination Type": "Channel", "Team Name": "test", "Channel Name": "c1", "Case ID": "1234"}
 
 
-@pytest.fixture(autouse=True)
+pytestmark = pytest.mark.usefixtures("case_overview")
+
+
+@pytest.fixture
 def case_overview(mocker: MockerFixture) -> MagicMock:
     details = CaseDetails.from_json(json.loads(DETAILS_PATH.read_text(encoding="utf-8")))
     mocker.patch(
