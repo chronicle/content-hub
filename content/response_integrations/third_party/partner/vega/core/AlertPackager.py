@@ -2,30 +2,59 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
 from .alert_event_mapping import build_vega_alert_event_dict
+from .case_insight import build_case_description
 from .constants import (
     DEVICE_PRODUCT,
     ENTITY_TYPE_ALERT,
     MAX_EVENTS_PER_ALERT_DEFAULT,
+    SOAR_ALERT_TYPE_ALERT,
     SYNC_ALERTS_TAG,
     VENDOR_NAME,
 )
 from .mapping import (
     alert_priority,
     normalize_alert_event,
+    record_display_id,
     record_id,
     record_name,
     record_severity,
+    related_incident_ids,
     signal_rule_generator,
     signal_ticket_id,
     soar_meta,
 )
 from .utils import parse_iso_timestamp, safe_log
+
+
+def _signal_link(record: dict) -> str:
+    return str(record.get("href") or record.get("link") or "").strip()
+
+
+def _also_in_incidents(record: dict, current_incident_id: str) -> str:
+    others = [
+        incident_id
+        for incident_id in related_incident_ids(record)
+        if incident_id and incident_id != current_incident_id
+    ]
+    return ",".join(others)
+
+
+def _mitre_text(value: Any) -> str:
+    if value in (None, "", [], {}):
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    try:
+        return json.dumps(value, default=str)
+    except Exception:
+        return str(value)
 
 # Reject epoch-0 / 1970 timestamps and values that are not real event times.
 _MIN_VALID_EVENT_MS = 946684800000  # 2000-01-01
@@ -186,16 +215,23 @@ def create_alerts(
             display = str(meta.get("incident_display_id") or "").strip()
             incident_name = str(meta.get("incident_name") or "").strip()
             case_title = f"{display} - {incident_name}".strip(" -") if display or incident_name else signal_name
-        incident_summary = str(
-            meta.get("incident_summary")
-            or record.get("incidentSummary")
-            or ""
-        ).strip()
+        case_description = str(meta.get("case_description") or "").strip()
+        if not case_description:
+            case_description = build_case_description(
+                {
+                    "verdict": meta.get("incident_verdict"),
+                    "verdictReasoning": meta.get("incident_verdict_reasoning"),
+                    "incidentSummary": meta.get("incident_summary") or record.get("incidentSummary"),
+                }
+            )
         case_tags = [SYNC_ALERTS_TAG]
         for name in meta.get("case_tags") or []:
             text = str(name or "").strip()
             if text and text not in case_tags:
                 case_tags.append(text)
+        signal_href = _signal_link(record if isinstance(record, dict) else {})
+        signal_id = record_display_id(record, ENTITY_TYPE_ALERT) or identifier
+        mitre = record.get("mitre") if isinstance(record, dict) else None
         alert = AlertInfo()
         alert.display_id = ticket_id
         alert.ticket_id = ticket_id
@@ -207,7 +243,7 @@ def create_alerts(
         alert.source_grouping_identifier = grouping_id
         alert.environment = environment
         # Case Description is set by SyncAlerts; alert description is a fallback.
-        alert.description = incident_summary or str(
+        alert.description = case_description or str(
             record.get("description") or record.get("detectionDescription") or signal_name
         )
         alert.case_tags = case_tags
@@ -216,8 +252,17 @@ def create_alerts(
         alert.Severity = severity
         alert.priority = alert_priority(severity)
         alert.extensions = {
-            "vega_entity_type": entity_type,
+            "alert_type": SOAR_ALERT_TYPE_ALERT,
+            "vega_entity_type": SOAR_ALERT_TYPE_ALERT,
+            "alert_id": identifier,
             "vega_id": identifier,
+            "vega_signal_id": signal_id,
+            "vega_signal_link": signal_href,
+            "href": signal_href,
+            "source_system_url": signal_href,
+            "signal_verdict": str(record.get("verdict") or "").strip(),
+            "mitre": _mitre_text(mitre),
+            "also_in": _also_in_incidents(record if isinstance(record, dict) else {}, incident_id),
             "vega_incident_id": incident_id,
             "vega_signal_rank": rank,
             "vega_total_signals": meta.get("total_signals"),

@@ -261,16 +261,7 @@ def _run_test_connection(siemplify: SiemplifyConnectorExecution, params: dict[st
     _manager.test_connection()
     preview = pipeline.preview()
     alerts = create_alerts(preview.get("records") or [], siemplify, None, max_events_in_alert=max_events)
-    summary = format_test_connection_summary(
-        incident_count=preview.get("incident_count") or 0,
-        related_alert_count=preview.get("related_alert_count") or 0,
-        unrelated_alert_count=0,
-        total_alert_count=preview.get("total_alert_count") or 0,
-        sample_count=len(alerts),
-        include_incidents=True,
-        include_related=True,
-        include_unrelated=False,
-    )
+    summary = format_test_connection_summary(incident_count=preview.get("incident_count") or 0)
     return alerts, summary
 
 

@@ -69,6 +69,8 @@ SYNC_ALERTS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Sync Alerts"
 SYNC_ALERTS_IDENTIFIER: str = "Vega_SyncAlerts"
 SYNC_ALERTS_TAG = "Vega"
 CASES_SYNC_LIMIT = 50
+# getIncidents(incidentIds / vegaIncidentIds) batch size for Sync Alerts.
+INCIDENT_ID_LOOKUP_BATCH = 100
 # Escalation status rank for top-N signal selection (lower = first).
 ESCALATION_RANK = {
     "ESCALATED": 0,
@@ -124,11 +126,6 @@ PARAM_INCIDENT_VERDICTS = "Incident Verdicts to Fetch"
 PARAM_MAX_EVENTS_IN_ALERT = "Max Events in Alert"
 PARAM_MAX_ALERTS_IN_CASE = "Max Alerts in Case"
 PARAM_PYTHON_TIMEOUT = "PythonProcessTimeout"
-# Removed connector params (kept only so old tests/imports fail loudly if reused).
-PARAM_ENTITIES = "Vega Entities to Fetch"
-PARAM_HAS_RELATED = "Has Related Incidents"
-PARAM_FETCH_RELATED_ALERT_METADATA = "Fetch Related Alert Metadata"
-PARAM_SYNC = "Sync Case Close to Vega"
 PYTHON_TIMEOUT_MIN = 30
 PYTHON_TIMEOUT_MAX = 3600
 
@@ -142,8 +139,6 @@ INCIDENT_INVESTIGATION_STATUS_OPTIONS = (
     "FAILED",
 )
 VERDICT_OPTIONS = ("MALICIOUS", "SUSPICIOUS", "BENIGN", "INCONCLUSIVE", "NA")
-ENTITY_OPTIONS = ("Alerts", "Incidents")
-RELATED_OPTIONS = ("Yes", "No")
 
 SEVERITY_TO_ALERT_PRIORITY = {
     "CRITICAL": 100,
@@ -229,7 +224,7 @@ query GetAlerts(
       }
       dedupCount
       comments { text addedBy addedAt }
-      labels { name color }
+      labels { id categoryId name color usageCount }
       skills { id name version }
       actors { field values }
       targets { field values }

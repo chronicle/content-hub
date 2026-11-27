@@ -80,19 +80,11 @@ def test_validate_connector_fields_lists_every_invalid_field() -> None:
 
 
 def test_format_test_connection_summary_lists_counts() -> None:
-    text = format_test_connection_summary(
-        incident_count=12,
-        related_alert_count=34,
-        unrelated_alert_count=0,
-        total_alert_count=34,
-        sample_count=3,
-    )
+    text = format_test_connection_summary(incident_count=12)
     assert "Successfully connected to Vega." in text
     assert "- Vega incidents: 12" in text
-    assert "- Vega related alerts: 34" in text
-    assert "unrelated" not in text.lower()
-    assert "- Total Vega alerts: 34" in text
-    assert "Showing 3 sample alert(s) below. Nothing was ingested." in text
+    assert "related" not in text.lower()
+    assert "alert" not in text.lower()
 
 
 def test_test_connection_maps_graphql_400_to_invalid_access_key_id() -> None:

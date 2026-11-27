@@ -86,6 +86,13 @@ def test_packager_only_attaches_vega_alert_events() -> None:
             "vegaAlertId": "VALERT-1",
             "name": "Phish",
             "createdAt": "2026-04-05T01:18:35Z",
+            "href": "https://vega.io/alerts/alert-1",
+            "verdict": "MALICIOUS",
+            "mitre": {"mitreTactics": ["TA0001"]},
+            "relatedIncidents": [
+                {"incidentId": "inc-1", "name": "Current"},
+                {"incidentId": "inc-2", "name": "Other"},
+            ],
             "alert_events": [{"name": "login"}, {"name": "click"}, {"name": "extra"}],
         },
         case_title="VINC-1 - Campaign",
@@ -111,6 +118,12 @@ def test_packager_only_attaches_vega_alert_events() -> None:
     assert signal.source_grouping_identifier == "Vega:incident:inc-1"
     assert signal.case_tags and signal.case_tags[0] == "Vega"
     assert signal.extensions.get("vega_incident_id") == "inc-1"
+    assert signal.extensions.get("vega_signal_id") == "VALERT-1"
+    assert signal.extensions.get("vega_signal_link") == "https://vega.io/alerts/alert-1"
+    assert signal.extensions.get("source_system_url") == "https://vega.io/alerts/alert-1"
+    assert signal.extensions.get("signal_verdict") == "MALICIOUS"
+    assert signal.extensions.get("also_in") == "inc-2"
+    assert signal.extensions.get("alert_type") == "Vega Alert"
     # Only Vega alert-events — no parent event for the Vega alert itself.
     assert len(signal.events) == 2
     assert signal.events[0]["name"] == "login"

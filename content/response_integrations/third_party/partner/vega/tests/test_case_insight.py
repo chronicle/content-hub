@@ -2,6 +2,7 @@ import json
 from types import SimpleNamespace
 
 from core.case_insight import (
+    build_case_description,
     build_incident_insight,
     extract_incident_id_from_ticket,
     incident_ids_from_soar_alert,
@@ -17,22 +18,42 @@ def test_extract_incident_id_from_ticket() -> None:
     assert extract_incident_id_from_ticket("other") == ""
 
 
-def test_build_incident_insight_includes_overflow_summary() -> None:
+def test_build_case_description_verdict_then_summary() -> None:
+    text = build_case_description(
+        {
+            "verdict": "MALICIOUS",
+            "verdictReasoning": "AI found phishing",
+            "incidentSummary": "Campaign summary",
+        }
+    )
+    assert text.startswith("MALICIOUS — AI found phishing")
+    assert "Campaign summary" in text
+
+
+def test_build_incident_insight_key_value_labels() -> None:
     insight = build_incident_insight(
         {
             "id": "inc-1",
+            "vegaUniqueIncidentId": "INC-1",
             "name": "Campaign",
             "severity": "HIGH",
+            "verdict": "MALICIOUS",
+            "investigationStatus": "NEW",
             "incidentSummary": "summary goes to case description",
+            "incidentFindings": "findings text",
+            "recommendedActions": [{"name": "block"}],
             "alertsCount": 312,
+            "alerts": [{"alertId": "a1", "name": "Phish", "createdAt": "2026-01-01T00:00:00Z"}],
             "link": "https://vega.io/incidents/inc-1",
         },
         signals_in_case=30,
     )
-    assert "<strong>name: </strong>Campaign" in insight
-    assert "<strong>signals_summary: </strong>312 signals, 30 in case" in insight
+    assert "<strong>Vega Incident ID: </strong>INC-1" in insight
+    assert "<strong>Vega AI Verdict: </strong>MALICIOUS" in insight
+    assert "<strong>Vega Incident Severity: </strong>HIGH" in insight
+    assert "<strong>Vega Signals: </strong>312 total, 30 in case" in insight
+    assert "<strong>Incident Findings: </strong>findings text" in insight
     assert "https://vega.io/incidents/inc-1" in insight
-    assert "incidentSummary" not in insight
     assert not insight.strip().startswith("{")
 
 

@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
+from .case_dedup import ingested_signal_count, remaining_ingest_slots
+from .case_insight import build_case_description
 from .constants import (
     ALERT_EVENTS_ID_BATCH,
     ALERT_ID_LOOKUP_BATCH,
@@ -350,6 +352,7 @@ class CaseEmissionMixin:
             case_tags=list(case_tags or []),
             incident_label_tags=record_label_tags(incident),
             case_title=incident_case_title(incident),
+            case_description=build_case_description(incident),
             grouping_time=grouping_start or record_timestamp(incident),
             grouping_start=grouping_start,
             grouping_end=grouping_end,
@@ -358,6 +361,8 @@ class CaseEmissionMixin:
             incident_name=record_name(incident),
             incident_link=incident_link,
             incident_summary=incident_summary,
+            incident_verdict=str(incident.get("verdict") or "").strip(),
+            incident_verdict_reasoning=str(incident.get("verdictReasoning") or "").strip(),
             signal_rank=signal_rank,
             total_signals=total_signals,
             signals_in_case=signals_in_case,
@@ -564,15 +569,31 @@ class CaseEmissionMixin:
                 self._mark_ingested(ingested, ingested_set, f"incident:{identifier}")
             return
         case_size = max(1, int(getattr(self, "max_alerts_in_case", 30)))
-        selected = rank_signals(queue, case_size)
-        signals_in_case = len(selected)
+        slots = remaining_ingest_slots(identifier or "", ingested_set, case_size)
+        if slots <= 0:
+            self._log(
+                "info",
+                "Step 6 — %s: case already at Max Alerts in Case=%s; "
+                "discarding %s new signal(s) (not sent to SecOps).",
+                label,
+                case_size,
+                len(queue),
+            )
+            if identifier:
+                self._mark_ingested(ingested, ingested_set, f"incident:{identifier}")
+            return
+        selected = rank_signals(queue, slots)
+        already = ingested_signal_count(identifier or "", ingested_set)
+        signals_in_case = min(case_size, already + len(selected))
         self._log(
             "info",
-            "Step 6 — %s: %s signal(s) total, packaging top %s "
-            "(Max Alerts in Case=%s). Ranking: ESCALATED, severity, oldest.",
+            "Step 6 — %s: %s signal(s) total, packaging top %s of %s new "
+            "(slots=%s, Max Alerts in Case=%s). Ranking: ESCALATED, severity, oldest.",
             label,
             total_signals,
-            signals_in_case,
+            len(selected),
+            len(queue),
+            slots,
             case_size,
         )
         case_tags = collect_label_tags(incident, *selected)

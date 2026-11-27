@@ -17,7 +17,6 @@ from .constants import (
     ALERT_STATUS_OPTIONS,
     BACKFILL_MAX,
     BACKFILL_MIN,
-    ENTITY_OPTIONS,
     INCIDENT_INVESTIGATION_STATUS_OPTIONS,
     INCIDENT_USER_STATUS_OPTIONS,
     LOOKBACK_MAX,
@@ -41,8 +40,6 @@ from .constants import (
     PARAM_ALERT_STATUSES,
     PARAM_ALERT_VERDICTS,
     PARAM_BACKFILL,
-    PARAM_ENTITIES,
-    PARAM_HAS_RELATED,
     PARAM_INCIDENT_INVESTIGATION_STATUSES,
     PARAM_INCIDENT_SEVERITIES,
     PARAM_INCIDENT_USER_STATUSES,
@@ -53,7 +50,6 @@ from .constants import (
     PARAM_PYTHON_TIMEOUT,
     PYTHON_TIMEOUT_MAX,
     PYTHON_TIMEOUT_MIN,
-    RELATED_OPTIONS,
     SEVERITY_OPTIONS,
     VERDICT_OPTIONS,
 )
@@ -254,58 +250,6 @@ def resolve_multi_filter(
     return resolved
 
 
-def resolve_entities(raw: Any) -> list[str]:
-    selected = parse_csv_list(raw)
-    if not selected:
-        raise VegaValidationException(f"{PARAM_ENTITIES} is required. Use one or both of: {', '.join(ENTITY_OPTIONS)}.")
-    known = {item.lower(): item for item in ENTITY_OPTIONS}
-    known["alert"] = "Alerts"
-    known["incident"] = "Incidents"
-    resolved = []
-    unknown = []
-    for item in selected:
-        match = known.get(item.lower())
-        if match:
-            if match not in resolved:
-                resolved.append(match)
-            continue
-        if item not in unknown:
-            unknown.append(item)
-    if unknown:
-        _raise_unsupported(PARAM_ENTITIES, unknown, ENTITY_OPTIONS)
-    if not resolved:
-        raise VegaValidationException(f"{PARAM_ENTITIES} is required. Use one or both of: {', '.join(ENTITY_OPTIONS)}.")
-    return resolved
-
-
-def resolve_has_related(raw: Any) -> bool | None:
-    selected = parse_csv_list(raw)
-    if not selected:
-        raise VegaValidationException(
-            f"{PARAM_HAS_RELATED} is required. Use one or both of: {', '.join(RELATED_OPTIONS)}."
-        )
-    known = {item.lower(): item for item in RELATED_OPTIONS}
-    resolved = []
-    unknown = []
-    for item in selected:
-        match = known.get(item.lower())
-        if match:
-            if match not in resolved:
-                resolved.append(match)
-            continue
-        if item not in unknown:
-            unknown.append(item)
-    if unknown:
-        _raise_unsupported(PARAM_HAS_RELATED, unknown, RELATED_OPTIONS)
-    if not resolved:
-        raise VegaValidationException(
-            f"{PARAM_HAS_RELATED} is required. Use one or both of: {', '.join(RELATED_OPTIONS)}."
-        )
-    if set(resolved) == set(RELATED_OPTIONS):
-        return None
-    return resolved[0] == "Yes"
-
-
 def resolve_alert_filters(config: dict) -> dict:
     return {
         "severities": resolve_multi_filter(
@@ -437,37 +381,16 @@ def format_connector_field_errors(errors: list[str]) -> str:
     return f"Cannot run the Vega Alerts and Incidents Connector because some fields are invalid:\n{bullets}"
 
 
-def format_test_connection_summary(
-    incident_count: int,
-    related_alert_count: int,
-    unrelated_alert_count: int = 0,
-    total_alert_count: int = 0,
-    sample_count: int = 0,
-    include_incidents: bool = True,
-    include_related: bool = True,
-    include_unrelated: bool = False,
-) -> str:
-    """Clean test-connection output shown with sample alerts.
-
-    Count lines follow Vega Entities to Fetch and Has Related Incidents, so a
-    Yes-only connector does not report unrelated alerts.
-    """
-    lines = ["Successfully connected to Vega.", "", "What this connector currently sees:"]
-    if include_incidents:
-        lines.append(f"- Vega incidents: {incident_count}")
-    if include_related:
-        lines.append(f"- Vega related alerts: {related_alert_count}")
-    if include_unrelated:
-        lines.append(f"- Vega unrelated alerts: {unrelated_alert_count}")
-    if include_related or include_unrelated:
-        lines.append(f"- Total Vega alerts: {total_alert_count}")
-    sample_line = (
-        f"Showing {sample_count} sample alert(s) below. Nothing was ingested."
-        if sample_count
-        else ("No sample alerts were found for the current filters and time window. Nothing was ingested.")
+def format_test_connection_summary(incident_count: int) -> str:
+    """Clean test-connection output: success + matching incident count only."""
+    return "\n".join(
+        [
+            "Successfully connected to Vega.",
+            "",
+            "What this connector currently sees:",
+            f"- Vega incidents: {incident_count}",
+        ]
     )
-    lines.extend(["", sample_line])
-    return "\n".join(lines)
 
 
 @dataclass(frozen=True)

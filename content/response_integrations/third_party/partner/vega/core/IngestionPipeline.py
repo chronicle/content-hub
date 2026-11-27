@@ -787,7 +787,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             "info",
             "Step 6 — package ready: %s record(s) will be turned into SecOps "
             "alerts (%s incident, %s alert). Checkpoint already held %s id(s). "
-            "incomplete=%s watermark=%s. Nothing in this list was cut to 250.",
+            "incomplete=%s watermark=%s.",
             len(records),
             incident_records,
             alert_records,

@@ -10,25 +10,7 @@ if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
 from .constants import DEVICE_PRODUCT, VENDOR_NAME
-
-# Flat key/value insight fields (incident → case). Skip bulky nested blobs.
-# incidentSummary is written to Case Description by SyncAlerts, not insight.
-_INSIGHT_KEYS = (
-    "id",
-    "vegaUniqueIncidentId",
-    "name",
-    "severity",
-    "userStatus",
-    "investigationStatus",
-    "verdict",
-    "verdictReasoning",
-    "incidentFindings",
-    "createdAt",
-    "lastUpdated",
-    "alertsCount",
-    "dataSources",
-    "assets",
-)
+from .mapping import incident_alert_stubs, rank_signals, record_name
 
 
 def _insight_value(value: Any) -> str:
@@ -39,16 +21,45 @@ def _insight_value(value: Any) -> str:
     return html.escape(text)
 
 
+def _ai_verdict_text(record: SingleJson) -> str:
+    verdict = str(record.get("verdict") or "").strip()
+    reasoning = str(record.get("verdictReasoning") or "").strip()
+    if verdict and reasoning:
+        return f"{verdict} — {reasoning}"
+    return verdict or reasoning
+
+
+def build_case_description(incident: SingleJson) -> str:
+    """Case Description: AI verdict, then incident summary."""
+    record = incident if isinstance(incident, dict) else {}
+    parts: list[str] = []
+    ai = _ai_verdict_text(record)
+    if ai:
+        parts.append(ai)
+    summary = str(record.get("incidentSummary") or "").strip()
+    if summary:
+        parts.append(summary)
+    return "\n\n".join(parts)
+
+
+def _top_signals(record: SingleJson, *, limit: int = 10) -> list[str]:
+    stubs = [dict(item) for item in incident_alert_stubs(record) if isinstance(item, dict)]
+    ranked = rank_signals(stubs, limit) if stubs else []
+    rows: list[str] = []
+    for item in ranked:
+        alert_id = str(item.get("alertId") or item.get("id") or "").strip()
+        name = record_name(item)
+        rows.append(f"{alert_id} — {name}" if alert_id else name)
+    return rows
+
+
 def build_incident_insight(
     incident: SingleJson,
     *,
     signals_in_case: int,
     total_signals: int | None = None,
 ) -> str:
-    """HTML key/value insight for a Vega incident case (rendered on case wall).
-
-    Includes overflow summary like ``"312 signals, 30 in case"``.
-    """
+    """HTML key/value insight for a Vega incident case (rendered on case wall)."""
     record = incident if isinstance(incident, dict) else {}
     total = total_signals
     if total is None:
@@ -59,26 +70,41 @@ def build_incident_insight(
     total = max(int(total or 0), int(signals_in_case or 0))
     in_case = max(0, int(signals_in_case or 0))
 
-    rows: list[tuple[str, Any]] = []
-    for key in _INSIGHT_KEYS:
-        value = record.get(key)
+    incident_id = str(
+        record.get("vegaUniqueIncidentId") or record.get("id") or record.get("incidentId") or ""
+    ).strip()
+    link = str(record.get("link") or record.get("href") or "").strip()
+    # shortcut: Vega API exposes one verdict; map it as AI Verdict until analyst verdict exists
+    ai_verdict = _ai_verdict_text(record)
+    rows: list[tuple[str, Any]] = [
+        ("Vega Incident ID", incident_id),
+        ("Vega Incident Link", link),
+        ("Vega Verdict", ai_verdict),
+        ("Vega Incident Severity", record.get("severity")),
+        ("Vega Investigation Status", record.get("investigationStatus")),
+        ("Vega User Status", record.get("userStatus")),
+        ("Vega Signals", f"{total} total, {in_case} in case"),
+        ("Incident Summary", record.get("incidentSummary")),
+        ("Incident Findings", record.get("incidentFindings")),
+        ("Recommended Actions", record.get("recommendedActions")),
+        ("Top Signals", _top_signals(record)),
+        ("Assets", record.get("assets")),
+        ("Observables", record.get("observables")),
+        ("Comments", record.get("comments")),
+        ("Labels", record.get("labels")),
+    ]
+
+    body_parts: list[str] = []
+    for key, value in rows:
         if value in (None, "", [], {}):
             continue
-        rows.append((key, value))
-    rows.append(("signals_summary", f"{total} signals, {in_case} in case"))
-    rows.append(("signals_in_case", in_case))
-    rows.append(("signals_total", total))
-
-    body = "".join(
-        f"<strong>{html.escape(key)}: </strong>{_insight_value(value)}<br/>" for key, value in rows
-    )
-    link = str(record.get("link") or record.get("href") or "").strip()
+        body_parts.append(f"<strong>{html.escape(key)}: </strong>{_insight_value(value)}<br/>")
     if link:
         safe_link = html.escape(link, quote=True)
-        body += (
+        body_parts.append(
             f"<p>Open in Vega: <a href='{safe_link}' target='_blank'>{html.escape(link)}</a></p>"
         )
-    return f"<p>{body}</p>"
+    return f"<p>{''.join(body_parts)}</p>"
 
 
 def extract_incident_id_from_ticket(ticket_id: str) -> str:
@@ -92,6 +118,21 @@ def extract_incident_id_from_ticket(ticket_id: str) -> str:
         return rest.split(":signal:", 1)[0].strip()
     # Grouping id form without signal suffix.
     return rest.split(":", 1)[0].strip() if rest else ""
+
+
+def extract_signal_id_from_ticket(ticket_id: str) -> str:
+    """Parse ``Vega:incident:<incident_id>:signal:<alert_id>`` → alert/signal id."""
+    text = str(ticket_id or "").strip()
+    marker = ":signal:"
+    lower = text.lower()
+    idx = lower.find(marker)
+    if idx < 0:
+        return ""
+    rest = text[idx + len(marker) :].strip()
+    # Optional packaging suffixes like ``:test 10`` after the alert id.
+    if ":test" in rest.lower():
+        rest = rest[: rest.lower().index(":test")]
+    return rest.strip().strip(":")
 
 
 def parse_alert_additional_properties(raw: Any) -> dict[str, Any]:
