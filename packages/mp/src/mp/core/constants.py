@@ -201,7 +201,9 @@ EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
 }
 
 INTEGRATIONS_WITH_INTEGRATION_SUFFIX: set[str] = {
+    "akamai_integration",
     "http_integration",
+    "slack_integration",
     "twilio_integration",
 }
 
