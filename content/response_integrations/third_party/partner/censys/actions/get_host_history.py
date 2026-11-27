@@ -51,7 +51,7 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameters
-    api_key, organization_id, verify_ssl = get_integration_params(siemplify)
+    params = get_integration_params(siemplify)
 
     # Action Parameters
     host_id = siemplify.extract_action_param(
@@ -78,12 +78,7 @@ def main():
         end_time = validate_rfc3339_timestamp(end_time, "End Time")
 
         # Initialize API Manager
-        censys_manager = APIManager(
-            api_key,
-            organization_id,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
+        censys_manager = APIManager(params, siemplify=siemplify)
 
         siemplify.LOGGER.info(f"Retrieving host history for Host ID: {host_id}")
 
@@ -125,7 +120,7 @@ def main():
             events_for_table = events[:MAX_TABLE_RECORDS]
 
             for idx, event in enumerate(events_for_table, start=1):
-                model = HostHistoryEventModel(event, idx, host_id, organization_id)
+                model = HostHistoryEventModel(event, idx, host_id, params.organization_id)
                 table_results.append(model.to_csv())
 
             # Add table to results

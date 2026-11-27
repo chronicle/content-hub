@@ -146,7 +146,7 @@ def main() -> None:
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
     # Configuration Parameters
-    api_key, organization_id, verify_ssl = get_integration_params(siemplify)
+    params = get_integration_params(siemplify)
 
     # Action Parameters
     at_time = siemplify.extract_action_param(
@@ -175,12 +175,7 @@ def main() -> None:
 
     try:
         # Initialize API Manager
-        censys_manager = APIManager(
-            api_key=api_key,
-            organization_id=organization_id,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
+        censys_manager = APIManager(params, siemplify=siemplify)
 
         # Get IP entities
         ip_entities = get_ip_entities(siemplify)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import ipaddress
 import re
 from datetime import datetime
-from typing import Any, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
@@ -13,32 +13,84 @@ from .censys_exceptions import (
     InvalidIntegerException,
 )
 from .constants import ENRICHMENT_PREFIX, INTEGRATION_NAME, PING_ACTION_IDENTIFIER
+from .params import IntegrationParams
+
+if TYPE_CHECKING:
+    from TIPCommon.types import ChronicleSOAR
 
 
-def get_integration_params(siemplify: Any) -> Tuple[str, str, bool]:
+def get_integration_params(siemplify: ChronicleSOAR) -> IntegrationParams:
     """
     Retrieve the integration parameters from Siemplify configuration.
 
     Args:
-        siemplify (SiemplifyAction): SiemplifyAction instance
+        siemplify: SOAR object used to read the integration configuration.
 
     Returns:
-        tuple: A tuple containing the integration parameters (api_key,
-        organization_id, verify_ssl).
+        The integration configuration (authentication settings, organization ID,
+        and SSL verification).
     """
-    api_key = siemplify.extract_configuration_param(
-        INTEGRATION_NAME, "API Key", input_type=str, is_mandatory=True
+    use_oauth = bool(
+        siemplify.extract_configuration_param(
+            INTEGRATION_NAME,
+            "Use OAuth Authentication",
+            input_type=bool,
+            is_mandatory=False,
+        )
+    )
+
+    api_key = (
+        siemplify.extract_configuration_param(
+            INTEGRATION_NAME,
+            "API Key",
+            input_type=str,
+            is_mandatory=False,
+        )
+        or ""
+    ).strip()
+
+    client_id = (
+        siemplify.extract_configuration_param(
+            INTEGRATION_NAME,
+            "Client ID",
+            input_type=str,
+            is_mandatory=False,
+        )
+        or ""
+    ).strip()
+
+    client_secret = (
+        siemplify.extract_configuration_param(
+            INTEGRATION_NAME,
+            "Client Secret",
+            input_type=str,
+            is_mandatory=False,
+        )
+        or ""
     ).strip()
 
     organization_id = siemplify.extract_configuration_param(
-        INTEGRATION_NAME, "Organization Id", input_type=str, is_mandatory=True
+        INTEGRATION_NAME,
+        "Organization Id",
+        input_type=str,
+        is_mandatory=True,
     ).strip()
 
     verify_ssl = siemplify.extract_configuration_param(
-        INTEGRATION_NAME, "Verify SSL", input_type=bool, is_mandatory=True
+        INTEGRATION_NAME,
+        "Verify SSL",
+        input_type=bool,
+        is_mandatory=True,
     )
 
-    return api_key, organization_id, verify_ssl
+    return IntegrationParams(
+        organization_id=organization_id,
+        verify_ssl=verify_ssl,
+        use_oauth=use_oauth,
+        api_key=api_key,
+        client_id=client_id,
+        client_secret=client_secret,
+    )
 
 
 def validate_required_string(value: str, param_name: str) -> str:

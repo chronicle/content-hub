@@ -98,3 +98,47 @@ class TestPing:
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert "Failed to connect to the Censys" in action_output.results.output_message
+
+    @set_metadata(
+        integration_config={
+            "Use OAuth Authentication": "false",
+            "API Key": "",
+            "Client ID": "",
+            "Client Secret": "",
+            "Organization Id": "test_org_id_67890",
+            "Verify SSL": "false",
+        }
+    )
+    def test_ping_missing_api_key_stops_before_api_call(
+        self,
+        action_output: MockActionOutput,
+        censys_manager: CensysAPIManager,
+    ) -> None:
+        """An empty API Key with OAuth disabled must fail validation without any request."""
+        ping.main()
+
+        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.results.result_value is False
+        assert "API Key is required" in action_output.results.output_message
+        assert "Unauthorized" not in action_output.results.output_message
+
+    @set_metadata(
+        integration_config={
+            "Use OAuth Authentication": "true",
+            "API Key": "",
+            "Client ID": "",
+            "Client Secret": "",
+            "Organization Id": "test_org_id_67890",
+            "Verify SSL": "false",
+        }
+    )
+    def test_ping_missing_oauth_credentials_stops_before_api_call(
+        self,
+        action_output: MockActionOutput,
+        censys_manager: CensysAPIManager,
+    ) -> None:
+        """OAuth enabled without Client ID/Secret must fail validation without any request."""
+        ping.main()
+
+        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert "Client ID and Client Secret are required" in action_output.results.output_message
