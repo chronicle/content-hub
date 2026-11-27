@@ -65,6 +65,16 @@ class MicrosoftTeamsSession(MockSession[MockRequest, MockResponse, MicrosoftTeam
             self.list_chats_handler,
             self.manage_chats_handler,
             self.channel_messages_handler,
+            self.send_card_channel_handler,
+            self.send_card_chat_handler,
+            self.get_channel_card_message_handler,
+            self.get_chat_card_message_handler,
+            self.update_channel_message_handler,
+            self.update_chat_message_handler,
+            self.team_channels_handler,
+            self.send_card_resolved_channel_handler,
+            self.get_resolved_channel_message_handler,
+            self.update_resolved_channel_message_handler,
         ]
 
     @router.post("/test_tenant/oauth2/token")
@@ -246,3 +256,83 @@ class MicrosoftTeamsSession(MockSession[MockRequest, MockResponse, MicrosoftTeam
         return MockResponse(
             content=self.mock_data["channel_messages_success"]
         )
+
+    @router.post("/v1.0/teams/t1/channels/c1/messages")
+    def send_card_channel_handler(self, _request: MockRequest) -> MockResponse:
+        """Mocks sending a card message to a channel."""
+        return MockResponse(
+            content=self.mock_data["send_card_success"], status_code=201
+        )
+
+    @router.post("/v1.0/chats/chat1/messages")
+    def send_card_chat_handler(self, _request: MockRequest) -> MockResponse:
+        """Mocks sending a card message to a chat."""
+        return MockResponse(
+            content=self.mock_data["send_card_success"], status_code=201
+        )
+
+    @router.get("/v1.0/teams/t1/channels/c1/messages/.+")
+    def get_channel_card_message_handler(
+        self, request: MockRequest
+    ) -> MockResponse:
+        """Mocks reading a channel message before updating its card."""
+        return self._get_message_by_id(request.url.path.rsplit("/", 1)[-1])
+
+    @router.get("/v1.0/chats/chat1/messages/.+")
+    def get_chat_card_message_handler(
+        self, request: MockRequest
+    ) -> MockResponse:
+        """Mocks reading a chat message before updating its card."""
+        return self._get_message_by_id(request.url.path.rsplit("/", 1)[-1])
+
+    @router.patch("/v1.0/teams/t1/channels/c1/messages/.+")
+    def update_channel_message_handler(
+        self, _request: MockRequest
+    ) -> MockResponse:
+        """Mocks updating a channel message."""
+        return MockResponse(content="", status_code=204)
+
+    @router.patch("/v1.0/chats/chat1/messages/.+")
+    def update_chat_message_handler(self, _request: MockRequest) -> MockResponse:
+        """Mocks updating a chat message."""
+        return MockResponse(content="", status_code=204)
+
+    def _get_message_by_id(self, message_id: str) -> MockResponse:
+        """Returns a message fixture based on the requested message ID.
+
+        m1 has a card, m2 has no card, m403 can't be read and m404 doesn't exist.
+        """
+        if message_id == "m2":
+            return MockResponse(
+                content=self.mock_data["get_message_without_card_success"]
+            )
+        if message_id == "m403":
+            return MockResponse(
+                content=self.mock_data["get_message_forbidden"], status_code=403
+            )
+        if message_id == "m404":
+            return MockResponse(
+                content=self.mock_data["get_message_not_found"], status_code=404
+            )
+
+        return MockResponse(content=self.mock_data["get_card_message_success"])
+
+    @router.get("/beta/teams/id_test_team/channels")
+    def team_channels_handler(self, _request: MockRequest) -> MockResponse:
+        """Mocks the channel lookup of a team resolved by name."""
+        return MockResponse(content=self.mock_data["get_channel_id_success"])
+
+    @router.post("/v1.0/teams/id_test_team/channels/id_test_channel/messages")
+    def send_card_resolved_channel_handler(self, _request: MockRequest) -> MockResponse:
+        """Mocks sending a card to a channel resolved by name."""
+        return MockResponse(content=self.mock_data["send_card_success"], status_code=201)
+
+    @router.get("/v1.0/teams/id_test_team/channels/id_test_channel/messages/.+")
+    def get_resolved_channel_message_handler(self, request: MockRequest) -> MockResponse:
+        """Mocks reading a message of a channel resolved by name."""
+        return self._get_message_by_id(request.url.path.rsplit("/", 1)[-1])
+
+    @router.patch("/v1.0/teams/id_test_team/channels/id_test_channel/messages/.+")
+    def update_resolved_channel_message_handler(self, _request: MockRequest) -> MockResponse:
+        """Mocks updating a message of a channel resolved by name."""
+        return MockResponse(content="", status_code=204)

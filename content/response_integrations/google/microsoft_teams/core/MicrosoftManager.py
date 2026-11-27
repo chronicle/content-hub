@@ -16,16 +16,19 @@
 #             IMPORTS
 # =====================================
 from __future__ import annotations
+
 import json
 from copy import deepcopy
-from typing import Final, Iterator
+from typing import TYPE_CHECKING, Final, Iterator
 from urllib.parse import urljoin, quote
 
 import requests
 
+from .card_utils import build_card_message_payload, find_card_attachment_id
 from .datamodels import Chat, Message, Reply
 from .MicrosoftConstants import CHAT_TYPES
 from .MicrosoftExceptions import (
+    MicrosoftTeamsCardError,
     MicrosoftTeamsChannelNotFoundError,
     MicrosoftTeamsClientError,
     MicrosoftTeamsManagerError,
@@ -33,6 +36,9 @@ from .MicrosoftExceptions import (
     MicrosoftTeamsTeamNotFoundError,
 )
 from .MicrosoftTeamsParser import MicrosoftTeamsParser
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 # =====================================
@@ -59,6 +65,8 @@ REFRESH_PAYLOAD = {
     "grant_type": "refresh_token",
     "redirect_uri": None,
 }
+
+HTTP_FORBIDDEN = 403
 
 HEADERS = {"Content-Type": "application/json"}
 
@@ -134,6 +142,7 @@ API_ENDPOINTS: Final[dict[str, str]] = {
     "list_chats": "{version}/me/chats",
     "manage_chats": "{version}/chats",
     "channel_messages": "{version}/chats/{chat_id}/messages",
+    "chat_message": "{version}/chats/{chat_id}/messages/{message_id}",
     "list_channels_to_send_message": (
         "{version}/me/chats?$expand=members&$filter=chatType eq 'oneOnOne'"
     ),
@@ -1020,6 +1029,128 @@ class MicrosoftTeamsManager:
         response = self.session.post(url, json=payload)
         validate_response(response, handle_client_error=True)
         return self.parser.build_send_message_reply(response.json())
+
+    def send_card_to_channel(
+        self, *, team_name: str, channel_name: str, card: SingleJson
+    ) -> Message:
+        """Post an Adaptive Card to a channel.
+
+        Args:
+            team_name: The name of the team containing the channel.
+            channel_name: The name of the target channel.
+            card: The Adaptive Card dictionary.
+
+        Returns:
+            A `Message` object representing the sent message.
+
+        """
+        team_id = self.get_team_id(team_name)
+        channel_id = self.get_channel_id(team_id, channel_name)
+        url = self._build_url(
+            API_ENDPOINTS["post_msg"],
+            version=VERSION_V1,
+            team_id=team_id,
+            channel_id=channel_id,
+        )
+        response = self.session.post(url, json=build_card_message_payload(card))
+        validate_response(response, handle_client_error=True)
+        return self.parser.build_message_object(raw_json=response.json())
+
+    def send_card_to_chat(self, *, chat_id: str, card: SingleJson) -> Message:
+        """Post an Adaptive Card to a chat.
+
+        Args:
+            chat_id: The ID of the chat.
+            card: The Adaptive Card dictionary.
+
+        Returns:
+            A `Message` object representing the sent message.
+
+        """
+        url = self._build_url(
+            API_ENDPOINTS["channel_messages"],
+            version=VERSION_V1,
+            chat_id=chat_id,
+        )
+        response = self.session.post(url, json=build_card_message_payload(card))
+        validate_response(response, handle_client_error=True)
+        return self.parser.build_message_object(raw_json=response.json())
+
+    def update_card_in_channel(
+        self, *, team_name: str, channel_name: str, message_id: str, card: SingleJson
+    ) -> None:
+        """Replace the card of an existing channel message.
+
+        Args:
+            team_name: The name of the team containing the channel.
+            channel_name: The name of the channel containing the message.
+            message_id: The ID of the message to update.
+            card: The new Adaptive Card dictionary.
+
+        """
+        team_id = self.get_team_id(team_name)
+        channel_id = self.get_channel_id(team_id, channel_name)
+        url = self._build_url(
+            API_ENDPOINTS["get_msg"],
+            version=VERSION_V1,
+            team_id=team_id,
+            channel_id=channel_id,
+            message_id=message_id,
+        )
+        self._update_card(url, card)
+
+    def update_card_in_chat(
+        self, *, chat_id: str, message_id: str, card: SingleJson
+    ) -> None:
+        """Replace the card of an existing chat message.
+
+        Args:
+            chat_id: The ID of the chat.
+            message_id: The ID of the message to update.
+            card: The new Adaptive Card dictionary.
+
+        """
+        url = self._build_url(
+            API_ENDPOINTS["chat_message"],
+            version=VERSION_V1,
+            chat_id=chat_id,
+            message_id=message_id,
+        )
+        self._update_card(url, card)
+
+    def _update_card(self, message_url: str, card: SingleJson) -> None:
+        """Reuse the existing card attachment ID and patch the message."""
+        attachment_id = self._get_card_attachment_id(message_url)
+        response = self.session.patch(
+            message_url, json=build_card_message_payload(card, attachment_id)
+        )
+        validate_response(response, handle_client_error=True)
+
+    def _get_card_attachment_id(self, message_url: str) -> str | None:
+        """Get the ID of the card attached to a message.
+
+        Args:
+            message_url: The URL of the message.
+
+        Returns:
+            The attachment ID, or None when the message can't be read (HTTP
+            403), in which case a new attachment ID is generated.
+
+        Raises:
+            MicrosoftTeamsCardError: If the message has no Adaptive Card.
+
+        """
+        response = self.session.get(message_url)
+        if response.status_code == HTTP_FORBIDDEN:
+            return None
+
+        validate_response(response)
+        attachment_id = find_card_attachment_id(response.json())
+        if attachment_id is None:
+            message = "The message does not contain an Adaptive Card to update."
+            raise MicrosoftTeamsCardError(message)
+
+        return attachment_id
 
     def _build_url(
         self, path_template: str, version: str | None = None, **kwargs
