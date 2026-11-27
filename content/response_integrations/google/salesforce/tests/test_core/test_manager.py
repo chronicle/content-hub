@@ -19,11 +19,13 @@ from unittest.mock import patch
 
 import pytest
 
+from salesforce.core.constants import DEFAULT_MAX_RECORDS, INVALID_MAX_RECORDS_MSG, MAX_RECORDS_LIMIT
 from salesforce.core.SalesforceManager import (
     CASE_PROPERTIES,
     SalesforceManager,
     SalesforceManagerError,
 )
+from salesforce.core.utils import parse_max_records
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -176,3 +178,113 @@ def test_create_case_fetches_new_case_by_id(manager: SalesforceManager) -> None:
 
     assert manager.create_case(subject="Test") == record
     assert sent_query(manager).endswith("WHERE Id = '500NEW'")
+
+
+def test_connectivity_executes_single_row_case_id_query(manager: SalesforceManager) -> None:
+    """test_connectivity runs SELECT Id FROM Case LIMIT 1 and never calls query_more."""
+    manager.sf.query.return_value = {"records": [{"Id": "500A"}], "done": True}
+
+    assert manager.test_connectivity() is True
+    assert sent_query(manager) == "SELECT Id FROM Case LIMIT 1"
+    manager.sf.query_more.assert_not_called()
+
+
+def test_get_cases_uses_default_limit_and_descending_order(manager: SalesforceManager) -> None:
+    """get_cases() defaults to DEFAULT_MAX_RECORDS ordered by CreatedDate DESC."""
+    record: dict[str, Any] = {
+        "Id": "500A",
+        "CaseNumber": "00001001",
+        "attributes": {"type": "Case", "url": "/services/data/v64.0/sobjects/Case/500A"},
+    }
+    manager.sf.query.return_value = {"records": [record], "done": True}
+
+    cases = manager.get_cases()
+
+    expected = f"SELECT {', '.join(CASE_PROPERTIES)} FROM Case ORDER BY CreatedDate DESC LIMIT {DEFAULT_MAX_RECORDS}"
+    assert sent_query(manager) == expected
+    assert cases == [{"Id": "500A", "CaseNumber": "00001001"}]
+
+
+@pytest.mark.parametrize(
+    ("raw_limit", "expected_limit"),
+    [
+        pytest.param(None, DEFAULT_MAX_RECORDS, id="none-uses-default"),
+        pytest.param("", DEFAULT_MAX_RECORDS, id="empty-string-uses-default"),
+        pytest.param("   ", DEFAULT_MAX_RECORDS, id="whitespace-uses-default"),
+        pytest.param("1", 1, id="minimum-str"),
+        pytest.param("25", 25, id="numeric-string"),
+        pytest.param("  100  ", 100, id="padded-numeric-string"),
+        pytest.param(str(MAX_RECORDS_LIMIT), MAX_RECORDS_LIMIT, id="maximum-str"),
+    ],
+)
+def test_parse_max_records_accepts_valid_inputs(raw_limit: str | None, expected_limit: int) -> None:
+    """Valid string/None inputs normalize to a positive integer within [1, MAX_RECORDS_LIMIT]."""
+    assert parse_max_records(raw_limit) == expected_limit
+
+
+@pytest.mark.parametrize(
+    "invalid_raw",
+    [
+        pytest.param("0", id="zero"),
+        pytest.param("-1", id="negative-str"),
+        pytest.param(str(MAX_RECORDS_LIMIT + 1), id="above-max-str"),
+        pytest.param("abc", id="non-numeric-str"),
+        pytest.param("10.5", id="float-str"),
+    ],
+)
+def test_parse_max_records_rejects_invalid_inputs(invalid_raw: str) -> None:
+    """Invalid string inputs raise SalesforceManagerError with INVALID_MAX_RECORDS_MSG."""
+    with pytest.raises(SalesforceManagerError) as exc_info:
+        parse_max_records(invalid_raw)
+
+    assert str(exc_info.value) == INVALID_MAX_RECORDS_MSG
+
+
+@pytest.mark.parametrize(
+    "invalid_limit",
+    [
+        pytest.param(0, id="zero"),
+        pytest.param(-5, id="negative-int"),
+        pytest.param(MAX_RECORDS_LIMIT + 1, id="above-max-int"),
+    ],
+)
+def test_get_cases_rejects_invalid_max_records_before_query(manager: SalesforceManager, invalid_limit: int) -> None:
+    """Out-of-range max_records raises SalesforceManagerError without querying Salesforce."""
+    with pytest.raises(SalesforceManagerError) as exc_info:
+        manager.get_cases(max_records=invalid_limit)
+
+    assert str(exc_info.value) == INVALID_MAX_RECORDS_MSG
+    manager.sf.query.assert_not_called()
+
+
+def test_run_query_stops_pagination_once_max_records_reached(manager: SalesforceManager) -> None:
+    """run_query halts query_more as soon as max_records items are collected and slices excess."""
+    manager.sf.query.return_value = {
+        "records": [{"Id": "500A"}, {"Id": "500B"}],
+        "done": False,
+        "nextRecordsUrl": "/services/data/v64.0/query/page-2",
+    }
+    manager.sf.query_more.side_effect = [
+        {
+            "records": [{"Id": "500C"}, {"Id": "500D"}],
+            "done": False,
+            "nextRecordsUrl": "/services/data/v64.0/query/page-3",
+        },
+        {
+            "records": [{"Id": "500E"}],
+            "done": True,
+        },
+    ]
+
+    records = manager.run_query("SELECT Id FROM Case", max_records=3)
+
+    assert records == [{"Id": "500A"}, {"Id": "500B"}, {"Id": "500C"}]
+    manager.sf.query_more.assert_called_once_with("/services/data/v64.0/query/page-2", True)
+
+
+def test_run_query_breaks_safely_when_next_records_url_missing(manager: SalesforceManager) -> None:
+    """Malformed pagination responses missing nextRecordsUrl do not loop infinitely."""
+    manager.sf.query.return_value = {"records": [{"Id": "500A"}], "done": False}
+
+    assert manager.run_query("SELECT Id FROM Case") == [{"Id": "500A"}]
+    manager.sf.query_more.assert_not_called()

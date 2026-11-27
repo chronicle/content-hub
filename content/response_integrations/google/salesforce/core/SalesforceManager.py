@@ -33,7 +33,7 @@ import requests
 from pypika import Field, Query, Table
 from simple_salesforce import Salesforce, format_soql
 
-from .constants import DEFAULT_API_VERSION
+from .constants import DEFAULT_API_VERSION, DEFAULT_MAX_RECORDS, INVALID_MAX_RECORDS_MSG, MAX_RECORDS_LIMIT
 
 # ============================== CONSTS ===================================== #
 
@@ -112,12 +112,14 @@ class SalesforceManager:
             version = DEFAULT_API_VERSION
         )
 
-    def test_connectivity(self):
+    def test_connectivity(self) -> bool:
+        """Test connectivity to Salesforce using a lightweight single-row query.
+
+        Returns:
+            True if connectivity succeeds.
+
         """
-        Test connectivity to Salesforce
-        :return: {bool} True if successful, exception otherwise.
-        """
-        self.get_cases()
+        self.sf.query("SELECT Id FROM Case LIMIT 1")
         return True
 
     def get_case_by_number(self, case_number: str | None) -> dict[str, Any]:
@@ -171,16 +173,27 @@ class SalesforceManager:
 
         return case[0]
 
-    def get_cases(self):
+    def get_cases(self, max_records: int = DEFAULT_MAX_RECORDS) -> list[dict[str, Any]]:
+        """Get cases ordered from newest to oldest up to max_records.
+
+        Args:
+            max_records: Maximum number of cases to return.
+
+        Returns:
+            List of case records.
+
+        Raises:
+            SalesforceManagerError: If max_records is out of range.
+
         """
-        Get all cases
-        :return: {list} List of the cases
-        """
-        _table = Table("Case")
-        query = Query.from_(_table)
-        for case_property in CASE_PROPERTIES:
-            query = query.select(Field(case_property))
-        return self.run_query(query.get_sql(quote_char=""))
+        if not 1 <= max_records <= MAX_RECORDS_LIMIT:
+            raise SalesforceManagerError(INVALID_MAX_RECORDS_MSG)
+        query: str = format_soql(
+            "SELECT {:literal} FROM Case ORDER BY CreatedDate DESC LIMIT {:literal}",
+            ", ".join(CASE_PROPERTIES),
+            str(max_records),
+        )
+        return self.run_query(query, max_records=max_records)
 
     def close_case(self, case_id):
         """
@@ -401,16 +414,38 @@ class SalesforceManager:
         self.validate_response(result, f"Unable to add comment to case {case_id}")
         return True
 
-    def run_query(self, query, delete_attributes=True):
+    def run_query(
+        self,
+        query: str,
+        delete_attributes: bool = True,
+        max_records: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Execute a SOQL query and paginate up to max_records.
+
+        Args:
+            query: SOQL query string to execute.
+            delete_attributes: Whether to remove Salesforce metadata attributes.
+            max_records: Optional cap on total records collected across pages.
+
+        Returns:
+            List of record dictionaries.
+
+        """
         results = self.sf.query(query)
 
-        records = results.get("records", [])
-        done = results.get("done")
+        records: list[dict[str, Any]] = list(results.get("records") or [])
+        done = bool(results.get("done", True))
 
-        while not done:
-            results = self.sf.query_more(results.get("nextRecordsUrl"), True)
-            records.extend(results.get("records", []))
-            done = results.get("done")
+        while not done and (max_records is None or len(records) < max_records):
+            next_records_url = results.get("nextRecordsUrl")
+            if not next_records_url:
+                break
+            results = self.sf.query_more(next_records_url, True)
+            records.extend(results.get("records") or [])
+            done = bool(results.get("done", True))
+
+        if max_records is not None:
+            records = records[:max_records]
 
         if delete_attributes:
             for record in records:
