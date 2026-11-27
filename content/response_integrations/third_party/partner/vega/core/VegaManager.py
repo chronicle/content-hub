@@ -29,6 +29,7 @@ from .constants import (
     GET_INCIDENT_TIMELINE_QUERY,
     GET_INCIDENTS_QUERY,
     GRAPHQL_PAGE_SIZE,
+    INCIDENT_ID_LOOKUP_BATCH,
     LOGIN_PATH,
     MAX_EVENTS_PER_ALERT,
     MSG_BAD_REQUEST,
@@ -870,15 +871,107 @@ class VegaManager:
 
     def get_incident(self, incident_id: str) -> SingleJson:
         """Fetch one incident by GraphQL UUID or human Vega incident id."""
-        from .mapping import is_graphql_alert_id
-
+        found = self.get_incidents_by_ids([incident_id])
         lookup = str(incident_id).strip()
-        if is_graphql_alert_id(lookup):
-            variables = {"incidentIds": [lookup]}
-        else:
-            variables = {"vegaIncidentIds": [lookup]}
-        records = self.get_incidents(variables, max_records=1)
-        return records[0] if records else {}
+        return found.get(lookup) or {}
+
+    def get_incidents_by_ids(
+        self,
+        incident_ids: list[str],
+        *,
+        batch_size: int | None = None,
+    ) -> dict[str, SingleJson]:
+        """Batch ``getIncidents`` by UUID / human id. Keys match the requested ids.
+
+        UUID-shaped values try ``incidentIds`` first. On Vega 400 / bad request
+        (common for stale or mis-parsed ids), fall back per id to
+        ``vegaIncidentIds``, then skip — do not raise.
+        """
+        from .constants import ENTITY_TYPE_INCIDENT
+        from .mapping import is_graphql_alert_id, record_display_id, record_id
+
+        unique = list(dict.fromkeys(str(item or "").strip() for item in incident_ids if str(item or "").strip()))
+        if not unique:
+            return {}
+        size = max(1, int(batch_size or INCIDENT_ID_LOOKUP_BATCH))
+        graphql_ids = [item for item in unique if is_graphql_alert_id(item)]
+        graphql_set = set(graphql_ids)
+        vega_ids = [item for item in unique if item not in graphql_set]
+        found: dict[str, SingleJson] = {}
+
+        def _index(records: list, requested: list[str]) -> None:
+            by_key: dict[str, SingleJson] = {}
+            for record in records or []:
+                if not isinstance(record, dict):
+                    continue
+                keys = {
+                    record_id(record, ENTITY_TYPE_INCIDENT),
+                    record_display_id(record, ENTITY_TYPE_INCIDENT),
+                    str(record.get("vegaUniqueIncidentId") or "").strip(),
+                    str(record.get("vegaIncidentId") or "").strip(),
+                    str(record.get("incidentId") or "").strip(),
+                }
+                keys.discard("")
+                for key in keys:
+                    by_key[key] = record
+            for req in requested:
+                match = by_key.get(req)
+                if match:
+                    found[req] = match
+
+        def _fetch(var_key: str, batch: list[str]) -> list:
+            try:
+                return self.get_incidents({var_key: batch}, max_records=len(batch)) or []
+            except VegaBadRequestException as exc:
+                self._log(
+                    "warn",
+                    "getIncidents(%s) rejected %s id(s) %s: %s",
+                    var_key,
+                    len(batch),
+                    batch,
+                    exc,
+                )
+                return []
+            except Exception as exc:
+                self._log(
+                    "warn",
+                    "getIncidents(%s) failed for %s id(s) %s: %s",
+                    var_key,
+                    len(batch),
+                    batch,
+                    exc,
+                )
+                return []
+
+        def _fetch_with_fallback(var_key: str, alt_key: str, ids: list[str]) -> None:
+            for index in range(0, len(ids), size):
+                batch = ids[index : index + size]
+                records = _fetch(var_key, batch)
+                if records:
+                    _index(records, batch)
+                    continue
+                # Batch rejected or empty: retry one id at a time with both keys.
+                if len(batch) == 1:
+                    if var_key != alt_key:
+                        alt_records = _fetch(alt_key, batch)
+                        if alt_records:
+                            _index(alt_records, batch)
+                    continue
+                for item in batch:
+                    if item in found:
+                        continue
+                    primary = _fetch(var_key, [item])
+                    if primary:
+                        _index(primary, [item])
+                        continue
+                    secondary = _fetch(alt_key, [item])
+                    if secondary:
+                        _index(secondary, [item])
+
+        _fetch_with_fallback("incidentIds", "vegaIncidentIds", graphql_ids)
+        _fetch_with_fallback("vegaIncidentIds", "incidentIds", vega_ids)
+
+        return found
 
     def update_alerts(self, payload: SingleJson) -> SingleJson:
         """Apply an updateAlerts mutation and return the response envelope."""

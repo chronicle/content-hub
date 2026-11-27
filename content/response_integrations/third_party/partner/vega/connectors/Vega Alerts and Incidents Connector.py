@@ -1,19 +1,9 @@
 """
 Vega Alerts and Incidents Connector.
 
-1. Read connector configuration (API, entities, filters, Has Related Incidents).
-2. IngestionPipeline applies those filters:
-   - Incidents+Alerts+Yes: one incident-only case, plus related Vega alerts
-     that share one source grouping identifier. SecOps groups them up to
-     the tenant maxAlertsInCase.
-   - Incidents+Alerts+No: incident-only case plus standalone unrelated alerts.
-   - Incidents only: Vega Incident cases only (no related or unrelated alerts).
-   - Alerts+Yes: one case per related Vega alert (no incident case).
-   - Alerts+No: one case per unrelated Vega alert.
-   Each packaged record is a SOAR alert inside its case.
-3. Packager turns records into SOAR AlertInfo objects. Optional outbound
-   sync sets Vega userStatus to RESOLVED when the matching SOAR case closes
-   (incident case → incident only; related-alert or alert case → those alerts only).
+Fetches Vega incidents and packages the top-N related signals as SOAR alerts
+that share ``Vega:incident:<id>``. Case description (Vega verdict) is
+maintained by the Sync Alerts job (not this connector).
 """
 
 from __future__ import annotations
@@ -32,6 +22,12 @@ from ..core.constants import (
     CHECKPOINT_PROPERTY_KEY,
     CONNECTOR_NAME,
     INGEST_STOP_BUFFER_SECONDS,
+    MAX_ALERTS_IN_CASE_DEFAULT,
+    MAX_ALERTS_IN_CASE_MAX,
+    MAX_ALERTS_IN_CASE_MIN,
+    MAX_EVENTS_PER_ALERT_DEFAULT,
+    MAX_EVENTS_PER_ALERT_MAX,
+    MAX_EVENTS_PER_ALERT_MIN,
     PARAM_ACCESS_KEY,
     PARAM_ACCESS_KEY_ID,
     PARAM_ALERT_SEVERITIES,
@@ -39,25 +35,21 @@ from ..core.constants import (
     PARAM_ALERT_VERDICTS,
     PARAM_API_ROOT,
     PARAM_BACKFILL,
-    PARAM_ENTITIES,
-    PARAM_FETCH_RELATED_ALERT_METADATA,
-    PARAM_HAS_RELATED,
     PARAM_INCIDENT_INVESTIGATION_STATUSES,
     PARAM_INCIDENT_SEVERITIES,
     PARAM_INCIDENT_USER_STATUSES,
     PARAM_INCIDENT_VERDICTS,
     PARAM_LOOKBACK,
+    PARAM_MAX_ALERTS_IN_CASE,
+    PARAM_MAX_EVENTS_IN_ALERT,
     PARAM_PYTHON_TIMEOUT,
-    PARAM_SYNC,
     PARAM_VERIFY_SSL,
     PYTHON_PROCESS_TIMEOUT_DEFAULT,
     PYTHON_TIMEOUT_MAX,
     PYTHON_TIMEOUT_MIN,
-    REMEDIATION_PROPERTY_KEY,
     TEST_RUN_MAX_FETCH,
 )
 from ..core.IngestionPipeline import IngestionPipeline
-from ..core.Remediator import SoarRemediator, ingest_skip_ids, ingest_sync_refs
 from ..core.utils import (
     ConnectorConfig,
     format_test_connection_summary,
@@ -149,13 +141,19 @@ def _read_params(siemplify: SiemplifyConnectorExecution) -> dict[str, Any]:
         "access_key_id": siemplify.extract_connector_param(param_name=PARAM_ACCESS_KEY_ID),
         "access_key": siemplify.extract_connector_param(param_name=PARAM_ACCESS_KEY),
         "verify_ssl": siemplify.extract_connector_param(param_name=PARAM_VERIFY_SSL, default_value="true"),
-        "entities_raw": siemplify.extract_connector_param(param_name=PARAM_ENTITIES, default_value="Alerts,Incidents"),
         "lookback_minutes": siemplify.extract_connector_param(param_name=PARAM_LOOKBACK, default_value="5"),
         "backfill_days": siemplify.extract_connector_param(param_name=PARAM_BACKFILL, default_value="30"),
+        "max_alerts_in_case": siemplify.extract_connector_param(
+            param_name=PARAM_MAX_ALERTS_IN_CASE,
+            default_value=str(MAX_ALERTS_IN_CASE_DEFAULT),
+        ),
+        "max_events_in_alert": siemplify.extract_connector_param(
+            param_name=PARAM_MAX_EVENTS_IN_ALERT,
+            default_value=str(MAX_EVENTS_PER_ALERT_DEFAULT),
+        ),
         "alert_severities": siemplify.extract_connector_param(param_name=PARAM_ALERT_SEVERITIES, default_value=""),
         "alert_statuses": siemplify.extract_connector_param(param_name=PARAM_ALERT_STATUSES, default_value=""),
         "alert_verdicts": siemplify.extract_connector_param(param_name=PARAM_ALERT_VERDICTS, default_value=""),
-        "has_related": siemplify.extract_connector_param(param_name=PARAM_HAS_RELATED, default_value="Yes,No"),
         "incident_severities": siemplify.extract_connector_param(
             param_name=PARAM_INCIDENT_SEVERITIES, default_value=""
         ),
@@ -170,10 +168,6 @@ def _read_params(siemplify: SiemplifyConnectorExecution) -> dict[str, Any]:
             param_name=PARAM_PYTHON_TIMEOUT,
             default_value=PYTHON_PROCESS_TIMEOUT_DEFAULT,
         ),
-        "fetch_related_alert_metadata": siemplify.extract_connector_param(
-            param_name=PARAM_FETCH_RELATED_ALERT_METADATA, default_value="false"
-        ),
-        "sync_close": siemplify.extract_connector_param(param_name=PARAM_SYNC, default_value="true"),
     }
 
 
@@ -184,17 +178,17 @@ def _validate_params(params: dict[str, Any]) -> None:
             api_root=params["api_root"],
             access_key_id=params["access_key_id"],
             access_key=params["access_key"],
-            entities_raw=params["entities_raw"],
             lookback_minutes=params["lookback_minutes"],
             backfill_days=params["backfill_days"],
             alert_severities=params["alert_severities"],
             alert_statuses=params["alert_statuses"],
             alert_verdicts=params["alert_verdicts"],
-            has_related=params["has_related"],
             incident_severities=params["incident_severities"],
             incident_user_statuses=params["incident_user_statuses"],
             incident_investigation_statuses=params["incident_investigation_statuses"],
             incident_verdicts=params["incident_verdicts"],
+            max_events_in_alert=params["max_events_in_alert"],
+            max_alerts_in_case=params["max_alerts_in_case"],
             python_timeout=params["python_timeout"],
         )
     )
@@ -203,8 +197,22 @@ def _validate_params(params: dict[str, Any]) -> None:
 def _build_manager_and_pipeline(
     siemplify: SiemplifyConnectorExecution,
     params: dict[str, Any],
-) -> tuple[VegaManager, IngestionPipeline]:
+) -> tuple[VegaManager, IngestionPipeline, int]:
     """Construct VegaManager and IngestionPipeline from connector params."""
+    max_alerts = parse_int_in_range(
+        params["max_alerts_in_case"],
+        PARAM_MAX_ALERTS_IN_CASE,
+        MAX_ALERTS_IN_CASE_MIN,
+        MAX_ALERTS_IN_CASE_MAX,
+        default=MAX_ALERTS_IN_CASE_DEFAULT,
+    )
+    max_events = parse_int_in_range(
+        params["max_events_in_alert"],
+        PARAM_MAX_EVENTS_IN_ALERT,
+        MAX_EVENTS_PER_ALERT_MIN,
+        MAX_EVENTS_PER_ALERT_MAX,
+        default=MAX_EVENTS_PER_ALERT_DEFAULT,
+    )
     manager = VegaManager(
         VegaClientConfig(
             api_root=params["api_root"],
@@ -216,22 +224,21 @@ def _build_manager_and_pipeline(
     )
     pipeline = IngestionPipeline(
         manager=manager,
-        entities_raw=params["entities_raw"],
         lookback_minutes=params["lookback_minutes"],
         backfill_days=params["backfill_days"],
         alert_severities=params["alert_severities"],
         alert_statuses=params["alert_statuses"],
         alert_verdicts=params["alert_verdicts"],
-        has_related=params["has_related"],
         incident_severities=params["incident_severities"],
         incident_user_statuses=params["incident_user_statuses"],
         incident_investigation_statuses=params["incident_investigation_statuses"],
         incident_verdicts=params["incident_verdicts"],
-        fetch_related_alert_metadata=truthy(params.get("fetch_related_alert_metadata")),
+        max_alerts_in_case=max_alerts,
+        max_events_in_alert=max_events,
         max_fetch=TEST_RUN_MAX_FETCH if params.get("is_test_run") else None,
         logger_instance=siemplify.LOGGER,
     )
-    return manager, pipeline
+    return manager, pipeline, max_events
 
 
 def _compute_deadline(python_timeout: Any) -> float:
@@ -247,73 +254,31 @@ def _compute_deadline(python_timeout: Any) -> float:
     return time.monotonic() + budget
 
 
-def _run_close_sync(
-    siemplify: SiemplifyConnectorExecution,
-    manager: VegaManager,
-    records: list[tuple[str, SingleJson]],
-) -> None:
-    """Resolve matching Vega entities when tracked SOAR cases have closed."""
-    rem_state = _read_json(siemplify, _connector_id(siemplify), REMEDIATION_PROPERTY_KEY)
-    remediator = SoarRemediator(
-        manager=manager,
-        siemplify=siemplify,
-        logger_instance=siemplify.LOGGER,
-    )
-    rem_result = remediator.run_once(
-        rem_state,
-        skip_ids=ingest_skip_ids(records),
-        ingest_refs=ingest_sync_refs(records),
-    )
-    if rem_result.get("message"):
-        siemplify.LOGGER.info(rem_result["message"])
-    if rem_result.get("state"):
-        _write_json(
-            siemplify,
-            _connector_id(siemplify),
-            REMEDIATION_PROPERTY_KEY,
-            rem_result["state"],
-        )
-
-
 def _run_test_connection(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) -> tuple[list[Any], str]:
     """Ping Vega, preview matching records, and return sample AlertInfo packages."""
     _validate_params(params)
-    manager, pipeline = _build_manager_and_pipeline(siemplify, params)
-    manager.test_connection()
+    _manager, pipeline, max_events = _build_manager_and_pipeline(siemplify, params)
+    _manager.test_connection()
     preview = pipeline.preview()
-    alerts = create_alerts(preview.get("records") or [], siemplify, None)
-    summary = format_test_connection_summary(
-        incident_count=preview.get("incident_count") or 0,
-        related_alert_count=preview.get("related_alert_count") or 0,
-        unrelated_alert_count=preview.get("unrelated_alert_count") or 0,
-        total_alert_count=preview.get("total_alert_count") or 0,
-        sample_count=len(alerts),
-        include_incidents=bool(preview.get("include_incidents")),
-        include_related=bool(preview.get("include_related")),
-        include_unrelated=bool(preview.get("include_unrelated")),
-    )
+    alerts = create_alerts(preview.get("records") or [], siemplify, None, max_events_in_alert=max_events)
+    summary = format_test_connection_summary(incident_count=preview.get("incident_count") or 0)
     return alerts, summary
 
 
 def _run_ingest(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) -> list[Any]:
-    """Run one ingest cycle, update checkpoint, and optionally close-sync to Vega."""
+    """Run one ingest cycle and update the checkpoint."""
     _validate_params(params)
-    manager, pipeline = _build_manager_and_pipeline(siemplify, params)
-    manager.test_connection()
+    _manager, pipeline, max_events = _build_manager_and_pipeline(siemplify, params)
+    _manager.test_connection()
     checkpoint = _read_json(siemplify, _connector_id(siemplify), CHECKPOINT_PROPERTY_KEY)
     deadline = _compute_deadline(params["python_timeout"])
     summary = pipeline.run(checkpoint=checkpoint, deadline_monotonic=deadline)
     records = summary.get("records") or []
-    alerts = create_alerts(records, siemplify, siemplify.LOGGER)
-    incident_packages = sum(1 for kind, _record in records if kind == "Incident")
-    alert_packages = sum(1 for kind, _record in records if kind == "Alert")
+    alerts = create_alerts(records, siemplify, siemplify.LOGGER, max_events_in_alert=max_events)
     siemplify.LOGGER.info(
-        f"Step 7 — handing {len(alerts)} alert package(s) to SecOps "
-        f"({incident_packages} incident, {alert_packages} alert). "
-        "This is the full list. The connector does not trim it to 250. "
-        "SecOps creates the cases after this handoff. "
-        f"If the case queue total is lower than {len(alerts)}, SecOps kept "
-        "fewer packages than this run returned."
+        f"Step 7 — handing {len(alerts)} signal alert package(s) to SecOps. "
+        "Incident description/insight are maintained by the Sync Alerts job. "
+        "SecOps creates/groups cases after this handoff."
     )
     if summary.get("incomplete"):
         siemplify.LOGGER.info(
@@ -326,8 +291,6 @@ def _run_ingest(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) 
         CHECKPOINT_PROPERTY_KEY,
         summary.get("checkpoint") or {},
     )
-    if (not summary.get("incomplete")) and truthy(params.get("sync_close")):
-        _run_close_sync(siemplify, manager, records)
     return alerts
 
 

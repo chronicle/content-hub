@@ -55,13 +55,29 @@ ALERT_EVENTS_PAGE_SIZE = 100
 ALERT_EVENTS_MAX_FETCH = 2500
 # getAlertsEvents(alertIds) accepts at most this many ids per request.
 ALERT_EVENTS_ID_BATCH = 10
-# SOAR attaches at most this many child events per Vega alert. Ingest stops
-# paging getAlertsEvents here so it does not download 2500 rows to keep 200.
-MAX_EVENTS_PER_ALERT = 200
-# Nested related Vega alerts are attached as events on the incident AlertInfo
-# (SOAR creates one case per AlertInfo unless grouping is enabled).
+# Default/cap for Max Events in Alert (connector param). Ingest stops paging
+# getAlertsEvents at this value so it does not download 2500 rows to keep N.
+MAX_EVENTS_PER_ALERT_DEFAULT = 50
+MAX_EVENTS_PER_ALERT_MIN = 0
+MAX_EVENTS_PER_ALERT_MAX = 200
+# Kept for callers that still import the old name; prefer the connector param.
+MAX_EVENTS_PER_ALERT = MAX_EVENTS_PER_ALERT_MAX
 NESTED_RELATED_KEY = "nested_related_alerts"
 SYNC_RESOLVED_STATUS = "RESOLVED"
+# Jobs
+SYNC_ALERTS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Sync Alerts"
+SYNC_ALERTS_IDENTIFIER: str = "Vega_SyncAlerts"
+SYNC_ALERTS_TAG = "Vega"
+CASES_SYNC_LIMIT = 50
+# getIncidents(incidentIds / vegaIncidentIds) batch size for Sync Alerts.
+INCIDENT_ID_LOOKUP_BATCH = 100
+# Escalation status rank for top-N signal selection (lower = first).
+ESCALATION_RANK = {
+    "ESCALATED": 0,
+    "NOT_ESCALATED": 1,
+    "FAILED": 2,
+    "SKIPPED": 3,
+}
 # getAlerts(alertIds) accepts up to 1000 ids, and limit may be 1000.
 ALERT_ID_LOOKUP_BATCH = 1000
 # getAlerts(alertIds) for incident metadata. One request may carry this many
@@ -79,36 +95,36 @@ INGEST_STOP_BUFFER_SECONDS = 90
 SERVER_ERROR_RETRIES = 3
 SERVER_ERROR_WAIT_SECONDS = 2
 INGESTED_ID_CAP = 5000
-# Related-alert case chunks: titles use (batch N) and grouping id
-# Vega:incident:<id>:related:batch:<N>, with N from a per-incident checkpoint.
-MAX_ALERTS_PER_CASE = 90
-# Bump when a previous return marked ids sent that were not all created.
-RELATED_BATCH_VERSION = 5
+# Max Alerts in Case (signals per incident). SecOps hard cap is 90.
+MAX_ALERTS_IN_CASE_DEFAULT = 30
+MAX_ALERTS_IN_CASE_MIN = 1
+MAX_ALERTS_IN_CASE_MAX = 90
+# Legacy alias used by older related-batch code paths.
+MAX_ALERTS_PER_CASE = MAX_ALERTS_IN_CASE_MAX
+RELATED_BATCH_VERSION = 6
 # getAlerts(alertIds) needs a time bound; related alerts can be older than the
 # ingest window, so ID lookups use this createdAt/updatedAt floor.
 ALERT_ID_LOOKUP_FROM = "2015-01-01T00:00:00.000Z"
 PYTHON_PROCESS_TIMEOUT_DEFAULT = "930"
 
-INTEGRATION_VERSION = 3
+INTEGRATION_VERSION = 4
 DOCUMENTATION_LINK = "https://vega.io"
 
 PARAM_API_ROOT = "API Root"
 PARAM_ACCESS_KEY_ID = "Access Key ID"
 PARAM_ACCESS_KEY = "Access Key"
 PARAM_VERIFY_SSL = "Verify SSL"
-PARAM_ENTITIES = "Vega Entities to Fetch"
 PARAM_LOOKBACK = "Fetch Lookback Minutes"
 PARAM_BACKFILL = "Backfill Days"
 PARAM_ALERT_SEVERITIES = "Alert Severities to Fetch"
 PARAM_ALERT_STATUSES = "Alert Statuses to Fetch"
 PARAM_ALERT_VERDICTS = "Alert Verdicts to Fetch"
-PARAM_HAS_RELATED = "Has Related Incidents"
 PARAM_INCIDENT_SEVERITIES = "Incident Severities to Fetch"
 PARAM_INCIDENT_USER_STATUSES = "Incident User Statuses to Fetch"
 PARAM_INCIDENT_INVESTIGATION_STATUSES = "Incident Investigation Statuses to Fetch"
 PARAM_INCIDENT_VERDICTS = "Incident Verdicts to Fetch"
-PARAM_FETCH_RELATED_ALERT_METADATA = "Fetch Related Alert Metadata"
-PARAM_SYNC = "Sync Case Close to Vega"
+PARAM_MAX_EVENTS_IN_ALERT = "Max Events in Alert"
+PARAM_MAX_ALERTS_IN_CASE = "Max Alerts in Case"
 PARAM_PYTHON_TIMEOUT = "PythonProcessTimeout"
 PYTHON_TIMEOUT_MIN = 30
 PYTHON_TIMEOUT_MAX = 3600
@@ -123,8 +139,6 @@ INCIDENT_INVESTIGATION_STATUS_OPTIONS = (
     "FAILED",
 )
 VERDICT_OPTIONS = ("MALICIOUS", "SUSPICIOUS", "BENIGN", "INCONCLUSIVE", "NA")
-ENTITY_OPTIONS = ("Alerts", "Incidents")
-RELATED_OPTIONS = ("Yes", "No")
 
 SEVERITY_TO_ALERT_PRIORITY = {
     "CRITICAL": 100,
@@ -210,7 +224,7 @@ query GetAlerts(
       }
       dedupCount
       comments { text addedBy addedAt }
-      labels { name color }
+      labels { id categoryId name color usageCount }
       skills { id name version }
       actors { field values }
       targets { field values }
@@ -286,8 +300,8 @@ query GetIncidents(
       comments { text addedBy addedAt }
       incidentSummary
       incidentFindings
-      assets
-      observables
+      typedAssets { value type }
+      typedObservables { value type }
       alertsCount
       alerts { alertId name createdAt }
       recommendedActions { name description actionKey targetParams }

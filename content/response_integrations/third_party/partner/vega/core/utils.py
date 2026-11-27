@@ -17,11 +17,16 @@ from .constants import (
     ALERT_STATUS_OPTIONS,
     BACKFILL_MAX,
     BACKFILL_MIN,
-    ENTITY_OPTIONS,
     INCIDENT_INVESTIGATION_STATUS_OPTIONS,
     INCIDENT_USER_STATUS_OPTIONS,
     LOOKBACK_MAX,
     LOOKBACK_MIN,
+    MAX_ALERTS_IN_CASE_DEFAULT,
+    MAX_ALERTS_IN_CASE_MAX,
+    MAX_ALERTS_IN_CASE_MIN,
+    MAX_EVENTS_PER_ALERT_DEFAULT,
+    MAX_EVENTS_PER_ALERT_MAX,
+    MAX_EVENTS_PER_ALERT_MIN,
     MSG_BAD_REQUEST,
     MSG_FORBIDDEN,
     MSG_INVALID_ACCESS_KEY,
@@ -35,17 +40,16 @@ from .constants import (
     PARAM_ALERT_STATUSES,
     PARAM_ALERT_VERDICTS,
     PARAM_BACKFILL,
-    PARAM_ENTITIES,
-    PARAM_HAS_RELATED,
     PARAM_INCIDENT_INVESTIGATION_STATUSES,
     PARAM_INCIDENT_SEVERITIES,
     PARAM_INCIDENT_USER_STATUSES,
     PARAM_INCIDENT_VERDICTS,
     PARAM_LOOKBACK,
+    PARAM_MAX_ALERTS_IN_CASE,
+    PARAM_MAX_EVENTS_IN_ALERT,
     PARAM_PYTHON_TIMEOUT,
     PYTHON_TIMEOUT_MAX,
     PYTHON_TIMEOUT_MIN,
-    RELATED_OPTIONS,
     SEVERITY_OPTIONS,
     VERDICT_OPTIONS,
 )
@@ -246,58 +250,6 @@ def resolve_multi_filter(
     return resolved
 
 
-def resolve_entities(raw: Any) -> list[str]:
-    selected = parse_csv_list(raw)
-    if not selected:
-        raise VegaValidationException(f"{PARAM_ENTITIES} is required. Use one or both of: {', '.join(ENTITY_OPTIONS)}.")
-    known = {item.lower(): item for item in ENTITY_OPTIONS}
-    known["alert"] = "Alerts"
-    known["incident"] = "Incidents"
-    resolved = []
-    unknown = []
-    for item in selected:
-        match = known.get(item.lower())
-        if match:
-            if match not in resolved:
-                resolved.append(match)
-            continue
-        if item not in unknown:
-            unknown.append(item)
-    if unknown:
-        _raise_unsupported(PARAM_ENTITIES, unknown, ENTITY_OPTIONS)
-    if not resolved:
-        raise VegaValidationException(f"{PARAM_ENTITIES} is required. Use one or both of: {', '.join(ENTITY_OPTIONS)}.")
-    return resolved
-
-
-def resolve_has_related(raw: Any) -> bool | None:
-    selected = parse_csv_list(raw)
-    if not selected:
-        raise VegaValidationException(
-            f"{PARAM_HAS_RELATED} is required. Use one or both of: {', '.join(RELATED_OPTIONS)}."
-        )
-    known = {item.lower(): item for item in RELATED_OPTIONS}
-    resolved = []
-    unknown = []
-    for item in selected:
-        match = known.get(item.lower())
-        if match:
-            if match not in resolved:
-                resolved.append(match)
-            continue
-        if item not in unknown:
-            unknown.append(item)
-    if unknown:
-        _raise_unsupported(PARAM_HAS_RELATED, unknown, RELATED_OPTIONS)
-    if not resolved:
-        raise VegaValidationException(
-            f"{PARAM_HAS_RELATED} is required. Use one or both of: {', '.join(RELATED_OPTIONS)}."
-        )
-    if set(resolved) == set(RELATED_OPTIONS):
-        return None
-    return resolved[0] == "Yes"
-
-
 def resolve_alert_filters(config: dict) -> dict:
     return {
         "severities": resolve_multi_filter(
@@ -315,7 +267,6 @@ def resolve_alert_filters(config: dict) -> dict:
             VERDICT_OPTIONS,
             param_name=PARAM_ALERT_VERDICTS,
         ),
-        "has_related": resolve_has_related(config.get("has_related")),
     }
 
 
@@ -430,37 +381,14 @@ def format_connector_field_errors(errors: list[str]) -> str:
     return f"Cannot run the Vega Alerts and Incidents Connector because some fields are invalid:\n{bullets}"
 
 
-def format_test_connection_summary(
-    incident_count: int,
-    related_alert_count: int,
-    unrelated_alert_count: int,
-    total_alert_count: int,
-    sample_count: int = 0,
-    include_incidents: bool = True,
-    include_related: bool = True,
-    include_unrelated: bool = True,
-) -> str:
-    """Clean test-connection output shown with sample alerts.
-
-    Count lines follow Vega Entities to Fetch and Has Related Incidents, so a
-    Yes-only connector does not report unrelated alerts.
-    """
-    lines = ["Successfully connected to Vega.", "", "What this connector currently sees:"]
-    if include_incidents:
-        lines.append(f"- Vega incidents: {incident_count}")
-    if include_related:
-        lines.append(f"- Vega related alerts: {related_alert_count}")
-    if include_unrelated:
-        lines.append(f"- Vega unrelated alerts: {unrelated_alert_count}")
-    if include_related or include_unrelated:
-        lines.append(f"- Total Vega alerts: {total_alert_count}")
-    sample_line = (
-        f"Showing {sample_count} sample alert(s) below. Nothing was ingested."
-        if sample_count
-        else ("No sample alerts were found for the current filters and time window. Nothing was ingested.")
-    )
-    lines.extend(["", sample_line])
-    return "\n".join(lines)
+def format_test_connection_summary(incident_count: int) -> str:
+    """Clean test-connection output: success + matching incident count only."""
+    return "\n".join([
+        "Successfully connected to Vega.",
+        "",
+        "What this connector currently sees:",
+        f"- Vega incidents: {incident_count}",
+    ])
 
 
 @dataclass(frozen=True)
@@ -470,17 +398,17 @@ class ConnectorConfig:
     api_root: Any
     access_key_id: Any
     access_key: Any
-    entities_raw: Any
     lookback_minutes: Any
     backfill_days: Any
     alert_severities: Any = ""
     alert_statuses: Any = ""
     alert_verdicts: Any = ""
-    has_related: Any = "Yes,No"
     incident_severities: Any = ""
     incident_user_statuses: Any = ""
     incident_investigation_statuses: Any = ""
     incident_verdicts: Any = ""
+    max_events_in_alert: Any = MAX_EVENTS_PER_ALERT_DEFAULT
+    max_alerts_in_case: Any = MAX_ALERTS_IN_CASE_DEFAULT
     python_timeout: Any = None
 
 
@@ -503,7 +431,6 @@ def validate_connector_fields(config: ConnectorConfig) -> None:
     _check(lambda: normalize_api_root(config.api_root))
     _check(lambda: require_secret(config.access_key_id, "Access Key ID"))
     _check(lambda: require_secret(config.access_key, "Access Key"))
-    _check(lambda: resolve_entities(config.entities_raw))
     _check(lambda: parse_lookback_minutes(config.lookback_minutes))
     _check(lambda: parse_backfill_days(config.backfill_days))
     _check(
@@ -527,7 +454,6 @@ def validate_connector_fields(config: ConnectorConfig) -> None:
             param_name=PARAM_ALERT_VERDICTS,
         )
     )
-    _check(lambda: resolve_has_related(config.has_related))
     _check(
         lambda: resolve_multi_filter(
             config.incident_severities,
@@ -554,6 +480,24 @@ def validate_connector_fields(config: ConnectorConfig) -> None:
             config.incident_verdicts,
             VERDICT_OPTIONS,
             param_name=PARAM_INCIDENT_VERDICTS,
+        )
+    )
+    _check(
+        lambda: parse_int_in_range(
+            config.max_events_in_alert,
+            PARAM_MAX_EVENTS_IN_ALERT,
+            MAX_EVENTS_PER_ALERT_MIN,
+            MAX_EVENTS_PER_ALERT_MAX,
+            default=MAX_EVENTS_PER_ALERT_DEFAULT,
+        )
+    )
+    _check(
+        lambda: parse_int_in_range(
+            config.max_alerts_in_case,
+            PARAM_MAX_ALERTS_IN_CASE,
+            MAX_ALERTS_IN_CASE_MIN,
+            MAX_ALERTS_IN_CASE_MAX,
+            default=MAX_ALERTS_IN_CASE_DEFAULT,
         )
     )
     if config.python_timeout is not None:

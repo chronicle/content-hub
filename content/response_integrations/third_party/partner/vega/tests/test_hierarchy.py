@@ -46,11 +46,8 @@ def test_case_display_name_uses_entity_display_id_and_name() -> None:
         ENTITY_TYPE_INCIDENT,
     ).startswith("Vega Incident - VINC-1 - Campaign")
     incident = {"vegaUniqueIncidentId": "VINC-1", "name": "Campaign"}
-    assert incident_case_title(incident).startswith("Vega Incident - VINC-1 - Campaign")
-    assert "(related alerts)" not in incident_case_title(incident)
-    related_title = incident_case_title(incident, related=True)
-    assert related_title.endswith("(related alerts)")
-    assert incident_case_title(incident, related=True) == related_title
+    assert incident_case_title(incident) == "VINC-1 - Campaign"
+    assert incident_case_title(incident, related=True) == "VINC-1 - Campaign"
     uuid = "019e1b27-5119-7822-bde3-344b13e481cf"
     assert case_display_name(
         {"id": uuid, "alertId": uuid, "vegaAlertId": "VALERT-9", "name": "Persist"},
@@ -319,11 +316,9 @@ def test_related_incident_ref() -> None:
 
 def test_grouping_ids() -> None:
     assert incident_grouping_id("inc-1") == "Vega:incident:inc-1"
-    assert incident_grouping_id("inc-1", related=False) == "Vega:incident:inc-1"
-    assert incident_grouping_id("inc-1", related=True) == "Vega:incident:inc-1:related"
-    assert incident_grouping_id("inc-1", batch=1) == "Vega:incident:inc-1:related:cluster:1"
-    assert incident_grouping_id("inc-1", batch=2) == "Vega:incident:inc-1:related:cluster:2"
-    assert incident_case_title({"name": "Campaign"}, batch=2).endswith("(cluster 2)")
+    # Case never splits: related/batch args are ignored.
+    assert incident_grouping_id("inc-1", related=True) == "Vega:incident:inc-1"
+    assert incident_grouping_id("inc-1", batch=2) == "Vega:incident:inc-1"
     assert alert_grouping_id("a-1") == "Vega:alert:a-1"
     assert is_graphql_alert_id("019e1b27-5119-7822-bde3-344b13e481cf")
     assert not is_graphql_alert_id("VEGA-3219")
@@ -451,8 +446,8 @@ def test_incident_event_maps_get_incidents_fields() -> None:
             "severity": "HIGH",
             "recommendedActions": [{"name": "block"}],
             "investigationPlan": [{"stepName": "scope"}],
-            "observables": ["1.1.1.1"],
-            "assets": ["host-1"],
+            "typedObservables": [{"value": "1.1.1.1", "type": "ip"}],
+            "typedAssets": [{"value": "host-1", "type": "hostname"}],
             "alertsCount": 2,
             "createdBy": "analyst",
             "link": "https://vega.example/incidents/1",

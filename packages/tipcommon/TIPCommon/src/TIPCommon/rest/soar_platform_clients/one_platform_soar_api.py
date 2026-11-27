@@ -217,7 +217,12 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Change case description."""
         endpoint = f"/cases/{self.params.case_id}"
         payload = {"description": self.params.description}
-        return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
+        return self._make_request(
+            HttpMethod.PATCH,
+            endpoint,
+            params={"updateMask": "description"},
+            json_payload=payload,
+        )
 
     def set_alert_priority(self) -> requests.Response:
         """Set alert priority."""
@@ -483,7 +488,12 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Rename case."""
         endpoint = f"/cases/{self.params.case_id}"
         payload = {"displayName": self.params.case_title}
-        return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
+        return self._make_request(
+            HttpMethod.PATCH,
+            endpoint,
+            params={"updateMask": "displayName"},
+            json_payload=payload,
+        )
 
     def add_comment_to_entity(self) -> requests.Response:
         """Add comment to entity."""

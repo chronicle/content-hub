@@ -1,30 +1,61 @@
-"""Build SOAR AlertInfo packages from Vega alerts and incidents."""
+"""Build SOAR AlertInfo packages from Vega signals (incident-linked alerts)."""
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
 from .alert_event_mapping import build_vega_alert_event_dict
+from .case_insight import build_case_description
 from .constants import (
     DEVICE_PRODUCT,
     ENTITY_TYPE_ALERT,
-    MAX_EVENTS_PER_ALERT,
+    MAX_EVENTS_PER_ALERT_DEFAULT,
+    SOAR_ALERT_TYPE_ALERT,
+    SYNC_ALERTS_TAG,
     VENDOR_NAME,
 )
 from .mapping import (
-    alert_grouping_id,
     alert_priority,
-    build_event_dict,
-    case_display_name,
     normalize_alert_event,
+    record_display_id,
     record_id,
+    record_name,
     record_severity,
+    related_incident_ids,
+    signal_rule_generator,
+    signal_ticket_id,
     soar_meta,
 )
 from .utils import parse_iso_timestamp, safe_log
+
+
+def _signal_link(record: dict) -> str:
+    return str(record.get("href") or record.get("link") or "").strip()
+
+
+def _also_in_incidents(record: dict, current_incident_id: str) -> str:
+    others = [
+        incident_id
+        for incident_id in related_incident_ids(record)
+        if incident_id and incident_id != current_incident_id
+    ]
+    return ",".join(others)
+
+
+def _mitre_text(value: Any) -> str:
+    if value in (None, "", [], {}):
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    try:
+        return json.dumps(value, default=str)
+    except Exception:
+        return str(value)
+
 
 # Reject epoch-0 / 1970 timestamps and values that are not real event times.
 _MIN_VALID_EVENT_MS = 946684800000  # 2000-01-01
@@ -74,11 +105,7 @@ def _field_ms(record: SingleJson, *keys: str) -> int | None:
 
 
 def record_start_end(record: SingleJson, fallback: int) -> tuple[int, int]:
-    """Incident and alert window: start is createdAt, end is last update.
-
-    Incidents send lastUpdated. Alerts send updatedAt for the same moment.
-    A missing end uses the start so SecOps does not get an empty end time.
-    """
+    """Incident and alert window: start is createdAt, end is last update."""
     start = _field_ms(record, "createdAt")
     end = _field_ms(record, "lastUpdated", "updatedAt")
     if start is None:
@@ -89,7 +116,6 @@ def record_start_end(record: SingleJson, fallback: int) -> tuple[int, int]:
 
 
 def _time_values(payload: SingleJson) -> list[int]:
-    """Valid timestamps from keys whose name contains 'time'."""
     found: list[int] = []
     if not isinstance(payload, dict):
         return found
@@ -106,32 +132,36 @@ def _time_values(payload: SingleJson) -> list[int]:
 
 
 def event_start_end(payload: SingleJson, parent_start: int, parent_end: int) -> tuple[int, int]:
-    """Alert-event window from any time field, otherwise the parent alert."""
     times = _time_values(payload if isinstance(payload, dict) else {})
     if not times:
         return parent_start, parent_end
     return min(times), max(times)
 
 
-def _attach_child_events(
+def _attach_vega_alert_events(
     alert: Any,
     record: SingleJson,
     parent_start: int,
     parent_end: int,
+    max_events: int,
     logger_instance: Any = None,
 ) -> None:
+    """Attach only Vega alert-events as SecOps events (no parent alert event)."""
     identifier = record_id(record, ENTITY_TYPE_ALERT)
     child_events = list(record.get("alert_events") or [])
-    if len(child_events) > MAX_EVENTS_PER_ALERT:
+    cap = max(0, int(max_events))
+    if cap == 0:
+        return
+    if len(child_events) > cap:
         safe_log(
             logger_instance,
             "info",
-            "Vega alert %s has %s events; attaching the first %s (SOAR per-alert cap).",
+            "Vega alert %s has %s alert-events; attaching the first %s (Max Events in Alert).",
             identifier,
             len(child_events),
-            MAX_EVENTS_PER_ALERT,
+            cap,
         )
-        child_events = child_events[:MAX_EVENTS_PER_ALERT]
+        child_events = child_events[:cap]
     for index, vega_event in enumerate(child_events):
         payload = vega_event if isinstance(vega_event, dict) else {}
         normalized = normalize_alert_event(payload) if payload else {}
@@ -144,14 +174,13 @@ def create_alerts(
     records: list[tuple[str, SingleJson]],
     siemplify: Any,
     logger_instance: Any = None,
+    max_events_in_alert: int = MAX_EVENTS_PER_ALERT_DEFAULT,
 ) -> list[Any]:
-    """Turn pipeline records into SOAR AlertInfo packages.
+    """Turn pipeline signal records into SOAR AlertInfo packages.
 
-    Incident case: one AlertInfo for the Vega incident. Related Vega alerts
-    are separate AlertInfo objects that share one source grouping identifier
-    so SecOps groups them up to the tenant maxAlertsInCase. Each alert keeps
-    its own Name, createdAt, and last update. Related alerts share Product
-    and Rule Generator. The incident case uses a different grouping id.
+    One Vega incident → one SecOps case via shared ``Vega:incident:<id>``.
+    No SecOps event for the Vega alert itself; only Vega alert-events become
+    SecOps events. Case name = rule_generator ``{vegaUniqueIncidentId} - {name}``.
     """
     from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
     from soar_sdk.SiemplifyUtils import unix_now
@@ -165,70 +194,88 @@ def create_alerts(
     except Exception:
         environment = ""
     packages = []
+    max_events = max(0, int(max_events_in_alert))
     for entity_type, record in records:
+        if entity_type != ENTITY_TYPE_ALERT:
+            continue
         identifier = record_id(record, entity_type)
         if not identifier:
             continue
         meta = soar_meta(record)
         start_time, end_time = record_start_end(record, current_time)
         severity = record_severity(record)
-        ticket_suffix = str(meta.get("ticket_suffix") or "").strip()
-        ticket_key = f"{identifier}:{ticket_suffix}" if ticket_suffix else identifier
-        ticket_id = f"{VENDOR_NAME}:{ticket_key}"
-        display_name = case_display_name(record, entity_type)
-        grouping_id = str(
-            meta.get("grouping_id")
-            or (
-                alert_grouping_id(identifier)
-                if entity_type == ENTITY_TYPE_ALERT
-                else f"{VENDOR_NAME}:incident:{identifier}"
-            )
-        )
-        case_title = str(meta.get("case_title") or display_name)
-        # Name is what the analyst sees on the alert tab. Related alerts must
-        # keep "Vega Alert - <id> - <name>", not the incident case title.
-        # Rule Generator stays the case title so Case Name = Rule Generator
-        # names the case after the Vega incident.
-        alert_name = display_name
-        rule_generator = case_title if meta.get("is_incident_case") else display_name
+        incident_id = str(meta.get("incident_id") or "").strip()
+        if not incident_id:
+            continue
+        ticket_id = signal_ticket_id(incident_id, identifier)
+        grouping_id = f"{VENDOR_NAME}:incident:{incident_id}"
+        rank = int(meta.get("signal_rank") or 1)
+        signal_name = record_name(record)
+        case_title = str(meta.get("case_title") or "").strip()
+        if not case_title:
+            display = str(meta.get("incident_display_id") or "").strip()
+            incident_name = str(meta.get("incident_name") or "").strip()
+            case_title = f"{display} - {incident_name}".strip(" -") if display or incident_name else signal_name
+        case_description = str(meta.get("case_description") or "").strip()
+        if not case_description:
+            case_description = build_case_description({
+                "verdict": meta.get("incident_verdict"),
+                "verdictReasoning": meta.get("incident_verdict_reasoning"),
+                "incidentSummary": meta.get("incident_summary") or record.get("incidentSummary"),
+            })
+        case_tags = [SYNC_ALERTS_TAG]
+        for name in meta.get("case_tags") or []:
+            text = str(name or "").strip()
+            if text and text not in case_tags:
+                case_tags.append(text)
+        signal_href = _signal_link(record if isinstance(record, dict) else {})
+        signal_id = record_display_id(record, ENTITY_TYPE_ALERT) or identifier
+        mitre = record.get("mitre") if isinstance(record, dict) else None
         alert = AlertInfo()
         alert.display_id = ticket_id
         alert.ticket_id = ticket_id
-        alert.rule_generator = rule_generator
-        alert.device_event_class_id = ticket_key
-        alert.name = alert_name
+        alert.rule_generator = case_title
+        alert.device_event_class_id = ticket_id
+        alert.name = signal_rule_generator(rank, signal_name)
         alert.device_vendor = VENDOR_NAME
-        # Product must be the stable value "Vega" so an Alerts Grouping rule
-        # (Product = Vega → Source Grouping Identifier) can match. Case title
-        # stays on rule_generator; each alert keeps its own name.
         alert.device_product = DEVICE_PRODUCT
         alert.source_grouping_identifier = grouping_id
         alert.environment = environment
-        alert.description = str(
-            record.get("description") or record.get("incidentSummary") or record.get("incidentFindings") or alert.name
+        # Case Description is set by SyncAlerts; alert description is a fallback.
+        alert.description = case_description or str(
+            record.get("description") or record.get("detectionDescription") or signal_name
         )
+        alert.case_tags = case_tags
         alert.start_time = start_time
         alert.end_time = end_time
         alert.Severity = severity
         alert.priority = alert_priority(severity)
-        incident_id = str(meta.get("incident_id") or "").strip()
         alert.extensions = {
-            "vega_entity_type": entity_type,
+            "alert_type": SOAR_ALERT_TYPE_ALERT,
+            "vega_entity_type": SOAR_ALERT_TYPE_ALERT,
+            "alert_id": identifier,
             "vega_id": identifier,
+            "vega_signal_id": signal_id,
+            "vega_signal_link": signal_href,
+            "href": signal_href,
+            "source_system_url": signal_href,
+            "signal_verdict": str(record.get("verdict") or "").strip(),
+            "mitre": _mitre_text(mitre),
+            "also_in": _also_in_incidents(record if isinstance(record, dict) else {}, incident_id),
             "vega_incident_id": incident_id,
+            "vega_signal_rank": rank,
+            "vega_total_signals": meta.get("total_signals"),
+            "vega_signals_in_case": meta.get("signals_in_case"),
+            "vega_incident_link": meta.get("incident_link") or "",
+            "SourceGroupingIdentifier": grouping_id,
         }
-        parent_event = build_event_dict(record, entity_type, start_time, end_time)
-        alert.events.append(parent_event)
-        if entity_type == ENTITY_TYPE_ALERT:
-            _attach_child_events(
-                alert,
-                record,
-                start_time,
-                end_time,
-                logger_instance,
-            )
-        # Do not set AlertInfo.case_tags here. SecOps treats each ingest
-        # write plus playbook add_tag as a new catalog tag, which duplicates
-        # names. Events still carry labels for Apply Vega Labels as Tags.
+        _attach_vega_alert_events(
+            alert,
+            record,
+            start_time,
+            end_time,
+            max_events,
+            logger_instance,
+        )
         packages.append(alert)
     return packages
