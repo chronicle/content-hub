@@ -600,7 +600,7 @@ def _flatten_entities(record: SingleJson) -> dict[str, str]:
         "fqdn": "hostname",
     }
     blobs: list = []
-    for key in ("entities", "observables", "assets"):
+    for key in ("entities", "observables", "assets", "typedObservables", "typedAssets"):
         value = record.get(key)
         if value:
             blobs.append(value)
@@ -792,8 +792,8 @@ _INCIDENT_API_FIELDS = (
     ("comments", "comments"),
     ("incidentSummary", "description"),
     ("incidentFindings", "incident_findings"),
-    ("assets", "assets"),
-    ("observables", "observables"),
+    ("typedAssets", "assets"),
+    ("typedObservables", "observables"),
     ("alertsCount", "alerts_count"),
     # Do not map API `alerts` onto an event field named `alerts`. SecOps
     # reserves that name for the case's alert list and drops it from Default.

@@ -42,6 +42,8 @@ def test_build_incident_insight_key_value_labels() -> None:
             "incidentSummary": "summary goes to case description",
             "incidentFindings": "findings text",
             "recommendedActions": [{"name": "block"}],
+            "typedAssets": [{"value": "host-1", "type": "hostname"}],
+            "typedObservables": [{"value": "1.1.1.1", "type": "ip"}],
             "alertsCount": 312,
             "alerts": [{"alertId": "a1", "name": "Phish", "createdAt": "2026-01-01T00:00:00Z"}],
             "link": "https://vega.io/incidents/inc-1",
@@ -49,10 +51,14 @@ def test_build_incident_insight_key_value_labels() -> None:
         signals_in_case=30,
     )
     assert "<strong>Vega Incident ID: </strong>INC-1" in insight
-    assert "<strong>Vega AI Verdict: </strong>MALICIOUS" in insight
+    assert "<strong>Vega Verdict: </strong>MALICIOUS" in insight
     assert "<strong>Vega Incident Severity: </strong>HIGH" in insight
     assert "<strong>Vega Signals: </strong>312 total, 30 in case" in insight
     assert "<strong>Incident Findings: </strong>findings text" in insight
+    assert "<strong>Assets: </strong>" in insight
+    assert "host-1" in insight
+    assert "<strong>Observables: </strong>" in insight
+    assert "1.1.1.1" in insight
     assert "https://vega.io/incidents/inc-1" in insight
     assert not insight.strip().startswith("{")
 

@@ -300,8 +300,8 @@ query GetIncidents(
       comments { text addedBy addedAt }
       incidentSummary
       incidentFindings
-      assets
-      observables
+      typedAssets { value type }
+      typedObservables { value type }
       alertsCount
       alerts { alertId name createdAt }
       recommendedActions { name description actionKey targetParams }

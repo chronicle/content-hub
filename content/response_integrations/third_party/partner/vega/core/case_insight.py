@@ -88,8 +88,8 @@ def build_incident_insight(
         ("Incident Findings", record.get("incidentFindings")),
         ("Recommended Actions", record.get("recommendedActions")),
         ("Top Signals", _top_signals(record)),
-        ("Assets", record.get("assets")),
-        ("Observables", record.get("observables")),
+        ("Typed Assets", record.get("typedAssets")),
+        ("Typed Observables", record.get("typedObservables")),
         ("Comments", record.get("comments")),
         ("Labels", record.get("labels")),
     ]
