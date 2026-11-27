@@ -15,19 +15,22 @@
 from __future__ import annotations
 
 import ast
-from datetime import datetime, timedelta
-import requests
 
 # FIXME: Import urllib while using python 3
 import urllib.parse
+from datetime import datetime, timedelta
+from http import HTTPStatus
+from typing import TYPE_CHECKING
 
-
-from soar_sdk.SiemplifyLogger import SiemplifyLogger
+import requests
+from soar_sdk.SiemplifyDataModel import EntityTypes
 from TIPCommon.filters import filter_old_alerts
-from TIPCommon.types import SingleJson
 
 from .constants import (
+    ACTIVE_REQUEST_EXISTS_ERROR_CODE,
+    ACTIVE_REQUEST_EXISTS_MESSAGE_MARKER,
     API_LIMIT_STATUS_CODE,
+    CONTAINMENT_ACTION_TYPES,
     CUSTOM_ACCESS_TOKEN_URL,
     DEFAULT_ALERTS_LIMIT,
     GRAPH_CLASSIFICATIONS_MAPPING,
@@ -35,17 +38,45 @@ from .constants import (
     GRAPH_SEVERITY_MAPPING,
     GRAPH_STATUS_MAPPING,
     GRAPH_VALID_PAIRS,
+    ISOLATE_ACTION_TYPE,
+    ISOLATION_STATUS_CONTAINED,
+    ISOLATION_STATUS_MAPPING,
+    ISOLATION_STATUS_UNCONTAINED,
+    ISOLATION_STATUS_UNKNOWN,
+    MACHINE_ID_PREFIXES,
+    POSSIBLE_SORT_BY,
     POSSIBLE_SORT_ORDER,
     POSSIBLE_THREATS,
-    POSSIBLE_SORT_BY,
     SORT_KEY_MAPPING,
     THREAT_ATTRIBUTE_MAPPING,
     THREAT_QUERY_MAPPING,
 )
-from .datamodels import Alert, Recommendation, Vulnerability
+from .exceptions import DefenderActiveRequestExistsException, DefenderException, DefenderNotFoundException
 from .MicrosoftDefenderATPTransformationLayer import (
     MicrosoftDefenderATPTransformationLayer,
 )
+
+if TYPE_CHECKING:
+    from soar_sdk.SiemplifyLogger import SiemplifyLogger
+    from TIPCommon.types import SingleJson
+
+    from .datamodels import Alert, Machine, MachineTask, Recommendation, Vulnerability
+
+
+def normalize_machine_id(raw: str) -> str:
+    """Strip known alert prefixes and whitespace from a Defender machine ID.
+
+    Args:
+        raw: Machine ID as provided by the analyst or the alert payload.
+
+    Returns:
+        The bare machine ID.
+    """
+    machine_id = raw.strip()
+    for prefix in MACHINE_ID_PREFIXES:
+        machine_id = machine_id.removeprefix(prefix).strip()
+
+    return machine_id
 
 
 class MicrosoftDefenderATPError(Exception):
@@ -53,7 +84,15 @@ class MicrosoftDefenderATPError(Exception):
     General Exception for MicrosoftDefenderATP Manager
     """
 
-    pass
+    def __init__(self, *args: object, status_code: int | None = None) -> None:
+        """Keep the HTTP status code of the failed response, if any.
+
+        Args:
+            *args: Exception arguments.
+            status_code: HTTP status code of the failed response.
+        """
+        super().__init__(*args)
+        self.status_code = status_code
 
 
 class MicrosoftDefenderATPValidationError(Exception):
@@ -100,6 +139,7 @@ class MicrosoftDefenderATPManager:
         "update_alert": "/api/alerts/{alert_id}",
         "update_alert_graph": "/v1.0/security/alerts_v2/{alert_id}",
         "get_machines": "/api/machines",
+        "get_machine_by_id": "/api/machines/{machine_id}",
         "get_machine_logon_users": "/api/machines/{machine_id}/logonusers",
         "get_machine_related_alerts": "/api/machines/{machine_id}/alerts",
         "isolate_machine": "/api/machines/{machine_id}/isolate",
@@ -530,6 +570,63 @@ class MicrosoftDefenderATPManager:
             for machine_data in machines_data
         ]
 
+    def get_machine_by_id(self, machine_id: str) -> Machine:
+        """Get a machine by its Defender machine ID.
+
+        MDE also resolves a computer DNS name on this route, so the returned
+        machine must have exactly the requested ID.
+
+        Args:
+            machine_id: Defender machine ID, optionally with an alert prefix.
+
+        Returns:
+            The matching machine.
+
+        Raises:
+            DefenderNotFoundException: If no machine has exactly this ID.
+        """
+        clean_id = normalize_machine_id(machine_id)
+        if not clean_id:
+            raise DefenderNotFoundException("Machine ID is empty.")
+
+        not_found_message = f"Machine with ID {clean_id} was not found."
+        url = self.get_full_url("get_machine_by_id", machine_id=urllib.parse.quote(clean_id, safe=""))
+        response = self.session.get(url)
+        if response.status_code == HTTPStatus.NOT_FOUND:
+            raise DefenderNotFoundException(not_found_message)
+
+        self._validate_response(response, f"Failed to get machine with ID: {clean_id}")
+        raw_machine: SingleJson = response.json()
+        machine = MicrosoftDefenderATPTransformationLayer.build_machine(raw_machine)
+        if (machine.id or "").lower() != clean_id.lower():
+            raise DefenderNotFoundException(not_found_message)
+
+        return machine
+
+    def find_machine_for_entity(self, identifier: str, entity_type: str) -> Machine:
+        """Resolve a HOSTNAME or ADDRESS entity to a Defender machine.
+
+        Args:
+            identifier: Entity identifier (hostname or IP address).
+            entity_type: SOAR entity type of the identifier.
+
+        Returns:
+            The last machine of the lookup result (latest seen for hostnames).
+
+        Raises:
+            DefenderNotFoundException: If no machine matches the entity.
+        """
+        machines: list[Machine] = []
+        if entity_type == EntityTypes.HOSTNAME:
+            machines = self.get_machines_by_name(starts_with_name=identifier) or []
+        elif entity_type == EntityTypes.ADDRESS:
+            machines = self.get_machines(ip=identifier)
+
+        if not machines:
+            raise DefenderNotFoundException(f"Machine for entity {identifier} was not found.")
+
+        return machines[-1]
+
     def get_machine_logon_users(self, machine_id):
         # type: (unicode) -> [User] or Exception
         """
@@ -600,12 +697,18 @@ class MicrosoftDefenderATPManager:
 
     def isolate_machine(self, machine_id, isolation_type, comment):
         # type: (unicode, unicode, unicode) -> MachineTask or Exception
-        """
-        Create Isolate Machine Task
-        @param machine_id: Machine ID
-        @param isolation_type: Isolation type
-        @param comment: Comment as to why the machine needs to be isolated
-        @return: Machine Task
+        """Create an isolate machine task.
+
+        Args:
+            machine_id: Machine ID.
+            isolation_type: Isolation type (Full or Selective).
+            comment: Comment as to why the machine needs to be isolated.
+
+        Returns:
+            The created machine task.
+
+        Raises:
+            DefenderActiveRequestExistsException: If an isolation is already active.
         """
         url = urllib.parse.urljoin(
             self.resource, self.URLS["isolate_machine"].format(machine_id=machine_id)
@@ -615,6 +718,7 @@ class MicrosoftDefenderATPManager:
         data = {"Comment": comment, "IsolationType": isolation_type}
 
         response = self.session.post(url, params=params, json=data)
+        self._raise_if_active_request_exists(response)
         self._validate_response(
             response, f"Failed isolate machine with ID: {machine_id}"
         )
@@ -627,11 +731,17 @@ class MicrosoftDefenderATPManager:
 
     def unisolate_machine(self, machine_id, comment):
         # type: (unicode, unicode) -> MachineTask or Exception
-        """
-        Create Unisolate Machine Task
-        @param machine_id: Machine ID
-        @param comment: Comment as to why the machine needs to be unisolated
-        @return: Machine Task
+        """Create an unisolate machine task.
+
+        Args:
+            machine_id: Machine ID.
+            comment: Comment as to why the machine needs to be unisolated.
+
+        Returns:
+            The created machine task.
+
+        Raises:
+            DefenderActiveRequestExistsException: If an unisolation is already active.
         """
         url = urllib.parse.urljoin(
             self.resource, self.URLS["unisolate_machine"].format(machine_id=machine_id)
@@ -641,6 +751,7 @@ class MicrosoftDefenderATPManager:
         data = {"Comment": comment}
 
         response = self.session.post(url, params=params, json=data)
+        self._raise_if_active_request_exists(response)
         self._validate_response(
             response, f"Failed unisolate machine with ID: {machine_id}"
         )
@@ -649,6 +760,112 @@ class MicrosoftDefenderATPManager:
 
         return MicrosoftDefenderATPTransformationLayer.build_machine_task(
             machine_task_data
+        )
+
+    @staticmethod
+    def _raise_if_active_request_exists(response: requests.Response) -> None:
+        """Raise if MDE rejected the request because the same one is active.
+
+        Args:
+            response: Response of an isolate or unisolate request.
+
+        Raises:
+            DefenderActiveRequestExistsException: On a 4xx carrying the
+                ActiveRequestAlreadyExists code or MDE's "is still active"
+                message.
+        """
+        if response.ok:
+            return
+
+        try:
+            payload: SingleJson = response.json()
+            error: object = payload.get("error") or {}
+        except (ValueError, AttributeError):
+            return
+
+        if not isinstance(error, dict):
+            return
+
+        message = error.get("message") or ""
+        if error.get("code") == ACTIVE_REQUEST_EXISTS_ERROR_CODE or ACTIVE_REQUEST_EXISTS_MESSAGE_MARKER in message:
+            raise DefenderActiveRequestExistsException(message or ACTIVE_REQUEST_EXISTS_ERROR_CODE)
+
+    def get_machine_containment_tasks(self, machine_id: str) -> list[MachineTask]:
+        """Get the isolate and unisolate tasks of a machine.
+
+        Args:
+            machine_id: Defender machine ID.
+
+        Returns:
+            The containment tasks sorted by creation time, newest first.
+        """
+        url = self.get_full_url("get_machine_task_status")
+        type_filter: str = self._get_multiple_value_filter("type", CONTAINMENT_ACTION_TYPES)
+        safe_machine_id = machine_id.replace("'", "''")
+        params = {"$filter": f"machineId eq '{safe_machine_id}' and {type_filter}"}
+        response = self.session.get(url, params=params)
+        self._validate_response(response, f"Failed to get containment tasks of machine with ID: {machine_id}")
+        raw_tasks: SingleJson = response.json()
+        tasks = [
+            MicrosoftDefenderATPTransformationLayer.build_machine_task(task_data)
+            for task_data in raw_tasks.get("value", [])
+        ]
+
+        return sorted(tasks, key=lambda task: task.creation_date_time_utc or "", reverse=True)
+
+    def get_machine_isolation_status(self, machine_id: str) -> tuple[str, bool | None]:
+        """Derive the isolation status of a machine from its containment tasks.
+
+        The status reflects the newest task; is_isolated reflects the newest
+        succeeded task. A cancelled newest task falls back to is_isolated.
+
+        Args:
+            machine_id: Defender machine ID.
+
+        Returns:
+            The isolation status and whether the machine is isolated, or
+            ("unknown", None) if the tasks can't be fetched.
+        """
+        try:
+            tasks = self.get_machine_containment_tasks(machine_id)
+        except (MicrosoftDefenderATPError, requests.RequestException) as error:
+            if self.siemplify is not None:
+                self.siemplify.LOGGER.warn(f"Failed to get the isolation status of machine {machine_id}: {error}")
+            return ISOLATION_STATUS_UNKNOWN, None
+
+        is_isolated = next((task.type == ISOLATE_ACTION_TYPE for task in tasks if task.is_succeeded), False)
+        newest = (tasks[0].type, tasks[0].status) if tasks else None
+        fallback = ISOLATION_STATUS_CONTAINED if is_isolated else ISOLATION_STATUS_UNCONTAINED
+
+        return ISOLATION_STATUS_MAPPING.get(newest, fallback), is_isolated
+
+    def get_active_containment_task(self, machine_id: str, action_type: str) -> MachineTask:
+        """Get the active containment task of a machine for idempotent handling.
+
+        Args:
+            machine_id: Defender machine ID.
+            action_type: Expected containment action type (Isolate or Unisolate).
+
+        Returns:
+            The active containment machine task.
+
+        Raises:
+            DefenderException: If no matching active containment task is found.
+        """
+        tasks = self.get_machine_containment_tasks(machine_id)
+        newest = tasks[0] if tasks else None
+        if newest and newest.type == action_type and (newest.is_pending or newest.is_in_progress):
+            return newest
+
+        if newest:
+            raise DefenderException(
+                f"Machine {machine_id} already has an active request that isn't a pending "
+                f"{action_type.lower()} task. Newest containment task: {newest.type} (task "
+                f"{newest.id}, {newest.status}).",
+            )
+
+        raise DefenderException(
+            f"Machine {machine_id} already has an active request, but no containment task was found.",
         )
 
     def run_antivirus_scan(self, machine_id, av_scan_type, comment):
@@ -935,10 +1152,13 @@ class MicrosoftDefenderATPManager:
 
     def get_file_info(self, file_hash):
         # type: (unicode) -> dict or Exception
-        """
-        Get Info about file
-        @param file_hash: File Hash
-        @return: Info dict
+        """Get info about a file.
+
+        Args:
+            file_hash: File hash.
+
+        Returns:
+            Info dictionary for the file.
         """
         url = urllib.parse.urljoin(
             self.resource, self.URLS["get_file_info"].format(file_hash=file_hash)
@@ -1298,30 +1518,39 @@ class MicrosoftDefenderATPManager:
     @staticmethod
     def _validate_response(response, error_msg="An error occurred"):
         # type: (requests.Response, unicode) -> None or Exception
-        """
-        Validate Response
-        @param response: Response
-        @param error_msg: Message to raise with
+        """Validate a response and raise an error that keeps its HTTP status code.
+
+        Args:
+            response: Response to validate.
+            error_msg: Message to raise with.
+
+        Raises:
+            MicrosoftDefenderATPError: If the response has an HTTP error status.
         """
         try:
             response.raise_for_status()
 
         except requests.HTTPError as error:
-            if response.status_code == API_LIMIT_STATUS_CODE:
+            status_code = response.status_code
+            if status_code == API_LIMIT_STATUS_CODE:
                 raise MicrosoftDefenderATPError(
-                    "Action ran into rate limiting. Please try again in a few minutes."
+                    "Action ran into rate limiting. Please try again in a few minutes.",
+                    status_code=status_code,
                 ) from error
 
             try:
-                response = response.json()
-                error_info = response.get("error", {})
+                payload: object = response.json()
+                error_info = payload.get("error", {}) if isinstance(payload, dict) else {}
+                error_message = error_info.get("message", "") if isinstance(error_info, dict) else error_info
                 raise MicrosoftDefenderATPError(
-                    f'{error_msg}. {error_info.get("message", "") if isinstance(error_info, dict) else error_info}'
-                )
-            except ValueError:
+                    f"{error_msg}. {error_message}" if error_message else error_msg,
+                    status_code=status_code,
+                ) from error
+            except (ValueError, AttributeError):
                 raise MicrosoftDefenderATPError(
-                    f"{error_msg}: {error} - {response.content}"
-                )
+                    f"{error_msg}: {error} - {response.content}",
+                    status_code=status_code,
+                ) from error
 
     @staticmethod
     def validate_statuses(*statuses):

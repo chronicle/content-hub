@@ -13,12 +13,19 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import abc
-
+import gzip
 import uuid
-from typing import Any, MutableMapping
+from typing import TYPE_CHECKING, Any
 
-from TIPCommon.types import SingleJson
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
+
+    from TIPCommon.types import SingleJson
+
+DEFAULT_ACQUIRED_CONTENT: bytes = b"[fonts]\r\n[extensions]\r\n"
+CONTAINMENT_TASK_TYPES: tuple[str, ...] = ("Isolate", "Unisolate")
 
 
 class MicrosoftDefenderATP(abc.ABC):
@@ -40,6 +47,11 @@ class MicrosoftDefenderATP(abc.ABC):
         self._file_info: dict[str, SingleJson] = {}
         self._file_stats: dict[str, SingleJson] = {}
         self._updateable_alerts: dict[str, SingleJson] = {}
+        self._active_request_conflicts: set[tuple[str, str]] = set()
+        self._containment_tasks_error: bool = False
+        self._live_response_final_status: str | None = None
+        self._live_response_errors: list[str] = []
+        self._live_response_file_bytes: bytes = gzip.compress(DEFAULT_ACQUIRED_CONTENT)
 
     # -------------------------------------------------------------------------
     # Vulnerabilities
@@ -142,6 +154,18 @@ class MicrosoftDefenderATP(abc.ABC):
         """Return all machines."""
         return list(self._machines.values())
 
+    def lookup_machine(self, id_or_dns_name: str) -> SingleJson | None:
+        """Mirror GET /api/machines/{id}: match the ID or the computerDnsName."""
+        value = id_or_dns_name.lower()
+        return next(
+            (
+                machine
+                for machine in self._machines.values()
+                if value in (machine["id"].lower(), machine.get("computerDnsName", "").lower())
+            ),
+            None,
+        )
+
     # -------------------------------------------------------------------------
     # Live response actions
     # -------------------------------------------------------------------------
@@ -176,6 +200,44 @@ class MicrosoftDefenderATP(abc.ABC):
             action_id: The ID of the action.
         """
         return self._live_response_actions.get(action_id)
+
+    def set_live_response_final_status(self, status: str, errors: list[str] | None = None) -> None:
+        """Make live-response status queries return a final status (opt-in).
+
+        Without this call the status route keeps returning "Pending".
+
+        Args:
+            status: Action status to return, e.g. "Succeeded" or "Failed".
+            errors: Command errors to report, as MDE does in commands[].errors.
+        """
+        self._live_response_final_status = status
+        self._live_response_errors = errors or []
+
+    def apply_live_response_outcome(self, action: SingleJson) -> SingleJson:
+        """Set the action status: "Pending" by default, else the opt-in final one.
+
+        Args:
+            action: Stored live-response action to update in place.
+
+        Returns:
+            The updated action.
+        """
+        status = self._live_response_final_status or "Pending"
+        action["status"] = status
+        if self._live_response_final_status:
+            for command in action.get("commands", []):
+                command["commandStatus"] = "Completed" if status == "Succeeded" else status
+                command["errors"] = list(self._live_response_errors)
+
+        return action
+
+    def set_live_response_file_bytes(self, content: bytes) -> None:
+        """Set the bytes served by the live-response result download (SAS) URL."""
+        self._live_response_file_bytes = content
+
+    def get_live_response_file_bytes(self) -> bytes:
+        """Return the bytes served by the live-response result download URL."""
+        return self._live_response_file_bytes
 
     # -------------------------------------------------------------------------
     # Alerts (global list, used by ListAlerts / test_connectivity)
@@ -251,8 +313,20 @@ class MicrosoftDefenderATP(abc.ABC):
         machine_id: str,
         status: str = "Pending",
         comment: str = "test",
+        creation_time: str = "2024-01-01T12:00:00.000Z",
     ) -> SingleJson:
-        """Create and store a task, returning its data dict."""
+        """Create and store a task, returning its data dict.
+
+        Args:
+            task_type: Machine action type, e.g. "Isolate" or "Unisolate".
+            machine_id: ID of the machine the task belongs to.
+            status: Task status, e.g. "Pending" or "Succeeded".
+            comment: Requestor comment.
+            creation_time: creationDateTimeUtc, used to order containment tasks.
+
+        Returns:
+            The stored task data.
+        """
         task_id = str(uuid.uuid4())
         machine = self._machines.get(machine_id, {})
         task_data: SingleJson = {
@@ -263,7 +337,7 @@ class MicrosoftDefenderATP(abc.ABC):
             "status": status,
             "machineId": machine_id,
             "computerDnsName": machine.get("computerDnsName", "unknown"),
-            "creationDateTimeUtc": "2024-01-01T12:00:00.000Z",
+            "creationDateTimeUtc": creation_time,
             "lastUpdateDateTimeUtc": "2024-01-01T12:00:00.000Z",
             "cancellationRequestor": None,
             "cancellationComment": None,
@@ -285,6 +359,49 @@ class MicrosoftDefenderATP(abc.ABC):
     def get_all_tasks(self) -> list[SingleJson]:
         """Return all tasks."""
         return list(self._tasks.values())
+
+    def get_containment_tasks(self, machine_id: str) -> list[SingleJson]:
+        """Return the Isolate/Unisolate tasks of a machine in any status."""
+        return [
+            task
+            for task in self._tasks.values()
+            if task.get("machineId") == machine_id and task.get("type") in CONTAINMENT_TASK_TYPES
+        ]
+
+    def set_active_request_exists(self, machine_id: str, task_type: str) -> None:
+        """Make isolate/unisolate requests return 400 ActiveRequestAlreadyExists.
+
+        Args:
+            machine_id: ID of the machine that already has an active request.
+            task_type: "Isolate" or "Unisolate".
+        """
+        self._active_request_conflicts.add((machine_id, task_type))
+
+    def has_active_request(self, machine_id: str, task_type: str) -> bool:
+        """Return whether a request of this type is already active on the machine.
+
+        Args:
+            machine_id: ID of the target machine.
+            task_type: "Isolate" or "Unisolate".
+
+        Returns:
+            True if set_active_request_exists was called for this pair or the
+            machine has a Pending/InProgress task of this type, like the real API.
+        """
+        pending = any(
+            task["type"] == task_type and task["status"] in ("Pending", "InProgress")
+            for task in self.get_containment_tasks(machine_id)
+        )
+
+        return pending or (machine_id, task_type) in self._active_request_conflicts
+
+    def set_containment_tasks_error(self, *, enabled: bool = True) -> None:
+        """Make the Isolate/Unisolate machineactions query return HTTP 500."""
+        self._containment_tasks_error = enabled
+
+    def is_containment_tasks_error(self) -> bool:
+        """Return whether the containment-task query should fail."""
+        return self._containment_tasks_error
 
     # -------------------------------------------------------------------------
     # Indicators

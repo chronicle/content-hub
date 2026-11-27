@@ -12,6 +12,165 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+Acquire File:
+  ai_description: >-
+    ### General Description
+
+    Acquires a single file from Microsoft Defender for Endpoint machines with the
+    Live Response `GetFile` command. The file returned by Microsoft Defender (a gzip
+    archive) is saved as-is, its MD5, SHA1 and SHA256 hashes are computed on the decompressed
+    content, and the file is attached to the case wall.
+
+
+    ### Flow Description
+
+    1. **Path Validation:** The `File Path` is normalized (`%systemroot%` is expanded
+    and repeated backslashes are collapsed, keeping a UNC prefix). A relative path
+    fails the action.
+
+    2. **Machine Resolution:** If `Machine ID` is provided, only that machine is targeted
+    and the case entities are ignored. Otherwise, `HOSTNAME` and `ADDRESS` entities
+    are resolved to machines.
+
+    3. **Command Initiation:** If the machine already runs an identical `GetFile`
+    action, the action tracks it. If another action is running, the action waits
+    for it to finish. Otherwise, it starts a new `GetFile` action.
+
+    4. **Asynchronous Polling:** The action polls the Live Response status until the
+    command finishes.
+
+    5. **Result Processing:** On success, the file is downloaded, hashed, saved under
+    a random name and attached to the case wall.
+
+
+    ### Additional Notes
+
+    * This action is **asynchronous**. Adjust the script timeout in the Google SecOps
+    IDE as needed.
+
+    * The action succeeds only if at least one file is acquired and no machine fails.
+    Entities that are not found in Microsoft Defender for Endpoint are reported without
+    failing the action.
+  ai_short_description: >-
+    Acquires a file from Microsoft Defender for Endpoint machines with the Live Response
+    GetFile command and returns its hashes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a Live Response GetFile action on the remote endpoint via the Microsoft
+      Defender API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches machine details, the Live Response status and the acquired
+      file from Microsoft Defender for Endpoint (fetches_data=true). Starting a Live
+      Response action on the endpoint changes state in the external system (can_mutate_external_data=true).
+      It attaches the file to the case wall but does not update entities, create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over the target entities and keeps only `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`, unless the `Machine ID` parameter is provided, in
+      which case the entities are ignored.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a file from a remote endpoint through the Live Response
+      GetFile command and attaches it to the case wall. This directly aligns with
+      the 'Download File' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Path | String | Yes | The absolute path of the file to acquire, for example
+    C:\Windows\win.ini, %systemroot%\win.ini or /etc/hostname. |
+
+    | Machine ID | String | No | Specify the ID of the Microsoft Defender for Endpoint
+    machine to acquire the file from. If provided, it overrides target entities. |
+
+    | Comment | String | No | The comment for the Live Response action. Default: Acquire
+    File via Google SecOps. |
 Create Isolate Machine Task:
   ai_description: >-
     ### General Description
@@ -41,7 +200,8 @@ Create Isolate Machine Task:
     ### Additional Notes
 
     The action requires valid Microsoft Defender ATP credentials and appropriate permissions
-    to isolate machines.
+    to isolate machines. If 'Machine ID' is provided, the action targets only that
+    machine and ignores the entities.
   ai_short_description: >-
     Initiates a network isolation task for machines in Microsoft Defender ATP based
     on Hostname or IP Address entities to contain potentially compromised assets.
@@ -160,6 +320,9 @@ Create Isolate Machine Task:
     | Comment | String | Yes | A mandatory justification for the isolation action,
     which is logged within the Microsoft Defender ATP Action Center for auditing purposes.
     |
+
+    | Machine ID | String | No | Specify the ID of the Microsoft Defender for Endpoint
+    machine to isolate. If provided, it overrides target entities. |
 Create Run Antivirus Scan Task:
   ai_description: >-
     ### General Description
@@ -493,6 +656,9 @@ Create Unisolate Machine Task:
     are found for a single entity.
 
     - If an entity is neither a Hostname nor an IP Address, it is skipped.
+
+    - If 'Machine ID' is provided, the action targets only that machine and ignores
+    the entities.
   ai_short_description: >-
     Creates a 'Unisolate Machine' task in Microsoft Defender ATP for specific Hostname
     or IP Address entities to restore network connectivity.
@@ -606,6 +772,9 @@ Create Unisolate Machine Task:
 
     | Comment | String | Yes | Comment why the machine needs to be isolated (unisolated)
     |
+
+    | Machine ID | String | No | Specify the ID of the Microsoft Defender for Endpoint
+    machine to unisolate. If provided, it overrides target entities. |
 Delete Entity Indicators:
   ai_description: >-
     ### General Description
@@ -763,10 +932,13 @@ Enrich Entities:
 
     1. Connects to the Microsoft Defender ATP API using the provided integration credentials.
 
-    2. Iterates through the target entities in the case.
+    2. If 'Machine ID' parameter is provided, queries '/api/machines/{machine_id}'
+    directly, overriding target entities. Otherwise, iterates through target entities.
 
     3. For Hostname and IP Address entities, queries the Defender API (`/api/machines`)
-    for matching machine records.
+    for matching machine records. For each machine, derives `isolation_status` and
+    `is_isolated` from its Isolate/Unisolate machine actions (`unknown` if they can't
+    be retrieved).
 
     4. For File Hash entities, queries the Defender API (`/api/files/{file_hash}`)
     for file information.
@@ -781,6 +953,10 @@ Enrich Entities:
     ### Additional Notes
 
     File hash can be in SHA1 or SHA256 format.
+
+
+    Possible `isolation_status` values: `contained`, `uncontained`, `containment_requested`,
+    `uncontainment_requested`, `contain_failed`, `uncontain_failed`, `unknown`.
   ai_short_description: >-
     Enriches Hostname, IP Address, and File Hash entities using Microsoft Defender
     ATP by retrieving detailed machine information or file metadata and prevalence.
@@ -887,7 +1063,13 @@ Enrich Entities:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: There are no parameters for this action
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Machine ID | String | No | Specify the ID of the Microsoft Defender for Endpoint
+    machine to enrich. If provided, it overrides target entities. |
 Execute Live Response Command:
   ai_description: >-
     ### General Description
