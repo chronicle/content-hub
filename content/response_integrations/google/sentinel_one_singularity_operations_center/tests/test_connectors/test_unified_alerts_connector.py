@@ -25,6 +25,7 @@ import yaml
 from integration_testing import common
 from integration_testing.common import set_is_test_run_to_true
 from integration_testing.set_meta import set_metadata
+from TIPCommon.base.connector import Connector
 from TIPCommon.data_models import DatabaseContextType
 from TIPCommon.exceptions import ConnectorSetupError
 from TIPCommon.utils import is_test_run
@@ -38,6 +39,8 @@ from sentinel_one_singularity_operations_center.core.api.api_client import (
 from sentinel_one_singularity_operations_center.core.constants import EventType
 from sentinel_one_singularity_operations_center.core.data_models import (
     AlertObservable,
+    SentinelOneAlert,
+    SentinelOneAlertDetails,
 )
 from sentinel_one_singularity_operations_center.tests.common import (
     DUPLICATE_INDICATOR_OBSERVABLE,
@@ -773,11 +776,7 @@ def _get_list_request_variables(script_session: SentinelOneSession) -> SingleJso
     connector_def_file_path=DEF_PATH,
     parameters={**DEFAULT_PARAMETERS, "Status Filter": "Unresolved, in progress"},
 )
-def test_status_filter_is_sent_in_query(
-    sentinelone: SentinelOne,
-    script_session: SentinelOneSession,
-    connector_output: MockConnectorOutput,
-) -> None:
+def test_status_filter_is_sent_in_query(script_session: SentinelOneSession) -> None:
     """b/581347099: Status Filter is applied server-side (case-insensitive, legacy alias)."""
     set_is_test_run_to_true()
     connector = UnifiedAlertsConnector(is_test_run(sys.argv))
@@ -794,9 +793,7 @@ def test_status_filter_is_sent_in_query(
 
 @set_metadata(connector_def_file_path=DEF_PATH, parameters=DEFAULT_PARAMETERS)
 def test_empty_status_filter_fetches_all_statuses(
-    sentinelone: SentinelOne,
     script_session: SentinelOneSession,
-    connector_output: MockConnectorOutput,
 ) -> None:
     """An empty Status Filter keeps the previous behavior (no status filter)."""
     set_is_test_run_to_true()
@@ -813,11 +810,7 @@ def test_empty_status_filter_fetches_all_statuses(
     connector_def_file_path=DEF_PATH,
     parameters={**DEFAULT_PARAMETERS, "Status Filter": "New, Closed"},
 )
-def test_invalid_status_filter_raises_error(
-    sentinelone: SentinelOne,
-    script_session: SentinelOneSession,
-    connector_output: MockConnectorOutput,
-) -> None:
+def test_invalid_status_filter_raises_error() -> None:
     """An unsupported Status Filter value fails connector setup."""
     set_is_test_run_to_true()
     connector = UnifiedAlertsConnector(is_test_run(sys.argv))
@@ -828,48 +821,9 @@ def test_invalid_status_filter_raises_error(
     assert "Status Filter" in str(exc_info.value)
 
 
-@set_metadata(
-    connector_def_file_path=DEF_PATH,
-    parameters={**DEFAULT_PARAMETERS, "Padding Period": 120},
-)
-def test_padding_period_moves_start_time_back(
-    sentinelone: SentinelOne,
-    script_session: SentinelOneSession,
-    connector_output: MockConnectorOutput,
-) -> None:
-    """b/584468218: start = min(last success time, now - padding)."""
-    set_is_test_run_to_true()
-    connector = UnifiedAlertsConnector(is_test_run(sys.argv))
-    before_ms = arrow.utcnow().shift(minutes=-120).int_timestamp * 1000
-    connector.start()
-    after_ms = arrow.utcnow().shift(minutes=-120).int_timestamp * 1000 + 1000
-
-    variables = _get_list_request_variables(script_session)
-    start = variables["orFilter"]["or"][0]["and"][0]["dateTimeRange"]["start"]
-    assert before_ms <= start <= after_ms
-
-
-@set_metadata(
-    connector_def_file_path=DEF_PATH,
-    parameters={**DEFAULT_PARAMETERS, "Padding Period": 1441},
-)
-def test_padding_period_above_max_raises_error(
-    sentinelone: SentinelOne,
-    script_session: SentinelOneSession,
-    connector_output: MockConnectorOutput,
-) -> None:
-    """Padding Period is bounded to 1440 minutes."""
-    set_is_test_run_to_true()
-    connector = UnifiedAlertsConnector(is_test_run(sys.argv))
-
-    with pytest.raises(ConnectorSetupError):
-        connector.start()
-
-
 @set_metadata(connector_def_file_path=DEF_PATH, parameters=DEFAULT_PARAMETERS)
 def test_alert_update_skips_overflow_check(
     sentinelone: SentinelOne,
-    script_session: SentinelOneSession,
     connector_output: MockConnectorOutput,
     external_context: MockExternalContext,
     monkeypatch: pytest.MonkeyPatch,
@@ -915,8 +869,6 @@ def test_alert_update_skips_overflow_check(
 
 @set_metadata(connector_def_file_path=DEF_PATH, parameters=DEFAULT_PARAMETERS)
 def test_new_alert_still_checks_overflow(
-    sentinelone: SentinelOne,
-    script_session: SentinelOneSession,
     connector_output: MockConnectorOutput,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -939,6 +891,7 @@ def test_new_alert_still_checks_overflow(
 
     assert len(overflow_calls) == 1
     assert len(connector_output.results.json_output.alerts) == 0
+    assert connector.context.existing_ids["019d114e-e4f4-7ad6-82c3-9829b6d0a801"] < 0
 
 
 @set_metadata(
@@ -946,8 +899,6 @@ def test_new_alert_still_checks_overflow(
     parameters={**DEFAULT_PARAMETERS, "Use dynamic list as a blocklist": "True"},
 )
 def test_filtered_alert_is_cached(
-    sentinelone: SentinelOne,
-    script_session: SentinelOneSession,
     connector_output: MockConnectorOutput,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -960,4 +911,235 @@ def test_filtered_alert_is_cached(
     connector.start()
 
     assert len(connector_output.results.json_output.alerts) == 0
-    assert "019d114e-e4f4-7ad6-82c3-9829b6d0a801" in connector.context.existing_ids
+    assert connector.context.existing_ids["019d114e-e4f4-7ad6-82c3-9829b6d0a801"] < 0
+
+
+def _seed_alert_cached_as_not_ingested(
+    sentinelone: SentinelOne, external_context: MockExternalContext
+) -> str:
+    """Seed the cache with a negative (not ingested) entry and return the alert ID."""
+    alert_id = "019d114e-e4f4-7ad6-82c3-9829b6d0a801"
+    old_timestamp_ms = arrow.utcnow().shift(minutes=-45).int_timestamp * 1000
+    external_context.set_row_value(
+        context_type=DatabaseContextType.CONNECTOR,
+        identifier=None,
+        property_key="ids",
+        property_value=json.dumps({alert_id: -old_timestamp_ms}),
+    )
+    new_timestamp_str = (
+        arrow.utcnow().shift(minutes=-15).format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z"
+    )
+    new_alert_data = copy.deepcopy(sentinelone.alerts[0])
+    new_alert_data["node"]["lastSeenAt"] = new_timestamp_str
+    sentinelone.alerts = [new_alert_data]
+    new_details = copy.deepcopy(sentinelone.details[alert_id])
+    new_details["lastSeenAt"] = new_timestamp_str
+    sentinelone.details[alert_id] = new_details
+    return alert_id
+
+
+@set_metadata(connector_def_file_path=DEF_PATH, parameters=DEFAULT_PARAMETERS)
+def test_previously_overflowed_alert_update_still_checks_overflow(
+    sentinelone: SentinelOne,
+    connector_output: MockConnectorOutput,
+    external_context: MockExternalContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An alert cached as not ingested is not treated as an update on its next change."""
+    set_is_test_run_to_true()
+    alert_id = _seed_alert_cached_as_not_ingested(sentinelone, external_context)
+    overflow_calls = []
+
+    def _always_overflowed(*args: Any, **kwargs: Any) -> bool:
+        overflow_calls.append(args)
+        return True
+
+    monkeypatch.setattr(
+        "sentinel_one_singularity_operations_center.connectors."
+        "unified_alerts_connector.is_overflowed",
+        _always_overflowed,
+    )
+
+    connector = UnifiedAlertsConnector(is_test_run(sys.argv))
+    connector.start()
+
+    assert len(overflow_calls) == 1
+    assert len(connector_output.results.json_output.alerts) == 0
+    assert connector.context.existing_ids[alert_id] < 0
+
+
+@set_metadata(connector_def_file_path=DEF_PATH, parameters=DEFAULT_PARAMETERS)
+def test_previously_filtered_alert_is_ingested_as_new(
+    sentinelone: SentinelOne,
+    connector_output: MockConnectorOutput,
+    external_context: MockExternalContext,
+) -> None:
+    """A previously filtered alert that now passes is ingested as new, not as an update."""
+    set_is_test_run_to_true()
+    alert_id = _seed_alert_cached_as_not_ingested(sentinelone, external_context)
+
+    connector = UnifiedAlertsConnector(is_test_run(sys.argv))
+    connector.start()
+
+    out_attr = "_" + "out"
+    raw_output = json.loads(getattr(connector_output, out_attr).getvalue())
+    raw_cases = json.loads(raw_output["ResultObjectJson"])["cases"]
+    assert len(raw_cases) == 1
+    assert not raw_cases[0].get("alert_update_supported")
+    assert connector.context.existing_ids[alert_id] > 0
+
+
+YAML_DEFAULTS: dict[str, Any] = {
+    param["name"]: param.get("default_value")
+    for param in yaml.safe_load(DEF_PATH.read_text())["parameters"]
+}
+
+
+def _iso(timestamp: arrow.Arrow) -> str:
+    return timestamp.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z"
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters={**DEFAULT_PARAMETERS, "Status Filter": YAML_DEFAULTS["Status Filter"]},
+)
+def test_yaml_default_status_filter_excludes_resolved(
+    script_session: SentinelOneSession,
+) -> None:
+    """The connector YAML default Status Filter fetches only New and In Progress alerts."""
+    set_is_test_run_to_true()
+    connector = UnifiedAlertsConnector(is_test_run(sys.argv))
+    connector.start()
+
+    and_filters = _get_list_request_variables(script_session)["orFilter"]["or"][0][
+        "and"
+    ]
+    assert YAML_DEFAULTS["Status Filter"] == "New, In Progress"
+    assert {
+        "fieldId": "status",
+        "stringIn": {"values": ["NEW", "IN_PROGRESS"]},
+    } in and_filters
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters={**DEFAULT_PARAMETERS, "Padding Period": 120},
+)
+def test_padding_period_is_bounded_by_max_hours_backwards(
+    script_session: SentinelOneSession,
+) -> None:
+    """On the first run, padding never looks back further than Max Hours Backwards."""
+    set_is_test_run_to_true()
+    connector = UnifiedAlertsConnector(is_test_run(sys.argv))
+    before_ms = arrow.utcnow().shift(hours=-1).int_timestamp * 1000 - 1000
+    connector.start()
+    after_ms = arrow.utcnow().shift(hours=-1).int_timestamp * 1000 + 1000
+
+    variables = _get_list_request_variables(script_session)
+    start = variables["orFilter"]["or"][0]["and"][0]["dateTimeRange"]["start"]
+    assert before_ms <= start <= after_ms
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters={**DEFAULT_PARAMETERS, "Padding Period": 5, "Max Hours Backwards": 24},
+)
+def test_padding_period_looks_back_from_last_success_time() -> None:
+    """b/584468218: start = last success time - Padding Period (not now - padding)."""
+    set_is_test_run_to_true()
+    connector = UnifiedAlertsConnector(is_test_run(sys.argv))
+    connector.start()
+
+    last_success_ms = arrow.utcnow().shift(minutes=-1).int_timestamp * 1000
+    assert connector._calculate_fetch_start_ms(last_success_ms) == (
+        last_success_ms - 5 * 60_000
+    )
+
+    connector.params.padding_period = 0
+    assert connector._calculate_fetch_start_ms(last_success_ms) == last_success_ms
+
+
+@pytest.mark.parametrize("padding_period", [-1, 1441])
+def test_padding_period_out_of_range_raises_error(padding_period: int) -> None:
+    """Padding Period must be between 0 and 1440 minutes."""
+
+    @set_metadata(
+        connector_def_file_path=DEF_PATH,
+        parameters={**DEFAULT_PARAMETERS, "Padding Period": padding_period},
+    )
+    def _run() -> None:
+        set_is_test_run_to_true()
+        connector = UnifiedAlertsConnector(is_test_run(sys.argv))
+        with pytest.raises(ConnectorSetupError):
+            connector.start()
+
+    _run()
+
+
+@set_metadata(connector_def_file_path=DEF_PATH, parameters=DEFAULT_PARAMETERS)
+def test_checkpoint_never_moves_backwards(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Late alerts from the padding window never move the last success time back."""
+    set_is_test_run_to_true()
+    connector = UnifiedAlertsConnector(is_test_run(sys.argv))
+    connector.start()
+    connector.context.last_success_timestamp = (
+        arrow.utcnow().shift(minutes=-10).datetime
+    )
+
+    saved: list[list[SentinelOneAlert]] = []
+    monkeypatch.setattr(
+        Connector,
+        "set_last_success_time",
+        lambda _self, alerts, **_kwargs: saved.append(alerts),
+    )
+    older = SentinelOneAlert(
+        {"id": "older", "lastSeenAt": _iso(arrow.utcnow().shift(minutes=-20))}
+    )
+    newer = SentinelOneAlert(
+        {"id": "newer", "lastSeenAt": _iso(arrow.utcnow().shift(minutes=-5))}
+    )
+
+    connector.set_last_success_time([older, newer])
+    connector.set_last_success_time([older])
+
+    assert [alert.alert_id for alert in saved[0]] == ["newer"]
+    assert saved[1] == []
+
+
+@set_metadata(connector_def_file_path=DEF_PATH, parameters=DEFAULT_PARAMETERS)
+def test_store_alert_in_cache_prefers_list_last_seen_and_moves_to_end() -> None:
+    """The list-query lastSeenAt is cached and re-seen alerts move to the end (LRU)."""
+    set_is_test_run_to_true()
+    connector = UnifiedAlertsConnector(is_test_run(sys.argv))
+    connector.start()
+    connector.context.existing_ids = {"a": 1, "b": 2, "c": 3}
+
+    list_seen = arrow.utcnow().shift(minutes=-10)
+    alert = SentinelOneAlert({"id": "a", "lastSeenAt": _iso(list_seen)})
+    alert.details = SentinelOneAlertDetails(
+        {"id": "a", "lastSeenAt": _iso(arrow.utcnow().shift(minutes=-1))}
+    )
+
+    connector.store_alert_in_cache(alert)
+
+    assert list(connector.context.existing_ids) == ["b", "c", "a"]
+    assert connector.context.existing_ids["a"] == int(list_seen.float_timestamp * 1000)
+
+
+@set_metadata(connector_def_file_path=DEF_PATH, parameters=DEFAULT_PARAMETERS)
+def test_store_alert_in_cache_falls_back_when_last_seen_missing() -> None:
+    """A missing lastSeenAt falls back to the last success time instead of crashing."""
+    set_is_test_run_to_true()
+    connector = UnifiedAlertsConnector(is_test_run(sys.argv))
+    connector.start()
+    connector.context.last_success_timestamp = (
+        arrow.utcnow().shift(minutes=-30).datetime
+    )
+
+    connector.store_alert_in_cache(
+        SentinelOneAlert({"id": "no_ts", "lastSeenAt": None})
+    )
+
+    assert connector.context.existing_ids["no_ts"] == int(
+        arrow.get(connector.context.last_success_timestamp).float_timestamp * 1000
+    )
