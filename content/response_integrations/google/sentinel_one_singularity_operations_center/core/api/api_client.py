@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 
     from requests import Response, Session
     from TIPCommon.base.interfaces.logger import ScriptLogger
+    from TIPCommon.types import SingleJson
 
 
 class ApiParameters(NamedTuple):
@@ -119,16 +120,18 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
     def build_unified_alerts_or_filter(
         start_timestamp_ms: int | None = None,
         lowest_severity: str | None = None,
-    ) -> dict | None:
+        statuses: list[str] | None = None,
+    ) -> SingleJson | None:
         """Build GraphQL OrFilterSelectionInput from parameters.
 
         Args:
-            start_timestamp_ms (int, optional): The start timestamp in milliseconds.
-            lowest_severity (str, optional): The lowest severity to fetch.
+            start_timestamp_ms: The start timestamp in milliseconds.
+            lowest_severity: The lowest severity to fetch.
+            statuses: SentinelOne status enums to fetch (e.g. ["NEW", "IN_PROGRESS"]).
+                If empty, all statuses are fetched.
 
         Returns:
-            dict, optional: A dictionary representing the OrFilterSelectionInput payload,
-                            or None if no filters are applicable.
+            The OrFilterSelectionInput payload, or None if no filters are applicable.
         """
         common_filters = []
         if lowest_severity:
@@ -143,6 +146,11 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
                             "stringIn": {"values": target_severities},
                         }
                     )
+
+        if statuses:
+            common_filters.append(
+                {"fieldId": "status", "stringIn": {"values": statuses}}
+            )
 
         if start_timestamp_ms is None:
             if not common_filters:
@@ -209,21 +217,24 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
         limit: int | None = None,
         start_timestamp_ms: int | None = None,
         lowest_severity: str | None = None,
-    ) -> Generator[dict, None, None]:
+        statuses: list[str] | None = None,
+    ) -> Generator[SingleJson, None, None]:
         """Stream unified alerts one-by-one from SentinelOne.
 
         Args:
-            limit (int, optional): The maximum number of alerts to yield.
-            start_timestamp_ms (int, optional): The start timestamp in milliseconds.
-            lowest_severity (str, optional): The lowest severity to fetch.
+            limit: The maximum number of alerts to yield.
+            start_timestamp_ms: The start timestamp in milliseconds.
+            lowest_severity: The lowest severity to fetch.
+            statuses: SentinelOne status enums to fetch.
 
         Yields:
-            dict: An individual raw alert dictionary.
+            An individual raw alert dictionary.
         """
         url = get_full_url(self.api_root, "graphql_unified_alerts")
         or_filter = self.build_unified_alerts_or_filter(
             start_timestamp_ms=start_timestamp_ms,
             lowest_severity=lowest_severity,
+            statuses=statuses,
         )
         variables = {
             "first": self.PAGE_SIZE,
