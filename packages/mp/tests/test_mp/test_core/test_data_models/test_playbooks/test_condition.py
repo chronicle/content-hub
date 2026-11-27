@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from typing import cast
 
 import pytest
@@ -66,6 +68,45 @@ class TestConditionDataModel:
 
     def test_from_non_built_to_non_built_is_idempotent(self) -> None:
         assert Condition.from_non_built(NON_BUILT_CONDITION).to_non_built() == NON_BUILT_CONDITION
+
+    def test_reaction_condition_enabled_and_operators_round_trip(self) -> None:
+        built_reaction_cond: BuiltCondition = {
+            "FieldName": "from",
+            "Value": "",
+            "MatchType": 10,
+            "CustomOperatorName": None,
+            "Enabled": True,
+        }
+        cond: Condition = Condition.from_built(built_reaction_cond)
+        assert cond.enabled is True
+        assert cond.match_type.to_string() == "equals_any"
+        assert cond.to_built() == built_reaction_cond
+
+        non_built_reaction_cond: NonBuiltCondition = cond.to_non_built()
+        assert non_built_reaction_cond["enabled"] is True
+        assert non_built_reaction_cond["match_type"] == "equals_any"
+        assert Condition.from_non_built(non_built_reaction_cond).to_built() == built_reaction_cond
+
+    def test_less_than_and_custom_match_types(self) -> None:
+        less_than_built: BuiltCondition = {
+            "FieldName": "count",
+            "Value": "5",
+            "MatchType": 4,
+            "CustomOperatorName": None,
+        }
+        cond: Condition = Condition.from_built(less_than_built)
+        assert cond.match_type.to_string() == "less_than"
+        assert Condition.from_non_built(cond.to_non_built()).to_built() == less_than_built
+
+        custom_built: BuiltCondition = {
+            "FieldName": "status",
+            "Value": "Open",
+            "MatchType": 9,
+            "CustomOperatorName": "CustomEq",
+        }
+        custom_cond: Condition = Condition.from_built(custom_built)
+        assert custom_cond.match_type.to_string() == "custom"
+        assert Condition.from_non_built(custom_cond.to_non_built()).to_built() == custom_built
 
 
 class TestConditionGroupDataModel:

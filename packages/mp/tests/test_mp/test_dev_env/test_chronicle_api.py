@@ -651,3 +651,46 @@ def test_matches_integration_staging_filtering() -> None:
         "websense",
         is_staging=False,
     )
+
+
+def test_normalize_connector_def_string_param_modes() -> None:
+    raw_def: SingleJson = {
+        "DisplayName": "ServiceNow Connector",
+        "Parameters": [
+            {
+                "DisplayName": "Rule Generator",
+                "Description": "The field name used to determine the rule generator.",
+                "Type": "String",
+                "Mode": "Regular",
+            },
+            {
+                "DisplayName": "Api Root",
+                "Description": "https://service-now.example.com/api/now/v1/",
+                "Type": "String",
+                "Mode": "Script",
+            },
+            {
+                "DisplayName": "Username",
+                "Description": "ServiceNow username.",
+                "Type": "String",
+            },
+            {
+                "DisplayName": "Bool Mode",
+                "Description": "Boolean mode should fall back to REGULAR.",
+                "Type": "String",
+                "Mode": True,
+            },
+            {
+                "DisplayName": "Out Of Range Mode",
+                "Description": "Unsupported int mode should fall back to REGULAR.",
+                "Type": "String",
+                "Mode": 1,
+            },
+        ],
+    }
+    integration_utils._normalize_connector_def(raw_def, "ServiceNow")  # ruff:ignore[private-member-access]
+    assert raw_def["Parameters"][0]["Mode"] == 0
+    assert raw_def["Parameters"][1]["Mode"] == 2
+    assert raw_def["Parameters"][2]["Mode"] == 0
+    assert raw_def["Parameters"][3]["Mode"] == 0
+    assert raw_def["Parameters"][4]["Mode"] == 0
