@@ -582,13 +582,14 @@ class CaseEmissionMixin:
             if identifier:
                 self._mark_ingested(ingested, ingested_set, f"incident:{identifier}")
             return
-        selected = rank_signals(queue, slots)
+        selected = rank_signals(queue, slots, filters=getattr(self, "alert_filters", None))
         already = ingested_signal_count(identifier or "", ingested_set)
         signals_in_case = min(case_size, already + len(selected))
         self._log(
             "info",
             "Step 6 — %s: %s signal(s) total, packaging top %s of %s new "
-            "(slots=%s, Max Alerts in Case=%s). Ranking: ESCALATED, severity, oldest.",
+            "(slots=%s, Max Alerts in Case=%s). Ranking: alert filters hard-drop, "
+            "then ESCALATED, severity, oldest.",
             label,
             total_signals,
             len(selected),

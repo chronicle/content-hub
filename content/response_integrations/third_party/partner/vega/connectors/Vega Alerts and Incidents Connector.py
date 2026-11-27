@@ -2,7 +2,7 @@
 Vega Alerts and Incidents Connector.
 
 Fetches Vega incidents and packages the top-N related signals as SOAR alerts
-that share ``Vega:incident:<id>``. Case description (from incidentSummary) is
+that share ``Vega:incident:<id>``. Case description (Vega verdict) is
 maintained by the Sync Alerts job (not this connector).
 """
 

@@ -214,7 +214,7 @@ def incident_grouping_id(incident_id: str, related: bool = False, batch: int | N
 
 def signal_ticket_id(incident_id: str, alert_id: str) -> str:
     """display_id / ticket_id for a signal in an incident case."""
-    return f"{VENDOR_NAME}:incident:{incident_id}:signal:{alert_id}:test 31"
+    return f"{VENDOR_NAME}:incident:{incident_id}:signal:{alert_id}"
 
 
 def signal_rule_generator(rank: int, signal_name: str) -> str:
@@ -264,10 +264,45 @@ def signal_rank_key(record: SingleJson) -> tuple[int, int, float]:
     return (esc, sev_rank, _created_at_sort_ts(record))
 
 
-def rank_signals(signals: list[SingleJson], limit: int) -> list[SingleJson]:
-    """Return the top ``limit`` signals for one incident case."""
+def _enum_token(value: Any) -> str:
+    return " ".join(str(value or "").split()).replace(" ", "_").upper()
+
+
+def signal_matches_alert_filters(record: SingleJson, filters: dict | None) -> bool:
+    """True when the signal passes connector alert filters (None dimension = all)."""
+    if not isinstance(record, dict):
+        return False
+    if not filters:
+        return True
+    for filter_key, field in (
+        ("severities", "severity"),
+        ("statuses", "status"),
+        ("verdicts", "verdict"),
+    ):
+        allowed = filters.get(filter_key)
+        if allowed is None:
+            continue
+        allowed_set = {_enum_token(item) for item in allowed}
+        if _enum_token(record.get(field)) not in allowed_set:
+            return False
+    return True
+
+
+def rank_signals(
+    signals: list[SingleJson],
+    limit: int,
+    filters: dict | None = None,
+) -> list[SingleJson]:
+    """Return the top ``limit`` signals for one incident case.
+
+    When ``filters`` is set, non-matching signals are dropped before ranking.
+    """
     ordered = sorted(
-        [item for item in signals if isinstance(item, dict)],
+        [
+            item
+            for item in signals
+            if isinstance(item, dict) and signal_matches_alert_filters(item, filters)
+        ],
         key=signal_rank_key,
     )
     cap = max(0, int(limit))

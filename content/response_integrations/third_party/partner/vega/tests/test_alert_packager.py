@@ -79,6 +79,53 @@ def test_rank_signals_escalated_then_severity_then_oldest() -> None:
     assert [item["id"] for item in ranked] == ["c", "d", "b"]
 
 
+def test_rank_signals_hard_drops_non_matching_alert_filters() -> None:
+    signals = [
+        {
+            "id": "keep-high",
+            "severity": "HIGH",
+            "status": "OPEN",
+            "verdict": "MALICIOUS",
+            "createdAt": "2026-03-01T00:00:00Z",
+            "escalation": {"status": "NOT_ESCALATED"},
+        },
+        {
+            "id": "drop-low",
+            "severity": "LOW",
+            "status": "OPEN",
+            "verdict": "MALICIOUS",
+            "createdAt": "2026-01-01T00:00:00Z",
+            "escalation": {"status": "ESCALATED"},
+        },
+        {
+            "id": "drop-resolved",
+            "severity": "CRITICAL",
+            "status": "RESOLVED",
+            "verdict": "MALICIOUS",
+            "createdAt": "2026-02-01T00:00:00Z",
+            "escalation": {"status": "ESCALATED"},
+        },
+        {
+            "id": "keep-critical",
+            "severity": "CRITICAL",
+            "status": "IN PROGRESS",
+            "verdict": "SUSPICIOUS",
+            "createdAt": "2026-04-01T00:00:00Z",
+            "escalation": {"status": "ESCALATED"},
+        },
+    ]
+    ranked = rank_signals(
+        signals,
+        10,
+        filters={
+            "severities": ["HIGH", "CRITICAL"],
+            "statuses": ["OPEN", "IN_PROGRESS"],
+            "verdicts": None,
+        },
+    )
+    assert [item["id"] for item in ranked] == ["keep-critical", "keep-high"]
+
+
 def test_packager_only_attaches_vega_alert_events() -> None:
     related = set_soar_meta(
         {

@@ -76,13 +76,19 @@ class FakeManager:
         return list(self.timelines.get(incident_id) or [])
 
 
-def _pipeline(manager: FakeManager, max_alerts_in_case: int = 30, max_fetch: int = 50) -> IngestionPipeline:
+def _pipeline(
+    manager: FakeManager,
+    max_alerts_in_case: int = 30,
+    max_fetch: int = 50,
+    **filter_kwargs,
+) -> IngestionPipeline:
     return IngestionPipeline(
         manager=manager,
         lookback_minutes="5",
         backfill_days="0",
         max_alerts_in_case=max_alerts_in_case,
         max_fetch=max_fetch,
+        **filter_kwargs,
     )
 
 
@@ -166,6 +172,25 @@ def test_max_alerts_in_case_caps_and_sets_overflow_meta() -> None:
     assert meta["total_signals"] == 3
     assert meta["signals_in_case"] == 2
     assert [record["id"] for _, record in records] == ["alert-1", "alert-2"]
+
+
+def test_alert_filters_hard_drop_related_signals() -> None:
+    manager = _sample_manager()
+    for alert in manager.alerts:
+        if alert["id"] == "alert-1":
+            alert["status"] = "OPEN"
+        elif alert["id"] == "alert-2":
+            alert["status"] = "RESOLVED"
+        elif alert["id"] == "alert-3":
+            alert["status"] = "OPEN"
+    result = _pipeline(
+        manager,
+        alert_severities="HIGH,CRITICAL",
+        alert_statuses="OPEN",
+    ).run()
+    records = result["records"]
+    assert [record["id"] for _, record in records] == ["alert-1"]
+    assert soar_meta(records[0][1])["total_signals"] == 3
 
 
 def test_does_not_fetch_unrelated_alerts() -> None:

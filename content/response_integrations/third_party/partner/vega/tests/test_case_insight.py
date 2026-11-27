@@ -18,7 +18,7 @@ def test_extract_incident_id_from_ticket() -> None:
     assert extract_incident_id_from_ticket("other") == ""
 
 
-def test_build_case_description_verdict_then_summary() -> None:
+def test_build_case_description_verdict_only() -> None:
     text = build_case_description(
         {
             "verdict": "MALICIOUS",
@@ -26,8 +26,8 @@ def test_build_case_description_verdict_then_summary() -> None:
             "incidentSummary": "Campaign summary",
         }
     )
-    assert text.startswith("MALICIOUS — AI found phishing")
-    assert "Campaign summary" in text
+    assert text == "MALICIOUS — AI found phishing"
+    assert "Campaign summary" not in text
 
 
 def test_build_incident_insight_key_value_labels() -> None:
@@ -39,7 +39,7 @@ def test_build_incident_insight_key_value_labels() -> None:
             "severity": "HIGH",
             "verdict": "MALICIOUS",
             "investigationStatus": "NEW",
-            "incidentSummary": "summary goes to case description",
+            "incidentSummary": "summary stays on insight",
             "incidentFindings": "findings text",
             "recommendedActions": [{"name": "block"}],
             "typedAssets": [{"value": "host-1", "type": "hostname"}],
@@ -55,10 +55,11 @@ def test_build_incident_insight_key_value_labels() -> None:
     assert "<strong>Vega Incident Severity: </strong>HIGH" in insight
     assert "<strong>Vega Signals: </strong>312 total, 30 in case" in insight
     assert "<strong>Incident Findings: </strong>findings text" in insight
-    assert "<strong>Assets: </strong>" in insight
+    assert "<strong>Typed Assets: </strong>" in insight
     assert "host-1" in insight
-    assert "<strong>Observables: </strong>" in insight
+    assert "<strong>Typed Observables: </strong>" in insight
     assert "1.1.1.1" in insight
+    assert "<strong>Incident Summary: </strong>summary stays on insight" in insight
     assert "https://vega.io/incidents/inc-1" in insight
     assert not insight.strip().startswith("{")
 

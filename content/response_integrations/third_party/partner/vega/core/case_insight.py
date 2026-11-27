@@ -30,16 +30,9 @@ def _ai_verdict_text(record: SingleJson) -> str:
 
 
 def build_case_description(incident: SingleJson) -> str:
-    """Case Description: AI verdict, then incident summary."""
+    """Case Description: Vega verdict (and reasoning) only."""
     record = incident if isinstance(incident, dict) else {}
-    parts: list[str] = []
-    ai = _ai_verdict_text(record)
-    if ai:
-        parts.append(ai)
-    summary = str(record.get("incidentSummary") or "").strip()
-    if summary:
-        parts.append(summary)
-    return "\n\n".join(parts)
+    return _ai_verdict_text(record)
 
 
 def _top_signals(record: SingleJson, *, limit: int = 10) -> list[str]:

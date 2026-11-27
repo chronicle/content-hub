@@ -638,7 +638,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
                 continue
             incident = self._attach_vega_alerts(incident, window)
             related = self._resolve_related_alerts(incident, {})
-            selected = rank_signals(related, self.max_alerts_in_case)
+            selected = rank_signals(related, self.max_alerts_in_case, filters=self.alert_filters)
             total = max(int(incident.get("alertsCount") or 0), len(related))
             for rank, alert in enumerate(selected, start=1):
                 if added >= remaining:
