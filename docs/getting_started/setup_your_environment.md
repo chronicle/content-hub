@@ -9,6 +9,26 @@ This repository uses specific tools to streamline development and ensure code qu
 * [**Google SecOps SOAR SDK**](/docs/tools_and_sdk/soar_sdk.md): A library providing the necessary
   types and classes for developing integrations.
 
+## Security & Git Hooks (Required)
+
+Before committing or pushing changes, enable the repository's `pre-commit` and `pre-push` secret
+scanning hooks. These hooks prevent credentials (including SOAR `AppKey`s in both 44-character
+Base64 and UUIDv4 formats), customer tenant URLs (`*.siemplify-soar.com`), and Google-internal
+references (`go/`, `b/`, `cl/`, `google3/`) from entering git history—even if a secret was added in
+one local commit and removed in a subsequent commit before pushing:
+
+```bash
+python3 tools/security/scan_secrets.py --install-hooks
+```
+
+If you prefer the [`pre-commit`](https://pre-commit.com/) framework, use it **instead of** the
+command above (`pre-commit install` refuses to run while `core.hooksPath` is set; undo it with
+`git config --unset core.hooksPath`):
+
+```bash
+pre-commit install --hook-type pre-commit --hook-type pre-push
+```
+
 ## JetBrains IDEs Setup Guide
 
 This guide will help you configure JetBrains IDEs (like PyCharm, IntelliJ IDEA with Python plugin)

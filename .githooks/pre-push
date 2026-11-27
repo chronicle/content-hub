@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+if command -v python3 >/dev/null 2>&1; then
+  PYTHON_BIN="python3"
+elif command -v python >/dev/null 2>&1; then
+  PYTHON_BIN="python"
+else
+  echo "[pre-push] ERROR: python3 is required to run the secret scanner." >&2
+  exit 1
+fi
+
+ZERO_SHA="0000000000000000000000000000000000000000"
+
+# git passes "<local_ref> <local_sha> <remote_ref> <remote_sha>" lines on stdin. The pre-commit
+# framework consumes stdin itself and exposes the range via PRE_COMMIT_FROM_REF/PRE_COMMIT_TO_REF.
+STDIN_PAYLOAD=""
+if [[ ! -t 0 ]]; then
+  STDIN_PAYLOAD="$(cat)"
+fi
+if [[ -z "$STDIN_PAYLOAD" && -n "${PRE_COMMIT_TO_REF:-}" ]]; then
+  STDIN_PAYLOAD="HEAD ${PRE_COMMIT_TO_REF} ${PRE_COMMIT_REMOTE_BRANCH:-HEAD} ${PRE_COMMIT_FROM_REF:-$ZERO_SHA}"
+fi
+
+"$PYTHON_BIN" "$REPO_ROOT/tools/security/scan_secrets.py" \
+  --mode pre-push \
+  --repo-root "$REPO_ROOT" \
+  --pre-push-stdin "$STDIN_PAYLOAD"
+
+if command -v gitleaks >/dev/null 2>&1 && [[ -n "$STDIN_PAYLOAD" ]]; then
+  while read -r _local_ref local_sha _remote_ref remote_sha; do
+    [[ -z "${local_sha:-}" || "$local_sha" == "$ZERO_SHA" ]] && continue
+    if [[ "$remote_sha" == "$ZERO_SHA" ]] || ! git cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
+      LOG_OPTS="$local_sha --not --remotes=origin"
+    else
+      LOG_OPTS="$remote_sha..$local_sha"
+    fi
+    gitleaks git \
+      --redact \
+      --no-banner \
+      --config "$REPO_ROOT/.gitleaks.toml" \
+      --log-opts "$LOG_OPTS" \
+      "$REPO_ROOT"
+  done <<< "$STDIN_PAYLOAD"
+fi
