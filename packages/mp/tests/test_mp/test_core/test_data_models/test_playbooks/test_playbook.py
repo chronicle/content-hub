@@ -16,7 +16,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mp.core.data_models.playbooks.playbook import Playbook
+from mp.core.data_models.playbooks.meta.metadata import PlaybookExecutionScope
+from mp.core.data_models.playbooks.playbook import BuiltPlaybook, Playbook
 
 MOCK_BUILT_PLAYBOOK_PATH: Path = Path("mock_built_playbook/mock_built_playbook.json")
 MOCK_NON_BUILT_PLAYBOOK_PATH: Path = Path("third_party/community/mock_non_built_playbook")
@@ -46,3 +47,13 @@ class TestPlaybookDataModel:
     def test_convert_built_to_non_built(self, mock_playbook_path: Path) -> None:
         pa: Path = mock_playbook_path / MOCK_BUILT_PLAYBOOK_PATH
         Playbook.from_built_path(pa).to_non_built()
+
+    def test_case_playbook_preserves_execution_scope(self, mock_playbook_path: Path) -> None:
+        pa: Path = mock_playbook_path / MOCK_NON_BUILT_PLAYBOOK_PATH
+        pb: Playbook = Playbook.from_non_built_path(pa)
+        assert "ExecutionScope" not in pb.to_built()["Definition"]
+
+        pb.meta_data.execution_scope = PlaybookExecutionScope.CASE
+        built: BuiltPlaybook = pb.to_built()
+        assert built["Definition"]["ExecutionScope"] == 2
+        assert pb.to_non_built()["meta_data"]["execution_scope"] == "case"

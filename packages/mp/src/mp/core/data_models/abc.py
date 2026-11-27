@@ -52,6 +52,44 @@ class RepresentableEnum(enum.Enum):
         """
         return self.name.casefold()
 
+    @classmethod
+    def parse_optional(
+        cls,
+        raw: int | str | None,
+        *,
+        aliases: Mapping[str, Self] | None = None,
+    ) -> Self | None:
+        """Parse an optional enum member from an integer or string value.
+
+        Args:
+            raw: Raw integer, string, or None value.
+            aliases: Optional mapping of case-folded string aliases to enum members.
+
+        Returns:
+            The parsed enum member, or None if ``raw`` is None.
+
+        Raises:
+            ValueError: If ``raw`` is a boolean, unknown string, or unsupported value.
+
+        """
+        if raw is None:
+            return None
+        if isinstance(raw, str):
+            stripped: str = raw.strip()
+            if stripped.isdigit():
+                return cls(int(stripped))
+            if aliases and stripped.casefold() in aliases:
+                return aliases[stripped.casefold()]
+            try:
+                return cls.from_string(stripped)
+            except KeyError as err:
+                msg: str = f"Invalid {cls.__name__} value: {raw!r}"
+                raise ValueError(msg) from err
+        if isinstance(raw, int) and not isinstance(raw, bool):
+            return cls(raw)
+        msg = f"Invalid {cls.__name__} value: {raw!r}"
+        raise ValueError(msg)
+
 
 _BT = TypeVar("_BT", bound=Mapping[str, Any])
 _NBT = TypeVar("_NBT", bound=Mapping[str, Any])
