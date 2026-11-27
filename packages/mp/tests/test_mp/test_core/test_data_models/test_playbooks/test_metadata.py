@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from typing import cast
 
 import pytest
@@ -22,6 +24,9 @@ from mp.core.data_models.playbooks.meta.access_permissions import (
     NonBuiltAccessPermission,
 )
 from mp.core.data_models.playbooks.meta.metadata import (
+    BuiltPlaybookMetadata,
+    NonBuiltPlaybookMetadata,
+    PlaybookExecutionScope,
     PlaybookMetadata,
 )
 
@@ -109,3 +114,41 @@ class TestPlaybookMetadataDataModel:
             PlaybookMetadata.from_non_built("", NON_BUILT_PLAYBOOK_METADATA).to_non_built()
             == NON_BUILT_PLAYBOOK_METADATA
         )
+
+    def test_case_playbook_execution_scope_round_trip(self) -> None:
+        built_case_meta: BuiltPlaybookMetadata = {
+            **BUILT_PLAYBOOK_METADATA,
+            "ExecutionScope": 2,
+        }
+        meta: PlaybookMetadata = PlaybookMetadata.from_built("", built_case_meta)
+        assert meta.execution_scope == PlaybookExecutionScope.CASE
+        assert meta.to_built() == built_case_meta
+
+        non_built_case_meta: NonBuiltPlaybookMetadata = meta.to_non_built()
+        assert non_built_case_meta["execution_scope"] == "case"
+        assert PlaybookMetadata.from_non_built("", non_built_case_meta).to_built() == built_case_meta
+
+    def test_execution_scope_string_variants_from_built(self) -> None:
+        for raw_val, expected in [
+            ("CASE", PlaybookExecutionScope.CASE),
+            ("2", PlaybookExecutionScope.CASE),
+            ("ALERT", PlaybookExecutionScope.ALERT),
+            ("EXECUTION_SCOPE_UNSPECIFIED", PlaybookExecutionScope.UNSPECIFIED),
+        ]:
+            built_meta: BuiltPlaybookMetadata = {
+                **BUILT_PLAYBOOK_METADATA,
+                "ExecutionScope": raw_val,
+            }
+            meta: PlaybookMetadata = PlaybookMetadata.from_built("", built_meta)
+            assert meta.execution_scope == expected
+
+    def test_execution_scope_invalid_values_raise_value_error(self) -> None:
+        for invalid_bool in (True, False):
+            built_meta: BuiltPlaybookMetadata = {
+                **BUILT_PLAYBOOK_METADATA,
+                "ExecutionScope": invalid_bool,
+            }
+            with pytest.raises(ValueError, match="Failed to load built"):
+                PlaybookMetadata.from_built("", built_meta)
+        with pytest.raises(ValueError, match="Invalid PlaybookExecutionScope value"):
+            PlaybookExecutionScope.parse_optional("UNKNOWN_SCOPE")

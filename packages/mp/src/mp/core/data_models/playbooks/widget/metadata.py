@@ -25,6 +25,7 @@ from mp.core.data_models.abc import ComponentMetadata
 from mp.core.data_models.common.condition.condition_group import (
     BuiltConditionGroup,
     ConditionGroup,
+    LogicalOperator,
     NonBuiltConditionGroup,
 )
 from mp.core.data_models.common.widget.data import (
@@ -54,7 +55,7 @@ class BuiltPlaybookWidgetMetadata(TypedDict):
     BlockStepIdentifier: str | None
     BlockStepInstanceName: str | None
     PresentIfEmpty: bool
-    ConditionsGroup: BuiltConditionGroup
+    ConditionsGroup: BuiltConditionGroup | None
     IntegrationName: str | None
 
 
@@ -73,7 +74,7 @@ class NonBuiltPlaybookWidgetMetadata(TypedDict):
     block_step_id: str | None
     block_step_instance_name: str | None
     present_if_empty: bool
-    conditions_group: NonBuiltConditionGroup
+    conditions_group: NonBuiltConditionGroup | None
     integration_name: str | None
 
 
@@ -143,6 +144,7 @@ class PlaybookWidgetMetadata(ComponentMetadata[BuiltPlaybookWidgetMetadata, NonB
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
         data_json: pydantic.Json | BuiltWidgetDataDefinition = json.loads(built["DataDefinitionJson"])
+        raw_conditions_group: BuiltConditionGroup | None = built.get("ConditionsGroup")
         return cls(
             title=built["Title"],
             description=built["Description"],
@@ -162,12 +164,17 @@ class PlaybookWidgetMetadata(ComponentMetadata[BuiltPlaybookWidgetMetadata, NonB
             block_step_id=built["BlockStepIdentifier"],
             block_step_instance_name=built["BlockStepInstanceName"],
             present_if_empty=built["PresentIfEmpty"],
-            conditions_group=ConditionGroup.from_built(built["ConditionsGroup"]),
+            conditions_group=(
+                ConditionGroup.from_built(raw_conditions_group)
+                if raw_conditions_group is not None
+                else ConditionGroup(conditions=[], logical_operator=LogicalOperator.AND)
+            ),
             integration_name=built["IntegrationName"],
         )
 
     @classmethod
     def _from_non_built(cls, file_name: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
+        raw_conditions_group: NonBuiltConditionGroup | None = non_built.get("conditions_group")
         return cls(
             title=non_built["title"],
             description=non_built["description"],
@@ -187,7 +194,11 @@ class PlaybookWidgetMetadata(ComponentMetadata[BuiltPlaybookWidgetMetadata, NonB
             block_step_id=non_built["block_step_id"],
             block_step_instance_name=non_built["block_step_instance_name"],
             present_if_empty=non_built["present_if_empty"],
-            conditions_group=ConditionGroup.from_non_built(non_built["conditions_group"]),
+            conditions_group=(
+                ConditionGroup.from_non_built(raw_conditions_group)
+                if raw_conditions_group is not None
+                else ConditionGroup(conditions=[], logical_operator=LogicalOperator.AND)
+            ),
             integration_name=non_built["integration_name"],
         )
 

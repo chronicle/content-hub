@@ -89,6 +89,7 @@ class BuiltPlaybookDefinition(TypedDict):
     SimulationClone: NotRequired[bool | None]
     DefaultAccessLevel: NotRequired[int | str | None]
     CreationSource: NotRequired[int | str | None]
+    ExecutionScope: NotRequired[int | str | None]
     Steps: list[BuiltStep]
     Triggers: list[BuiltTrigger]
     OverviewTemplates: list[BuiltOverviewDetails]
@@ -211,6 +212,8 @@ class Playbook:
             Permissions=built_playbook_meta["Permissions"],
             Environments=built_playbook_meta["Environments"],
         )
+        if "ExecutionScope" in built_playbook_meta:
+            built_playbook_definition["ExecutionScope"] = built_playbook_meta["ExecutionScope"]
 
         return BuiltPlaybook(
             CategoryName="Content Hub",
