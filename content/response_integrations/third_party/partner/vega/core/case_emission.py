@@ -573,8 +573,7 @@ class CaseEmissionMixin:
         if slots <= 0:
             self._log(
                 "info",
-                "Step 6 — %s: case already at Max Alerts in Case=%s; "
-                "discarding %s new signal(s) (not sent to SecOps).",
+                "Step 6 — %s: case already at Max Alerts in Case=%s; discarding %s new signal(s) (not sent to SecOps).",
                 label,
                 case_size,
                 len(queue),
@@ -649,9 +648,7 @@ class CaseEmissionMixin:
                 f"; {overflow} past the cap stay in Vega only"
                 if overflow and not stopped_early
                 else (
-                    f"; stopped early with {max(signals_in_case - packaged, 0)} still waiting"
-                    if stopped_early
-                    else ""
+                    f"; stopped early with {max(signals_in_case - packaged, 0)} still waiting" if stopped_early else ""
                 )
             ),
         )

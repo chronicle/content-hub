@@ -10,22 +10,17 @@ from core.case_insight import (
 
 
 def test_extract_incident_id_from_ticket() -> None:
-    assert (
-        extract_incident_id_from_ticket("Vega:incident:abc-123:signal:alert-9")
-        == "abc-123"
-    )
+    assert extract_incident_id_from_ticket("Vega:incident:abc-123:signal:alert-9") == "abc-123"
     assert extract_incident_id_from_ticket("Vega:incident:abc-123") == "abc-123"
     assert extract_incident_id_from_ticket("other") == ""
 
 
 def test_build_case_description_verdict_only() -> None:
-    text = build_case_description(
-        {
-            "verdict": "MALICIOUS",
-            "verdictReasoning": "AI found phishing",
-            "incidentSummary": "Campaign summary",
-        }
-    )
+    text = build_case_description({
+        "verdict": "MALICIOUS",
+        "verdictReasoning": "AI found phishing",
+        "incidentSummary": "Campaign summary",
+    })
     assert text == "MALICIOUS — AI found phishing"
     assert "Campaign summary" not in text
 
@@ -71,12 +66,10 @@ def test_incident_ids_from_soar_alert_parses_json_props() -> None:
         identifier=None,
         device_vendor="Vega",
         device_product="Vega",
-        additional_properties=json.dumps(
-            {
-                "vega_incident_id": "inc-42",
-                "SourceGroupingIdentifier": "Vega:incident:inc-42",
-            }
-        ),
+        additional_properties=json.dumps({
+            "vega_incident_id": "inc-42",
+            "SourceGroupingIdentifier": "Vega:incident:inc-42",
+        }),
     )
     assert incident_ids_from_soar_alert(alert) == ["inc-42"]
 

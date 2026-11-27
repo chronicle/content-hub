@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from types import ModuleType, SimpleNamespace
 
-from core.constants import ENTITY_TYPE_ALERT, ENTITY_TYPE_INCIDENT
+from core.constants import ENTITY_TYPE_ALERT
 from core.mapping import incident_case_title, rank_signals, set_soar_meta, signal_rule_generator, signal_ticket_id
 
 

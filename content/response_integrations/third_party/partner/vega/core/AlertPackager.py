@@ -56,6 +56,7 @@ def _mitre_text(value: Any) -> str:
     except Exception:
         return str(value)
 
+
 # Reject epoch-0 / 1970 timestamps and values that are not real event times.
 _MIN_VALID_EVENT_MS = 946684800000  # 2000-01-01
 _MAX_VALID_EVENT_MS = 4102444800000  # 2100-01-01
@@ -217,13 +218,11 @@ def create_alerts(
             case_title = f"{display} - {incident_name}".strip(" -") if display or incident_name else signal_name
         case_description = str(meta.get("case_description") or "").strip()
         if not case_description:
-            case_description = build_case_description(
-                {
-                    "verdict": meta.get("incident_verdict"),
-                    "verdictReasoning": meta.get("incident_verdict_reasoning"),
-                    "incidentSummary": meta.get("incident_summary") or record.get("incidentSummary"),
-                }
-            )
+            case_description = build_case_description({
+                "verdict": meta.get("incident_verdict"),
+                "verdictReasoning": meta.get("incident_verdict_reasoning"),
+                "incidentSummary": meta.get("incident_summary") or record.get("incidentSummary"),
+            })
         case_tags = [SYNC_ALERTS_TAG]
         for name in meta.get("case_tags") or []:
             text = str(name or "").strip()

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from core.constants import ENTITY_TYPE_ALERT, ENTITY_TYPE_INCIDENT
+from core.constants import ENTITY_TYPE_ALERT
 from core.IngestionPipeline import IngestionPipeline
 from core.mapping import soar_meta
 

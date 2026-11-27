@@ -1,10 +1,9 @@
 import pytest
-from core.constants import GRAPHQL_PAGE_SIZE, MSG_BAD_REQUEST, MSG_INVALID_ACCESS_KEY_ID
+from core.constants import MSG_BAD_REQUEST, MSG_INVALID_ACCESS_KEY_ID
 from core.exceptions import VegaBadRequestException, VegaUnauthorizedException, VegaValidationException
 from core.utils import (
     ConnectorConfig,
     format_test_connection_summary,
-    format_user_facing_error,
     resolve_incident_filters,
     validate_connector_fields,
 )
@@ -100,12 +99,10 @@ def test_test_connection_maps_graphql_400_to_invalid_access_key_id() -> None:
 
 
 def test_resolve_incident_filters_accepts_empty() -> None:
-    filters = resolve_incident_filters(
-        {
-            "incident_severities": "",
-            "incident_user_statuses": "",
-            "incident_investigation_statuses": "",
-            "incident_verdicts": "",
-        }
-    )
+    filters = resolve_incident_filters({
+        "incident_severities": "",
+        "incident_user_statuses": "",
+        "incident_investigation_statuses": "",
+        "incident_verdicts": "",
+    })
     assert filters["severities"] is None

@@ -63,9 +63,7 @@ def build_incident_insight(
     total = max(int(total or 0), int(signals_in_case or 0))
     in_case = max(0, int(signals_in_case or 0))
 
-    incident_id = str(
-        record.get("vegaUniqueIncidentId") or record.get("id") or record.get("incidentId") or ""
-    ).strip()
+    incident_id = str(record.get("vegaUniqueIncidentId") or record.get("id") or record.get("incidentId") or "").strip()
     link = str(record.get("link") or record.get("href") or "").strip()
     # shortcut: Vega API exposes one verdict; map it as AI Verdict until analyst verdict exists
     ai_verdict = _ai_verdict_text(record)
@@ -94,9 +92,7 @@ def build_incident_insight(
         body_parts.append(f"<strong>{html.escape(key)}: </strong>{_insight_value(value)}<br/>")
     if link:
         safe_link = html.escape(link, quote=True)
-        body_parts.append(
-            f"<p>Open in Vega: <a href='{safe_link}' target='_blank'>{html.escape(link)}</a></p>"
-        )
+        body_parts.append(f"<p>Open in Vega: <a href='{safe_link}' target='_blank'>{html.escape(link)}</a></p>")
     return f"<p>{''.join(body_parts)}</p>"
 
 
@@ -145,21 +141,12 @@ def incident_ids_from_soar_alert(alert: Any) -> list[str]:
     """Vega incident ids carried on one SecOps alert card."""
     props = parse_alert_additional_properties(getattr(alert, "additional_properties", None))
     vendor = str(
-        getattr(alert, "device_vendor", None)
-        or props.get("device_vendor")
-        or props.get("deviceVendor")
-        or ""
+        getattr(alert, "device_vendor", None) or props.get("device_vendor") or props.get("deviceVendor") or ""
     ).strip()
     product = str(
-        getattr(alert, "device_product", None)
-        or props.get("device_product")
-        or props.get("deviceProduct")
-        or ""
+        getattr(alert, "device_product", None) or props.get("device_product") or props.get("deviceProduct") or ""
     ).strip()
-    is_vega = (
-        vendor.casefold() == VENDOR_NAME.casefold()
-        or product.casefold() == DEVICE_PRODUCT.casefold()
-    )
+    is_vega = vendor.casefold() == VENDOR_NAME.casefold() or product.casefold() == DEVICE_PRODUCT.casefold()
     if vendor and product and not is_vega:
         return []
     found: list[str] = []

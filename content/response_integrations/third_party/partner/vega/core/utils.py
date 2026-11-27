@@ -383,14 +383,12 @@ def format_connector_field_errors(errors: list[str]) -> str:
 
 def format_test_connection_summary(incident_count: int) -> str:
     """Clean test-connection output: success + matching incident count only."""
-    return "\n".join(
-        [
-            "Successfully connected to Vega.",
-            "",
-            "What this connector currently sees:",
-            f"- Vega incidents: {incident_count}",
-        ]
-    )
+    return "\n".join([
+        "Successfully connected to Vega.",
+        "",
+        "What this connector currently sees:",
+        f"- Vega incidents: {incident_count}",
+    ])
 
 
 @dataclass(frozen=True)

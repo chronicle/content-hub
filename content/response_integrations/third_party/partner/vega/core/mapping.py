@@ -298,11 +298,7 @@ def rank_signals(
     When ``filters`` is set, non-matching signals are dropped before ranking.
     """
     ordered = sorted(
-        [
-            item
-            for item in signals
-            if isinstance(item, dict) and signal_matches_alert_filters(item, filters)
-        ],
+        [item for item in signals if isinstance(item, dict) and signal_matches_alert_filters(item, filters)],
         key=signal_rank_key,
     )
     cap = max(0, int(limit))

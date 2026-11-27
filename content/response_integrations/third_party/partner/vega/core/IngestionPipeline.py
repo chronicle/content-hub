@@ -30,6 +30,8 @@ from .constants import (
     TEST_RUN_MAX_FETCH,
 )
 from .mapping import (
+    alert_grouping_id,
+    case_display_name,
     collect_label_tags,
     incident_alert_ids,
     incident_alert_stubs,
@@ -293,11 +295,14 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         if not callable(batch_fetch):
             return self._fetch_events_one_by_one(alerts)
         try:
-            fetched = batch_fetch(
-                query_ids,
-                max_records=cap,
-                deadline_monotonic=self._deadline,
-            ) or {}
+            fetched = (
+                batch_fetch(
+                    query_ids,
+                    max_records=cap,
+                    deadline_monotonic=self._deadline,
+                )
+                or {}
+            )
             self._mark_if_truncated()
         except Exception as exc:
             self._log(

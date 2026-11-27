@@ -138,8 +138,7 @@ class SyncAlerts(BaseSyncJob[VegaManager]):
             )
         elif prepared:
             self.logger.info(
-                f"Sync batch {prepared}/{self.sync_limit}. "
-                "Watermark advances to the last case in this set."
+                f"Sync batch {prepared}/{self.sync_limit}. Watermark advances to the last case in this set."
             )
         return cases
 
@@ -206,9 +205,7 @@ class SyncAlerts(BaseSyncJob[VegaManager]):
         sync). Merges open cases that share one Vega incident id (oldest wins)
         with no comment/tag. Description/insight sync runs only after this step.
         """
-        self.logger.info(
-            "Vega case dedup starting (priority before description/insight sync)."
-        )
+        self.logger.info("Vega case dedup starting (priority before description/insight sync).")
         try:
             candidates = self._get_case_ids_by_timestamp()
         except Exception as exc:
@@ -294,9 +291,7 @@ class SyncAlerts(BaseSyncJob[VegaManager]):
                         primary_count += dup_count
                         self.processed_items.pop(dup["case_id"], None)
                 except Exception as exc:
-                    self.logger.warn(
-                        f"Failed to merge case {dup['case_id']} into {primary['case_id']}: {exc}"
-                    )
+                    self.logger.warn(f"Failed to merge case {dup['case_id']} into {primary['case_id']}: {exc}")
 
         if skipped_limit:
             self.logger.warn(
@@ -316,8 +311,7 @@ class SyncAlerts(BaseSyncJob[VegaManager]):
             primary_id = int(primary_case_id)
         except (TypeError, ValueError):
             self.logger.warn(
-                f"Skipping merge: non-integer case ids "
-                f"(dup={duplicate_case_id!r} primary={primary_case_id!r})."
+                f"Skipping merge: non-integer case ids (dup={duplicate_case_id!r} primary={primary_case_id!r})."
             )
             return False
         body = {"casesIds": [dup_id, primary_id], "caseToMergeWith": primary_id}
@@ -330,9 +324,7 @@ class SyncAlerts(BaseSyncJob[VegaManager]):
             result = {}
         errors = result.get("errors") or []
         if not bool(result.get("isRequestValid", True)) or errors:
-            self.logger.warn(
-                f"cases.merge failed for {duplicate_case_id} → {primary_case_id}: {errors or result}"
-            )
+            self.logger.warn(f"cases.merge failed for {duplicate_case_id} → {primary_case_id}: {errors or result}")
             return False
         return True
 
@@ -341,9 +333,7 @@ class SyncAlerts(BaseSyncJob[VegaManager]):
             return
         # SecOps rejects description/insight writes on closed cases (400 / errorCode 2000).
         if job_case.case_detail.is_closed:
-            self.logger.info(
-                f"Skipping description/insight on closed case {job_case.case_detail.id_}."
-            )
+            self.logger.info(f"Skipping description/insight on closed case {job_case.case_detail.id_}.")
             return
         incident_ids = self._extract_product_ids_from_case(job_case)
         if not incident_ids:
@@ -432,9 +422,7 @@ class SyncAlerts(BaseSyncJob[VegaManager]):
                         page_size=len(chunk),
                     )
                 except Exception as exc:
-                    self.logger.warn(
-                        f"Unable to fetch Vega alert labels for {len(chunk)} id(s): {exc}"
-                    )
+                    self.logger.warn(f"Unable to fetch Vega alert labels for {len(chunk)} id(s): {exc}")
                     continue
                 records.extend(row for row in (rows or []) if isinstance(row, dict))
 
@@ -452,16 +440,12 @@ class SyncAlerts(BaseSyncJob[VegaManager]):
             wanted = [constants.SYNC_ALERTS_TAG, *wanted]
         pending = pending_case_tags(wanted, self._case_tag_names(job_case))
         if not pending:
-            self.logger.info(
-                f"No new Vega label tags for case {job_case.case_detail.id_}."
-            )
+            self.logger.info(f"No new Vega label tags for case {job_case.case_detail.id_}.")
             return
         case_id = int(job_case.case_detail.id_)
         try:
             add_tags_to_case_in_bulk(self.soar_job, [case_id], pending)
-            self.logger.info(
-                f"Added {len(pending)} Vega label tag(s) on case {case_id}: {', '.join(pending)}."
-            )
+            self.logger.info(f"Added {len(pending)} Vega label tag(s) on case {case_id}: {', '.join(pending)}.")
         except Exception as exc:
             self.logger.warn(f"Unable to add Vega label tags on case {case_id}: {exc}")
 
