@@ -144,6 +144,7 @@ class PlaybookWidgetMetadata(ComponentMetadata[BuiltPlaybookWidgetMetadata, NonB
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
         data_json: pydantic.Json | BuiltWidgetDataDefinition = json.loads(built["DataDefinitionJson"])
+        raw_conditions_group: BuiltConditionGroup | None = built.get("ConditionsGroup")
         return cls(
             title=built["Title"],
             description=built["Description"],
@@ -164,8 +165,8 @@ class PlaybookWidgetMetadata(ComponentMetadata[BuiltPlaybookWidgetMetadata, NonB
             block_step_instance_name=built["BlockStepInstanceName"],
             present_if_empty=built["PresentIfEmpty"],
             conditions_group=(
-                ConditionGroup.from_built(built["ConditionsGroup"])
-                if built["ConditionsGroup"] is not None
+                ConditionGroup.from_built(raw_conditions_group)
+                if raw_conditions_group is not None
                 else ConditionGroup(conditions=[], logical_operator=LogicalOperator.AND)
             ),
             integration_name=built["IntegrationName"],
@@ -173,6 +174,7 @@ class PlaybookWidgetMetadata(ComponentMetadata[BuiltPlaybookWidgetMetadata, NonB
 
     @classmethod
     def _from_non_built(cls, file_name: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
+        raw_conditions_group: NonBuiltConditionGroup | None = non_built.get("conditions_group")
         return cls(
             title=non_built["title"],
             description=non_built["description"],
@@ -193,8 +195,8 @@ class PlaybookWidgetMetadata(ComponentMetadata[BuiltPlaybookWidgetMetadata, NonB
             block_step_instance_name=non_built["block_step_instance_name"],
             present_if_empty=non_built["present_if_empty"],
             conditions_group=(
-                ConditionGroup.from_non_built(non_built["conditions_group"])
-                if non_built["conditions_group"] is not None
+                ConditionGroup.from_non_built(raw_conditions_group)
+                if raw_conditions_group is not None
                 else ConditionGroup(conditions=[], logical_operator=LogicalOperator.AND)
             ),
             integration_name=non_built["integration_name"],

@@ -188,15 +188,7 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
 
     @classmethod
     def _from_non_built(cls, file_name: str, non_built: NonBuiltTrigger) -> Self:  # ruff:ignore[unused-class-method-argument]
-        raw_exec_mode: str | None = non_built.get("execution_mode")
-        raw_reaction_op: str | None = non_built.get("reaction_logical_operator")
         raw_reaction_conds: list[NonBuiltConditionGroup] | None = non_built.get("reaction_conditions")
-        exec_mode: TriggerExecutionMode | None = (
-            TriggerExecutionMode.from_string(raw_exec_mode) if raw_exec_mode is not None else None
-        )
-        reaction_op: LogicalOperator | None = (
-            LogicalOperator.from_string(raw_reaction_op) if raw_reaction_op is not None else None
-        )
         return cls(
             identifier=non_built["identifier"],
             is_enabled=non_built["is_enabled"],
@@ -210,8 +202,11 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
             playbook_id=non_built["playbook_id"],
             playbook_name=non_built["playbook_name"],
             type_=TriggerType.from_string(non_built["type_"]),
-            execution_mode=exec_mode,
-            reaction_logical_operator=reaction_op,
+            execution_mode=TriggerExecutionMode.parse_optional(
+                non_built.get("execution_mode"),
+                aliases=_EXECUTION_MODE_ALIASES,
+            ),
+            reaction_logical_operator=LogicalOperator.parse_optional(non_built.get("reaction_logical_operator")),
             reaction_conditions=(
                 [
                     ConditionGroup.from_non_built(condition_group)
