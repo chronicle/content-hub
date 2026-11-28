@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import re
 import uuid
+from typing import Any
 
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
-from TIPCommon import add_prefix_to_dict, dict_to_flat, flat_dict_to_csv
+from TIPCommon.transformation import add_prefix_to_dict, dict_to_flat, flat_dict_to_csv
 
 from .constants import (
     DEFAULT_DEVICE_PRODUCT,
@@ -11,25 +13,24 @@ from .constants import (
     RULE_GENERATOR,
     SEVERITY_MAP,
     URL_API_VERSION,
+    VECTRA_RUX,
 )
-from .UtilsManager import get_alert_id
-
-ASSIGNMENT_ID = "Assignment ID"
+from .UtilsManager import get_alert_id, get_detection_alert_id
 
 
 class BaseModel:
     """Base model for inheritance"""
 
-    def __init__(self, raw_data):
+    def __init__(self, raw_data: dict[str, Any]) -> None:
         self.raw_data = raw_data
 
-    def to_json(self):
+    def to_json(self) -> dict[str, Any]:
         return self.raw_data
 
-    def to_csv(self):
+    def to_csv(self) -> dict[str, Any] | list[str]:
         return dict_to_flat(self.to_json())
 
-    def to_enrichment_data(self, prefix=None):
+    def to_enrichment_data(self, prefix: str | None = None) -> dict[str, Any]:
         data = dict_to_flat(self.raw_data)
         return add_prefix_to_dict(data, prefix) if prefix else data
 
@@ -37,16 +38,16 @@ class BaseModel:
 class Assignment(BaseModel):
     def __init__(
         self,
-        raw_data,
-        assignment_id,
-        assigned_by,
-        assigned_to,
-        resolved_by,
-        outcome,
-        account_id,
-        host_id,
-        note_title,
-    ):
+        raw_data: dict[str, Any],
+        assignment_id: str | int | None,
+        assigned_by: dict[str, Any] | None,
+        assigned_to: dict[str, Any] | None,
+        resolved_by: dict[str, Any] | None,
+        outcome: dict[str, Any] | None,
+        account_id: str | int | None,
+        host_id: str | int | None,
+        note_title: str | None,
+    ) -> None:
         super(Assignment, self).__init__(raw_data)
         self.assignment_id = assignment_id
         self.assigned_by = {} if not assigned_by else assigned_by
@@ -57,9 +58,9 @@ class Assignment(BaseModel):
         self.host_id = host_id
         self.note_title = None if note_title == "" else note_title
 
-    def list_assignment_csv(self):
+    def list_assignment_csv(self) -> dict[str, Any]:
         result = {
-            ASSIGNMENT_ID: self.assignment_id,
+            "Assignment ID": self.assignment_id,
             "Assigned User ID": self.assigned_to.get("id"),
             "Assigned User": self.assigned_to.get("username"),
             "Resolved By User ID": self.resolved_by.get("id"),
@@ -78,21 +79,25 @@ class Assignment(BaseModel):
 
         return result
 
-    def update_assignment_csv(self, entity_type):
-        return {
-            ASSIGNMENT_ID: self.assignment_id,
-            "Assigned User ID": self.assigned_to.get("id"),
-            "Assigned User": self.assigned_to.get("username"),
-            "Entity Type": entity_type,
-            "Entity ID": self.host_id or self.account_id,
-        }
-
-    def create_assignment_csv(self):
+    def update_assignment_csv(self, entity_type: str) -> list[str]:
         entity = "Host ID" if self.host_id else "Account ID"
 
         return flat_dict_to_csv(
             {
-                ASSIGNMENT_ID: self.assignment_id,
+                "Assignment ID": self.assignment_id,
+                "Assigned User ID": self.assigned_to.get("id"),
+                "Assigned User": self.assigned_to.get("username"),
+                "Entity Type": entity_type,
+                entity: self.host_id or self.account_id,
+            }
+        )
+
+    def create_assignment_csv(self) -> list[str]:
+        entity = "Host ID" if self.host_id else "Account ID"
+
+        return flat_dict_to_csv(
+            {
+                "Assignment ID": self.assignment_id,
                 "User ID": self.assigned_to.get("id"),
                 entity: self.host_id or self.account_id,
             },
@@ -102,15 +107,15 @@ class Assignment(BaseModel):
 class Detection(BaseModel):
     def __init__(
         self,
-        raw_data,
-        detection_id,
-        state,
-        category,
-        detection_type,
-        threat,
-        last_detection_timestamp,
-        detection_url,
-    ):
+        raw_data: dict[str, Any],
+        detection_id: str | int,
+        state: str,
+        category: str,
+        detection_type: str,
+        threat: str | int,
+        last_detection_timestamp: str,
+        detection_url: str,
+    ) -> None:
         """Constructor for Detection class
 
         Args:
@@ -140,21 +145,24 @@ class Detection(BaseModel):
         self.entity_name = None
         self.detection_url = detection_url.replace(URL_API_VERSION, "")
 
-        if raw_data["src_account"]:
-            self.entity_id = raw_data["src_account"]["id"]
-            self.entity_name = raw_data["src_account"]["name"]
-            self.raw_data["src_account"]["url"] = raw_data["src_account"][
-                "url"
-            ].replace(URL_API_VERSION, "")
-        elif raw_data["src_host"]:
-            self.entity_id = raw_data["src_host"]["id"]
-            self.entity_name = raw_data["src_host"]["name"]
-            self.raw_data["src_host"]["url"] = raw_data["src_host"]["url"].replace(
+        src_account = raw_data.get("src_account")
+        src_host = raw_data.get("src_host")
+        if src_account:
+            self.entity_id = src_account.get("id")
+            self.entity_name = src_account.get("name")
+            src_account["url"] = (src_account.get("url") or "").replace(
+                URL_API_VERSION,
+                "",
+            )
+        elif src_host:
+            self.entity_id = src_host.get("id")
+            self.entity_name = src_host.get("name")
+            src_host["url"] = (src_host.get("url") or "").replace(
                 URL_API_VERSION,
                 "",
             )
 
-    def to_csv(self):
+    def to_csv(self) -> list[str]:
         return flat_dict_to_csv(
             {
                 "ID": self.detection_id,
@@ -166,7 +174,7 @@ class Detection(BaseModel):
             },
         )
 
-    def get_subset(self):
+    def get_subset(self) -> dict[str, Any]:
         return {
             "ID": self.detection_id,
             "Detection URL": self.detection_url,
@@ -179,21 +187,21 @@ class Detection(BaseModel):
 class Entity(BaseModel):
     def __init__(
         self,
-        raw_data,
-        entity_id,
-        name,
-        entity_type,
-        state,
-        severity,
-        last_detection_timestamp,
-        last_modified_timestamp,
-        urgency_score,
-        attack_rating,
-        ip,
-        importance,
-        tags,
-        detection_ids,
-    ):
+        raw_data: dict[str, Any],
+        entity_id: str | int,
+        name: str,
+        entity_type: str,
+        state: str,
+        severity: str,
+        last_detection_timestamp: str,
+        last_modified_timestamp: str,
+        urgency_score: int,
+        attack_rating: int,
+        ip: str | None,
+        importance: str,
+        tags: list[str],
+        detection_ids: list[str],
+    ) -> None:
         """Constructor for Entity class
 
         Args:
@@ -235,7 +243,7 @@ class Entity(BaseModel):
         self.detection_ids = [url.split("/")[-1] for url in detection_ids]
         self.uuid = str(uuid.uuid4())
 
-    def to_csv(self):
+    def to_csv(self) -> list[str]:
         """Creates a CSV representation of the entity for table view.
         :return: a string representing the entity in CSV format
         """
@@ -256,12 +264,12 @@ class Entity(BaseModel):
 
     def get_alert_info(
         self,
-        alert_info,
-        detections,
-        entity_type,
-        environment_common,
-        device_product_field,
-    ):
+        alert_info: Any,
+        detections: list[Detection],
+        entity_type: str,
+        environment_common: Any,
+        device_product_field: str,
+    ) -> Any:
         self.raw_data["entity_type"] = entity_type
         alert_info.environment = environment_common.get_environment(self.raw_data)
         alert_info.ticket_id = get_alert_id(
@@ -294,11 +302,11 @@ class Entity(BaseModel):
 
         return alert_info
 
-    def get_siemplify_severity(self):
+    def get_siemplify_severity(self) -> int:
         return SEVERITY_MAP.get(self.severity.lower(), -1)
 
     @staticmethod
-    def create_event(detection):
+    def create_event(detection: dict[str, Any]) -> dict[str, Any]:
         detection["name"] = detection["detection"]
         detection["StartTime"] = convert_string_to_unix_time(
             detection["first_timestamp"],
@@ -312,7 +320,15 @@ class Entity(BaseModel):
 class User(BaseModel):
     """User model for store user details"""
 
-    def __init__(self, raw_data, user_id, email, name, role, last_login_timestamp):
+    def __init__(
+        self,
+        raw_data: dict[str, Any],
+        user_id: str | int,
+        email: str,
+        name: str,
+        role: str,
+        last_login_timestamp: str | None,
+    ) -> None:
         """Constructor for User class
 
         Args:
@@ -331,7 +347,7 @@ class User(BaseModel):
         self.role = role
         self.last_login_timestamp = last_login_timestamp
 
-    def fetch_user_details(self):
+    def fetch_user_details(self) -> dict[str, Any]:
         """Fetches the user details.
 
         Returns:
@@ -339,49 +355,11 @@ class User(BaseModel):
 
         """
         return {
-            "Last Login": self.last_login_timestamp,
-            "Role": self.role,
-            "Email": self.email,
-            "Name": self.name,
             "ID": self.user_id,
-        }
-
-
-class Outcome(BaseModel):
-    """Outcome model for storing outcome details"""
-
-    def __init__(self, raw_data, outcome_id, builtin, user_selectable, title, category):
-        """Constructor for Outcome class
-
-        Args:
-            raw_data (dict): The dict containing the outcome details
-            outcome_id (str): The id of the outcome
-            builtin (bool): Whether the outcome is a built-in outcome
-            user_selectable (bool): Whether the outcome is user-selectable
-            title (str): The title of the outcome
-            category (str): The category of the outcome
-
-        """
-        super(Outcome, self).__init__(raw_data)
-        self.outcome_id = outcome_id
-        self.builtin = builtin
-        self.user_selectable = user_selectable
-        self.title = title
-        self.category = category
-
-    def list_outcome_csv(self):
-        """Returns a dict containing the outcome details in CSV format
-
-        Returns:
-            dict: A dict containing the outcome details in CSV format
-
-        """
-        return {
-            "Outcome ID": self.outcome_id,
-            "Built In": self.builtin,
-            "User Selectable": self.user_selectable,
-            "Title": self.title,
-            "Category": self.category,
+            "Name": self.name,
+            "Email": self.email,
+            "Role": self.role,
+            "Last Login": self.last_login_timestamp,
         }
 
 
@@ -390,13 +368,13 @@ class Group(BaseModel):
 
     def __init__(
         self,
-        raw_data,
-        group_id,
-        group_name,
-        group_type,
-        description,
-        importance,
-    ):
+        raw_data: dict[str, Any],
+        group_id: str | int,
+        group_name: str,
+        group_type: str,
+        description: str | None,
+        importance: str,
+    ) -> None:
         """Constructor for Group class
 
         Args:
@@ -415,7 +393,7 @@ class Group(BaseModel):
         self.description = description
         self.importance = importance
 
-    def fetch_group_details(self):
+    def fetch_group_details(self) -> dict[str, Any]:
         """Fetches the details of a group
 
         Returns:
@@ -423,11 +401,11 @@ class Group(BaseModel):
 
         """
         return {
-            "Description": self.description,
-            "Importance": self.importance,
-            "Type": self.group_type,
             "ID": self.group_id,
             "Name": self.group_name,
+            "Type": self.group_type,
+            "Description": self.description,
+            "Importance": self.importance,
         }
 
 
@@ -440,18 +418,31 @@ class Note(BaseModel):
         date_created (bool): Indicates the creation date of the note.
         created_by (bool): the creator of the note.
         note (str): The textual content or description of the note.
+        date_modified (str): The last modification date of the note.
+        modified_by (str): The user who last modified the note.
         entity_type (str): The type or category of the entity associated with the note.
 
     """
 
-    def __init__(self, raw_data, note_id, date_created, created_by, note):
+    def __init__(
+        self,
+        raw_data: dict[str, Any],
+        note_id: str | int,
+        date_created: str,
+        created_by: str,
+        note: str,
+        date_modified: str | None = None,
+        modified_by: str | None = None,
+    ) -> None:
         self.raw_data = raw_data
         self.note_id = note_id
         self.date_created = date_created
         self.created_by = created_by
         self.note = note
+        self.date_modified = date_modified
+        self.modified_by = modified_by
 
-    def to_csv(self):
+    def to_csv(self) -> list[str]:
         return flat_dict_to_csv(
             {
                 "ID": self.note_id,
@@ -460,3 +451,215 @@ class Note(BaseModel):
                 "Created By": self.created_by,
             },
         )
+
+    def list_entity_notes_csv(self) -> dict[str, Any]:
+        return {
+            "Note ID": self.note_id,
+            "Note": self.note,
+            "Created By": self.created_by,
+            "Creation Date": self.date_created,
+            "Modified Date": self.date_modified,
+            "Modified By": self.modified_by,
+        }
+    
+    
+    def update_entity_notes_csv(self) -> list[str]:
+        return flat_dict_to_csv(
+            {
+                "Note ID": self.note_id,
+                "Updated Note": self.note,
+                "Created By": self.created_by,
+                "Creation Date": self.date_created,
+                "Modified Date": self.date_modified,
+                "Modified By": self.modified_by,
+            }
+        )
+
+
+class InvestigationResult(BaseModel):
+    """Model to store investigation result details"""
+
+    def __init__(
+        self,
+        raw_data: dict[str, Any],
+        timestamp: str,
+        identity_principal: str,
+        operation: str,
+        object_id: str,
+        client_ip: str,
+        extended_properties: Any,
+        device_properties: Any,
+    ) -> None:
+        """Constructor for InvestigationResult class
+
+        Args:
+            raw_data (dict): The raw JSON response from the API
+            timestamp (str): The timestamp of the investigation result record
+            identity_principal (str): The identity principal associated with the record
+            operation (str): The operation performed
+            object_id (str): The ID of the object the operation was performed on
+            client_ip (str): The client IP from which the operation was performed
+
+        """
+        super().__init__(raw_data)
+        self.timestamp = timestamp
+        self.identity_principal = identity_principal
+        self.operation = operation
+        self.object_id = object_id
+        self.client_ip = client_ip
+        self.device_properties = device_properties
+        self.extended_properties = extended_properties
+
+    def to_csv(self) -> dict[str, Any]:
+        return {
+            "Operation": self.operation,
+            "Identity Principal": self.identity_principal,
+            "Timestamp": self.timestamp,
+            "Object ID": self.object_id,
+            "Client IP": self.client_ip,
+        }
+
+class DetectionEvent(BaseModel):
+    """Model for a single record returned by the events/detections endpoint"""
+
+    def __init__(
+        self,
+        raw_data: dict[str, Any],
+        event_id: int,
+        detection_id: int,
+        entity_id: int,
+        entity_name: str,
+        entity_uid: str,
+        detection_type: str,
+        category: str,
+        threat: int,
+        certainty: int,
+        event_timestamp: str,
+        change_type: str,
+    ) -> None:
+        """Constructor for DetectionEvent class
+
+        Args:
+            raw_data (dict): The raw JSON response from the API
+            event_id (int): The ID of the detection event record
+            detection_id (int): The ID of the detection the event belongs to
+            entity_id (int): The ID of the entity associated with the detection
+            entity_name (str): The name of the entity associated with the detection
+            entity_uid (str): The UID of the entity associated with the detection
+            detection_type (str): The type of the detection
+            category (str): The category of the detection
+            threat (int): The threat score of the detection
+            certainty (int): The certainty score of the detection
+            event_timestamp (str): The timestamp of the detection event
+            change_type (str): The type of change the event represents (e.g. new, appended)
+
+        """
+        super().__init__(raw_data)
+        self.event_id = event_id
+        self.detection_id = detection_id
+        self.entity_id = entity_id
+        self.entity_name = entity_name
+        self.entity_uid = entity_uid
+        self.raw_data = raw_data
+        self.detection_type = detection_type
+        self.category = category
+        self.threat = threat
+        self.certainty = certainty
+        self.event_timestamp = event_timestamp
+        self.change_type = change_type
+
+    def get_siemplify_severity(self) -> int:
+        """Derives the Siemplify alert severity for this detection event from its
+        urgency_score.
+
+        Ranges: 0-30 Low, 31-60 Medium, 61-79 High, 80-100 Critical.
+
+        Returns:
+            int: The Siemplify severity value.
+
+        """
+        urgency_score_field = (
+            "src_host_urgency_score"
+            if self.raw_data.get("type") == "host"
+            else "src_account_urgency_score"
+        )
+        urgency_score = dict_to_flat(self.raw_data).get(urgency_score_field)
+        if urgency_score is None:
+            return -1
+        urgency_score = int(urgency_score)
+        if urgency_score >= 80:
+            return SEVERITY_MAP["critical"]
+        if urgency_score >= 61:
+            return SEVERITY_MAP["high"]
+        if urgency_score >= 31:
+            return SEVERITY_MAP["medium"]
+        return SEVERITY_MAP["low"]
+
+    def get_alert_info(
+        self,
+        alert_info: Any,
+        environment_common: Any,
+        device_product_field: str,
+    ) -> Any:
+        alert_info.environment = environment_common.get_environment(self.raw_data)
+        alert_info.ticket_id = get_detection_alert_id(self.detection_id, self.event_id)
+        alert_info.display_id = get_detection_alert_id(self.detection_id, self.event_id)
+        alert_info.name = self.entity_uid
+        alert_info.device_vendor = DEFAULT_DEVICE_VENDOR
+        alert_info.priority = self.get_siemplify_severity()
+        alert_info.rule_generator = f"{RULE_GENERATOR}: {self.entity_uid}"
+        alert_info.source_grouping_identifier = f"detection#{self.detection_id}"
+        flat_event = dict_to_flat(self.raw_data)
+        alert_info.start_time = convert_string_to_unix_time(
+            self._get_start_timestamp(flat_event),
+        )
+        alert_info.end_time = convert_string_to_unix_time(
+            self._get_end_timestamp(flat_event),
+        )
+        flat_event = dict_to_flat(self.create_event(self.raw_data))
+        alert_info.events = [flat_event]
+        alert_info.extensions = flat_event
+        alert_info.device_product = (
+            self.raw_data.get(device_product_field) or DEFAULT_DEVICE_PRODUCT
+        )
+        return alert_info
+
+    @staticmethod
+    def _get_start_timestamp(flat_event: dict[str, Any]) -> str | None:
+        timestamp = flat_event.get("detail_first_timestamp") or flat_event.get("event_timestamp")
+        return DetectionEvent._ensure_utc_timezone(timestamp)
+
+    @staticmethod
+    def _get_end_timestamp(flat_event: dict[str, Any]) -> str | None:
+        timestamp = flat_event.get("detail_last_timestamp") or flat_event.get("event_timestamp")
+        return DetectionEvent._ensure_utc_timezone(timestamp)
+
+    @staticmethod
+    def _ensure_utc_timezone(timestamp: str | None) -> str | None:
+        """Vectra's events/detections API returns timestamps inconsistently: some
+        with a trailing UTC marker (e.g. "2026-04-07T13:12:47Z"), others with
+        none at all (e.g. "2026-04-07T14:05:51"). convert_string_to_unix_time
+        raises "no timezone info was supplied" on the latter, so a timestamp
+        with no timezone marker is assumed to be UTC and gets "Z" appended.
+        """
+        if timestamp and not re.search(r"(Z|[+-]\d{2}:?\d{2})$", timestamp):
+            return f"{timestamp}Z"
+        return timestamp
+
+    @staticmethod
+    def create_event(event: dict[str, Any]) -> dict[str, Any]:
+        flat_event = dict_to_flat(event)
+        event["name"] = event.get("detection_type") or f"Detection {event.get('detection_id')}"
+        event["StartTime"] = convert_string_to_unix_time(
+            DetectionEvent._get_start_timestamp(flat_event),
+        )
+        event["EndTime"] = convert_string_to_unix_time(
+            DetectionEvent._get_end_timestamp(flat_event),
+        )
+        event["DeviceProduct"] = DEFAULT_DEVICE_PRODUCT
+        event["SourceSystemName"] = VECTRA_RUX
+        event["SourceType"] = VECTRA_RUX
+        event["CategoryOutcome"] = event.get("category") or "N/A"
+        event["EntityType"] = event.get("type")
+
+        return event
